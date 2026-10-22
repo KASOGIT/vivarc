@@ -36,6 +36,8 @@ BLOCK = f'{BEGIN}\n<script src="vivarc.js"></script>\n{END}'
 FREED_KEY = "meta+t"  # the command bar listens for Cmd+T itself
 COPY_URL_KEY = "shift+meta+c"
 TOGGLE_SIDEBAR_KEY = "meta+s"
+SIDEBAR_WIDTH = 323
+SIDEBAR_BOTTOM = ["NewTab", "FlexibleSpacer", "AccountButton", "FlexibleSpacer", "PanelDownloads", "UpdateButton"]
 SIDEBAR_TOOLBAR = ["TabButton", "Extensions", "FlexibleSpacer", "Back", "Reload", "Forward", "AddressField"]
 
 # Peek is community code (GPL-3.0, PaRr0tBoY/Awesome-Vivaldi). It is downloaded at install time from a
@@ -53,6 +55,10 @@ TOUCHED = [
     ("vivaldi", "toolbars", "tabbar_before"),
     ("vivaldi", "toolbars", "tabbar_after"),
     ("vivaldi", "address_bar", "visible"),
+    ("vivaldi", "panels", "position"),
+    ("vivaldi", "auto_hide", "enabled"),
+    ("vivaldi", "auto_hide", "panel"),
+    ("vivaldi", "tabs", "bar", "width"),
     ("vivaldi", "tabs", "bar", "position"),
 ]
 
@@ -137,8 +143,13 @@ def patch_preferences(prefs, default_actions):
     _set(new, ("vivaldi", "toolbars", "tabbar_before"), bar if "AddressField" in bar else list(SIDEBAR_TOOLBAR))
     _set(new, ("vivaldi", "address_bar", "visible"), False)
     after = _get(new, ("vivaldi", "toolbars", "tabbar_after"))
-    if after is not _MISSING:
-        _set(new, ("vivaldi", "toolbars", "tabbar_after"), swap_vpn_for_downloads(after))
+    after = swap_vpn_for_downloads([] if after is _MISSING else after)
+    _set(new, ("vivaldi", "toolbars", "tabbar_after"), after if "AccountButton" in after else list(SIDEBAR_BOTTOM))
+    _set(new, ("vivaldi", "panels", "position"), 1)
+    _set(new, ("vivaldi", "auto_hide", "enabled"), True)
+    _set(new, ("vivaldi", "auto_hide", "panel"), True)
+    if _get(new, ("vivaldi", "tabs", "bar", "width")) is _MISSING:
+        _set(new, ("vivaldi", "tabs", "bar", "width"), SIDEBAR_WIDTH)
     _set(new, ("vivaldi", "tabs", "bar", "position"), 1)
     return new, snap
 

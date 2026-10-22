@@ -10,11 +10,13 @@
   const COPY_URL = "shift+meta+c";
 
   // Bump when the steps change: profiles already set up then run the (idempotent) steps once more.
-  const VERSION = 5;
+  const VERSION = 6;
   const TOGGLE = "meta+s";
 
   // The address bar and navigation buttons live inside the sidebar; the top bar is hidden.
   const SIDEBAR_TOOLBAR = ["TabButton", "Extensions", "FlexibleSpacer", "Back", "Reload", "Forward", "AddressField"];
+
+  const SIDEBAR_BOTTOM = ["NewTab", "FlexibleSpacer", "AccountButton", "FlexibleSpacer", "PanelDownloads", "UpdateButton"];
 
   const tidyToolbar = (list, remove, swap) => {
     const out = [];
@@ -28,11 +30,11 @@
 
   const tidyToolbars = async () => {
     const edits = [
-      ["tabbar_before", ["Spacer", "WorkspaceButton"], {}, SIDEBAR_TOOLBAR],
-      ["tabbar_after", [], { VPNButton: "PanelDownloads" }, null],
+      ["tabbar_before", ["Spacer", "WorkspaceButton"], {}, "AddressField", SIDEBAR_TOOLBAR],
+      ["tabbar_after", [], { VPNButton: "PanelDownloads" }, "AccountButton", SIDEBAR_BOTTOM],
     ];
     let whole = null;
-    for (const [name, remove, swap, required] of edits) {
+    for (const [name, remove, swap, marker, fallback] of edits) {
       let list = await get(`vivaldi.toolbars.${name}`);
       if (!Array.isArray(list)) {
         whole ||= (await get("vivaldi.toolbars")) || {};
@@ -40,7 +42,7 @@
       }
       if (!Array.isArray(list)) continue;
       let next = tidyToolbar(list, remove, swap);
-      if (required && !next.includes("AddressField")) next = [...required];
+      if (!next.includes(marker)) next = [...fallback];
       if (next.join() === list.join()) continue;
       if (whole && whole[name] === list) whole[name] = next;
       else await set(`vivaldi.toolbars.${name}`, next);
@@ -101,6 +103,10 @@
     await bindShortcuts();
     await tidyToolbars();
     await set("vivaldi.address_bar.visible", false);
+    await set("vivaldi.panels.position", "right");
+    await set("vivaldi.auto_hide.enabled", true);
+    await set("vivaldi.auto_hide.panel", true);
+    if (!(await window.__vm.store.get("bootstrap", 0))) await set("vivaldi.tabs.bar.width", 323);
     await replaceWelcome();
     await window.__vm.store.set("bootstrap", VERSION);
   };
