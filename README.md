@@ -34,7 +34,7 @@ git clone https://github.com/KASOGIT/vivarc.git && cd vivarc
 ./vivarc.py install
 ```
 
-Then open Vivaldi. Profiles you create later are set up automatically the first time they open (restart Vivaldi once when it says so). The first time, Vivarc creates a `Vivarc` bookmarks folder with `Favorites` and `Pinned` in each profile; pin things with right-click, or drag tabs onto the sidebar.
+Then open Vivaldi. Profiles you create later are set up automatically the first time they open, no restart needed. The first time, Vivarc creates a `Vivarc` bookmarks folder with `Favorites` and `Pinned` in each profile; pin things with right-click, or drag tabs onto the sidebar.
 
 macOS may ask you to allow your terminal under **System Settings > Privacy & Security > App Management**, because the script edits `Vivaldi.app`.
 
@@ -59,12 +59,12 @@ An update replaces `Vivaldi.app` and removes the script. Quit Vivaldi, then (thi
 ### Uninstall
 
 ```sh
-./vivarc.py uninstall  # restores your preferences, flags and window.html; your bookmarks are left alone
+./vivarc.py uninstall  # restores your preferences and window.html; your bookmarks are left alone
 ```
 
 ## Safety
 
-Every file Vivarc edits is backed up in `~/.vivarc/backup/`, existing shortcuts and flags are kept, and `uninstall` restores the original values. The CSS only applies when the script is running, so a Vivaldi update can never leave you with half a UI. See [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) for exactly what changes.
+Every file Vivarc edits is backed up in `~/.vivarc/backup/`, existing shortcuts are kept, no Vivaldi flags are changed, and `uninstall` restores the original values. The styles ship inside the script, so a Vivaldi update can never leave you with half a UI. See [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) for exactly what changes.
 
 The command bar sends what you type to DuckDuckGo's autocomplete for suggestions; set `"suggestions": "off"` in `~/.vivarc/config.json` to turn that off.
 

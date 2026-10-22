@@ -31,7 +31,6 @@ DEFAULT_APP = "/Applications/Vivaldi.app"
 DEFAULT_DATA = os.path.join(HOME, "Library", "Application Support", "Vivaldi")
 RESOURCES = "Contents/Frameworks/Vivaldi Framework.framework/Resources/vivaldi"
 
-FLAGS = ["vivaldi-css-mods@1", "vivaldi-horizontal-pinned-tabs@1"]
 BEGIN, END = "<!-- vivarc:begin -->", "<!-- vivarc:end -->"
 BLOCK = f'{BEGIN}\n<script src="vivarc.js"></script>\n{END}'
 FREED_KEY = "meta+t"  # the command bar listens for Cmd+T itself
@@ -53,7 +52,6 @@ TOUCHED = [
     ("vivaldi", "toolbars", "tabbar_before"),
     ("vivaldi", "toolbars", "tabbar_after"),
     ("vivaldi", "tabs", "bar", "position"),
-    ("vivaldi", "appearance", "css_ui_mods_directory"),
 ]
 
 
@@ -108,7 +106,7 @@ def swap_vpn_for_downloads(items):
     return out
 
 
-def patch_preferences(prefs, default_actions, css_dir):
+def patch_preferences(prefs, default_actions):
     """Return (patched copy, snapshot of the original values of everything touched)."""
     new = copy.deepcopy(prefs)
     snap = _snapshot(prefs)
@@ -138,7 +136,6 @@ def patch_preferences(prefs, default_actions, css_dir):
     if after is not _MISSING:
         _set(new, ("vivaldi", "toolbars", "tabbar_after"), swap_vpn_for_downloads(after))
     _set(new, ("vivaldi", "tabs", "bar", "position"), 1)
-    _set(new, ("vivaldi", "appearance", "css_ui_mods_directory"), css_dir)
     return new, snap
 
 
@@ -153,21 +150,23 @@ def restore_preferences(prefs, snap):
     return new
 
 
-def patch_local_state(ls):
-    """Return (patched copy, flags that were added)."""
-    new = copy.deepcopy(ls)
-    flags = new.setdefault("browser", {}).setdefault("enabled_labs_experiments", [])
-    added = [f for f in FLAGS if f not in flags]
-    flags.extend(added)
-    return new, added
+def looks_configured(prefs):
+    """True when a profile carries Vivarc's keys (set at install, or at runtime by the JS for a newer profile)."""
+    actions = _get(prefs, ("vivaldi", "actions"))
+    if actions is _MISSING or not actions:
+        return False
+    table = actions[0]
+    toggle = table.get("COMMAND_TOGGLE_AUTO_HIDE_TAB_BAR", {}).get("shortcuts", [])
+    copy_url = table.get("COMMAND_PAGE_COPY_URL", {}).get("shortcuts", [])
+    new_tab = table.get("COMMAND_NEW_TAB", {}).get("shortcuts", [])
+    return toggle == [TOGGLE_SIDEBAR_KEY] and COPY_URL_KEY in copy_url and FREED_KEY not in new_tab
 
 
-def restore_local_state(ls, added):
-    new = copy.deepcopy(ls)
-    flags = _get(new, ("browser", "enabled_labs_experiments"))
-    if flags is not _MISSING:
-        new["browser"]["enabled_labs_experiments"] = [f for f in flags if f not in added]
-    return new
+def style_script(element_id, css):
+    return ("(() => {\n"
+            f"  const style = document.createElement(\"style\");\n  style.id = {json.dumps(element_id)};\n"
+            f"  style.textContent = {json.dumps(css)};\n"
+            "  (document.head || document.documentElement).append(style);\n})();\n")
 
 
 def inject_window_html(html):
@@ -237,7 +236,7 @@ def say(message):
 
 def load_state():
     path = os.path.join(HOME_DIR, "state.json")
-    return read_json(path) if os.path.exists(path) else {"profiles": {}, "flags_added": [], "version": VERSION}
+    return read_json(path) if os.path.exists(path) else {"profiles": {}, "version": VERSION}
 
 
 def save_state(state):
@@ -276,22 +275,14 @@ def default_actions(resources):
     return defs[key]
 
 
-def sync_css():
-    """Copy the stylesheet (and Peek's, if downloaded) to the folder Vivaldi loads CSS mods from, and the guide page."""
-    css_dir = os.path.join(HOME_DIR, "css")
-    os.makedirs(css_dir, exist_ok=True)
-    shutil.copy2(os.path.join(HERE, "src/css/vivarc.css"), css_dir)
-    peek_css = os.path.join(HOME_DIR, "peek", "VividPeek.css")
-    if os.path.exists(peek_css):
-        shutil.copy2(peek_css, css_dir)
+def sync_guide():
     start_dir = os.path.join(HOME_DIR, "start")
     os.makedirs(start_dir, exist_ok=True)
     shutil.copy2(os.path.join(HERE, "src/start/index.html"), start_dir)
-    return css_dir
 
 
 def write_bundle(resources, with_peek):
-    extras, pre = [], []
+    extras, pre = [], [("vivarc.css", style_script("vivarc-css", read_text(os.path.join(HERE, "src/css/vivarc.css"))))]
     icons = os.path.join(HOME_DIR, "icons.js")
     if os.path.exists(icons):
         pre.append(("icons.js", read_text(icons)))
@@ -299,8 +290,9 @@ def write_bundle(resources, with_peek):
     if with_peek and os.path.exists(os.path.join(peek_dir, "VividPeek.js")):
         extras.append(("peek-stubs.js", read_text(os.path.join(HERE, "src/optional/peek-stubs.js"))))
         extras.append(("VividPeek.js", read_text(os.path.join(peek_dir, "VividPeek.js"))))
+        extras.append(("VividPeek.css", style_script("vivarc-peek-css", read_text(os.path.join(peek_dir, "VividPeek.css")))))
     start_page = pathlib.Path(HOME_DIR, "start", "index.html").as_uri()
-    config = {**load_config(), "cssDir": os.path.join(HOME_DIR, "css"), "startUrl": start_page}
+    config = {**load_config(), "startUrl": start_page}
     bundle = build_bundle(os.path.join(HERE, "src/js"), config, extras, pre)
     with open(os.path.join(resources, "vivarc.js"), "w", encoding="utf8") as f:
         f.write(bundle)
@@ -331,12 +323,7 @@ def cmd_install(args):
         die(f"Vivaldi not found at {app} (use --app)")
     if vivaldi_running() and not args.dry_run:
         die("Quit Vivaldi (Cmd+Q) first, then run this again.")
-    local_state_path = os.path.join(data, "Local State")
-    local_state = read_json(local_state_path)
-    profiles = find_profiles(local_state)
-    if args.profiles:
-        wanted = set(args.profiles.split(","))
-        profiles = [p for p in profiles if p[0] in wanted or p[1] in wanted]
+    profiles = find_profiles(read_json(os.path.join(data, "Local State")))
     say(f"Vivaldi {app_version(app)}; profiles: {', '.join(f'{n} ({d})' for d, n in profiles)}")
     if args.dry_run:
         say("dry run: nothing written")
@@ -344,7 +331,7 @@ def cmd_install(args):
 
     state = load_state()
     backup = backup_dir()
-    css_dir = sync_css()
+    sync_guide()
     config_path = os.path.join(HOME_DIR, "config.json")
     if not os.path.exists(config_path):
         write_json(config_path, {})
@@ -352,7 +339,6 @@ def cmd_install(args):
     if not args.no_peek:
         try:
             fetch_peek()
-            sync_css()
             say("Peek (community mod, GPL-3.0) downloaded and verified")
         except Exception as error:  # network or checksum problem: Peek is optional
             say(f"Peek skipped: {error}")
@@ -365,19 +351,11 @@ def cmd_install(args):
         os.makedirs(os.path.join(backup, directory), exist_ok=True)
         shutil.copy2(prefs_path, os.path.join(backup, directory, "Preferences"))
         prefs = read_json(prefs_path)
-        old_css = _get(prefs, ("vivaldi", "appearance", "css_ui_mods_directory"))
-        if old_css not in (_MISSING, "", css_dir) and not args.force:
-            say(f"  {name}: already uses CSS mods in {old_css}; skipped (use --force to replace)")
-            continue
-        new, snap = patch_preferences(prefs, actions, css_dir)
+        new, snap = patch_preferences(prefs, actions)
         state["profiles"].setdefault(directory, snap)
         write_json(prefs_path, new)
         say(f"  {name}: configured")
 
-    shutil.copy2(local_state_path, os.path.join(backup, "Local State"))
-    new_ls, added = patch_local_state(local_state)
-    write_json(local_state_path, new_ls)
-    state["flags_added"] = sorted(set(state["flags_added"]) | set(added))
     state["version"] = VERSION
     save_state(state)
 
@@ -392,7 +370,7 @@ def cmd_apply(args):
     resources = os.path.join(args.app, RESOURCES)
     if vivaldi_running():
         die("Quit Vivaldi (Cmd+Q) first, then run this again.")
-    sync_css()
+    sync_guide()
     try:
         apply_js(args.app, resources, os.path.exists(os.path.join(HOME_DIR, "peek", "VividPeek.js")))
     except PermissionError as error:
@@ -412,17 +390,15 @@ def cmd_uninstall(args):
             say(f"  {directory}: restored")
     ls_path = os.path.join(args.data_dir, "Local State")
     if os.path.exists(ls_path):
-        ours = os.path.join(HOME_DIR, "css")
         blank = {".".join(path): {"present": False, "value": None} for path in TOUCHED}
         for directory, _name in find_profiles(read_json(ls_path)):
             prefs_path = os.path.join(args.data_dir, directory, "Preferences")
             if directory in state["profiles"] or not os.path.exists(prefs_path):
                 continue
             prefs = read_json(prefs_path)
-            if _get(prefs, ("vivaldi", "appearance", "css_ui_mods_directory")) == ours:
-                write_json(prefs_path, restore_preferences(prefs, blank))  # created after install: defaults were the original
+            if looks_configured(prefs):
+                write_json(prefs_path, restore_preferences(prefs, blank))  # set up by the JS later: defaults were the original
                 say(f"  {directory}: reset to Vivaldi defaults (configured by Vivarc at runtime)")
-        write_json(ls_path, restore_local_state(read_json(ls_path), state["flags_added"]))
     html_path = os.path.join(resources, "window.html")
     try:
         if os.path.exists(html_path):
@@ -448,9 +424,8 @@ def cmd_status(args):
     state = load_state()
     for directory, name in find_profiles(read_json(os.path.join(args.data_dir, "Local State"))):
         path = os.path.join(args.data_dir, directory, "Preferences")
-        css = _get(read_json(path), ("vivaldi", "appearance", "css_ui_mods_directory")) if os.path.exists(path) else _MISSING
-        say(f"  {name} ({directory}): {'configured' if directory in state['profiles'] else 'not configured'}"
-            f", css dir {'ok' if css == os.path.join(HOME_DIR, 'css') else 'other/unset'}")
+        ours = directory in state["profiles"] or (os.path.exists(path) and looks_configured(read_json(path)))
+        say(f"  {name} ({directory}): {'configured' if ours else 'not configured yet (set up when opened)'}")
 
 
 def cmd_import_arc(args):
@@ -465,9 +440,7 @@ def main(argv=None):
     parser.add_argument("--data-dir", default=DEFAULT_DATA)
     sub = parser.add_subparsers(dest="command", required=True)
     install = sub.add_parser("install")
-    install.add_argument("--profiles", help="comma-separated profile folders or names (default: all)")
     install.add_argument("--no-peek", action="store_true")
-    install.add_argument("--force", action="store_true", help="replace an existing CSS mods folder")
     install.add_argument("--dry-run", action="store_true")
     sub.add_parser("apply")
     uninstall = sub.add_parser("uninstall")

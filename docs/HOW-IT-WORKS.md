@@ -4,7 +4,7 @@ Vivaldi's UI is a web page (`window.html`). Vivarc adds one script and one style
 
 | Piece | Where it lives | What it does |
 |---|---|---|
-| CSS | `~/.vivarc/css/vivarc.css`, loaded by Vivaldi's own "CSS modifications" setting | Styles. Every rule is scoped to `#browser.vm-on`, a class the JS adds, so the CSS does nothing if the JS is missing. |
+| CSS | Embedded in `vivarc.js` and added to the UI as a `<style>` element (source: `src/css/vivarc.css`) | Styles. Every rule is scoped to `#browser.vm-on`, a class the JS adds. No CSS-mods folder or browser flag is needed, and it never conflicts with your own CSS mods. |
 | JS | `<Vivaldi.app>/.../vivaldi/vivarc.js`, referenced from `window.html` by one marked block | The sidebar, command bar, toast and theme editor. Rebuilt from `src/js/` by `vivarc.py apply`. |
 | Data | A bookmarks folder with `Favorites` and `Pinned` subfolders (created on first run) | Your favorites and pinned folders. Plain bookmarks: they sync, export and back up like any others. |
 | Settings | `~/.vivarc/config.json` | See below. |
@@ -30,29 +30,28 @@ An update replaces `Vivaldi.app`, including `window.html`. Run `./vivarc.py appl
 ```
 
 - `hideWorkspaceButton`: hide Vivaldi's Workspaces button at the top of the sidebar (on by default).
-- `autoConfigureProfiles`: let Vivarc set up profiles created after install (see below). Set to `false` to configure profiles only with `install`.
+- `autoConfigureProfiles`: let Vivarc set up profiles created after install (see below).
 - `compactBottomBar`: shrink the bottom toolbar (profile button) to Arc's proportions.
 - `suggestions`: `"ddg"` sends what you type in the command bar to DuckDuckGo's autocomplete endpoint; `"off"` sends nothing.
 - `spaceFolderTitle`: name of the folder created on first run.
 
 ## What the installer changes
 
-Per Vivaldi profile (`Preferences`): the tab bar goes left; the "CSS modifications" folder points at `~/.vivarc/css`;
-`Cmd+T` is freed from "New Tab" and "Quick Commands" (the command bar listens for it itself); `Cmd+Shift+C` copies the page URL;
-`Cmd+S` toggles the sidebar instead of saving the page; the `Spacer` and Workspaces items are removed from the tab bar toolbar and the VPN button becomes the Downloads button. In `Local State`: two flags are enabled (`vivaldi-css-mods`,
-`vivaldi-horizontal-pinned-tabs`). Existing shortcuts and flags are kept. `uninstall` restores the original values.
+Per Vivaldi profile (`Preferences`): the tab bar goes left; `Cmd+T` is freed from "New Tab" and "Quick Commands" (the command bar listens for it itself);
+`Cmd+Shift+C` copies the page URL; `Cmd+S` toggles the sidebar instead of saving the page; the `Spacer` and Workspaces items are removed from the tab bar toolbar and the VPN button becomes the Downloads button.
+Existing shortcuts are kept. Nothing else in Vivaldi's settings, flags or `Local State` is touched. `uninstall` restores the original values.
 
 ## Profiles created later
 
 `install` configures the profiles that exist. For a profile created afterwards, the JS (through `vivaldi.prefs`) applies the same
-settings the first time it opens, then asks for one restart because Vivaldi reads the CSS folder at start-up. It opens the guide page in
-place of Vivaldi's welcome tab. A profile that already uses a different CSS mods folder is never touched. `uninstall` resets these
-profiles to Vivaldi's defaults, since they have no snapshot.
+settings the first time it opens; they take effect immediately, no restart. It also opens the guide page in place of Vivaldi's welcome tab.
+`uninstall` finds profiles that carry Vivarc's settings but have no snapshot and resets those keys to Vivaldi's defaults.
+Set `"autoConfigureProfiles": false` to skip this and configure profiles only with `install`.
 
 ## Files in `~/.vivarc/`
 
-`css/` (stylesheet, Peek's), `start/` (guide page), `peek/` (downloaded Peek), `icons.js` (Arc site icons), `import/`, `backup/`, `config.json`, `state.json`.
-`apply` refreshes `css/`, `start/` and the bundle.
+`start/` (guide page), `peek/` (downloaded Peek), `icons.js` (Arc site icons), `import/`, `backup/`, `config.json`, `state.json`.
+`apply` refreshes `start/` and rebuilds the bundle (stylesheet included).
 
 ## Limits
 

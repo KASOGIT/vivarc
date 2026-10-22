@@ -60,7 +60,7 @@ class InstallFlow(unittest.TestCase):
         for name in ("Default", "Profile 1"):
             vivaldi = self.prefs(name)["vivaldi"]
             self.assertEqual(vivaldi["toolbars"]["tabbar_before"], ["TabButton"])
-            self.assertEqual(vivaldi["appearance"]["css_ui_mods_directory"], os.path.join(self.home, "css"))
+            self.assertNotIn("appearance", vivaldi)
             self.assertEqual(vivaldi["actions"][0]["COMMAND_NEW_TAB"]["shortcuts"], [])
         res = os.path.join(self.app, vivarc.RESOURCES)
         with open(os.path.join(res, "window.html")) as f:
@@ -68,9 +68,7 @@ class InstallFlow(unittest.TestCase):
         with open(os.path.join(res, "vivarc.js")) as f:
             bundle = f.read()
         self.assertIn("[vivarc] core started", bundle)
-        self.assertTrue(os.path.exists(os.path.join(self.home, "css", "vivarc.css")))
-        with open(os.path.join(self.data, "Local State")) as f:
-            self.assertIn("vivaldi-css-mods@1", json.load(f)["browser"]["enabled_labs_experiments"])
+        self.assertFalse(os.path.exists(os.path.join(self.home, "css")))
 
     def test_running_install_twice_keeps_the_original_snapshot(self):
         self.run_cli("install", "--no-peek")
@@ -87,14 +85,14 @@ class InstallFlow(unittest.TestCase):
         with open(os.path.join(res, "window.html")) as f:
             self.assertNotIn("vivarc", f.read())
         self.assertFalse(os.path.exists(os.path.join(res, "vivarc.js")))
-        with open(os.path.join(self.data, "Local State")) as f:
-            self.assertEqual(json.load(f)["browser"]["enabled_labs_experiments"], [])
 
-    def test_bundle_tells_the_js_where_the_css_lives(self):
+    def test_the_stylesheet_travels_inside_the_bundle(self):
         self.run_cli("install", "--no-peek")
         res = os.path.join(self.app, vivarc.RESOURCES)
         with open(os.path.join(res, "vivarc.js")) as f:
-            self.assertIn(json.dumps(os.path.join(self.home, "css")), f.read())
+            bundle = f.read()
+        with open(os.path.join(vivarc.HERE, "src", "css", "vivarc.css")) as f:
+            self.assertIn(json.dumps(f.read()), bundle)
 
     def test_install_puts_the_guide_page_in_place_and_tells_the_js_its_url(self):
         self.run_cli("install", "--no-peek")
@@ -105,33 +103,36 @@ class InstallFlow(unittest.TestCase):
             self.assertIn(json.dumps(pathlib.Path(page).as_uri()), f.read())
 
     def test_uninstall_also_cleans_profiles_the_js_configured_on_its_own(self):
-        self.run_cli("install", "--no-peek", "--profiles", "Default")
-        # "Profile 1" was configured at runtime by the JS: our css dir and defaults-based keys, no snapshot
-        path = os.path.join(self.data, "Profile 1", "Preferences")
-        with open(path, "w") as f:
-            json.dump({"vivaldi": {"appearance": {"css_ui_mods_directory": os.path.join(self.home, "css")},
-                                   "tabs": {"bar": {"position": 1}}, "actions": [{"COMMAND_NEW_TAB": {"shortcuts": []}}]}}, f)
+        self.run_cli("install", "--no-peek")
+        # a profile created later and configured at runtime: Vivarc's keys, no snapshot
+        os.makedirs(os.path.join(self.data, "Profile 2"))
+        configured, _ = vivarc.patch_preferences({}, [FAKE_DEFS["vivaldi"]["actions"]["default_mac"][0]])
+        with open(os.path.join(self.data, "Profile 2", "Preferences"), "w") as f:
+            json.dump(configured, f)
+        with open(os.path.join(self.data, "Local State"), "w") as f:
+            json.dump({"profile": {"info_cache": {"Default": {}, "Profile 1": {}, "Profile 2": {}}}}, f)
         self.run_cli("uninstall")
-        self.assertEqual(self.prefs("Profile 1"), {})
+        self.assertEqual(self.prefs("Profile 2"), {})
 
-    def test_apply_alone_also_puts_the_stylesheet_in_place(self):
+    def test_uninstall_leaves_an_unconfigured_profile_alone(self):
+        self.run_cli("install", "--no-peek")
+        os.makedirs(os.path.join(self.data, "Profile 2"))
+        plain = {"vivaldi": {"tabs": {"bar": {"position": 0}}}}
+        with open(os.path.join(self.data, "Profile 2", "Preferences"), "w") as f:
+            json.dump(plain, f)
+        with open(os.path.join(self.data, "Local State"), "w") as f:
+            json.dump({"profile": {"info_cache": {"Default": {}, "Profile 1": {}, "Profile 2": {}}}}, f)
+        self.run_cli("uninstall")
+        self.assertEqual(self.prefs("Profile 2"), plain)
+
+    def test_apply_alone_also_puts_the_guide_page_in_place(self):
         self.run_cli("apply")
-        self.assertTrue(os.path.exists(os.path.join(self.home, "css", "vivarc.css")))
+        self.assertTrue(os.path.exists(os.path.join(self.home, "start", "index.html")))
 
     def test_refuses_to_run_while_vivaldi_is_open(self):
         with mock.patch.object(vivarc, "vivaldi_running", return_value=True):
             with self.assertRaises(SystemExit):
                 self.run_cli("install", "--no-peek")
-
-    def test_skips_a_profile_that_already_uses_css_mods_unless_forced(self):
-        path = os.path.join(self.data, "Default", "Preferences")
-        with open(path, "w") as f:
-            json.dump({"vivaldi": {"appearance": {"css_ui_mods_directory": "/other"}}}, f)
-        self.run_cli("install", "--no-peek")
-        self.assertEqual(self.prefs("Default")["vivaldi"]["appearance"]["css_ui_mods_directory"], "/other")
-        self.run_cli("install", "--no-peek", "--force")
-        self.assertEqual(self.prefs("Default")["vivaldi"]["appearance"]["css_ui_mods_directory"],
-                         os.path.join(self.home, "css"))
 
 
 if __name__ == "__main__":
