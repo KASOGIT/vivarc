@@ -377,6 +377,7 @@
     if (tab.discarded) row.classList.add("discarded");
     row.title = tab.url;
     row.append(iconEl(tab.url, tab.favIconUrl), el("span", "vm-title", tab.title || tab.url));
+    if (window.__vm.tilingOf(tab)) row.append(el("span", "vm-split-mark", "◫"));
     row.append(actionButton("×", "Close tab", () => chrome.tabs.remove(tab.id)));
     row.addEventListener("click", () => chrome.tabs.update(tab.id, { active: true }));
     row.addEventListener("auxclick", (e) => { if (e.button === 1) chrome.tabs.remove(tab.id); });

@@ -86,6 +86,37 @@
     if (button) press(button);
     else chrome.downloads?.showDefaultFolder?.();
   };
+  const setExtData = async (tab, patch) => {
+    const fresh = await chrome.tabs.get(tab.id);
+    let ext = {};
+    try { ext = JSON.parse(fresh.vivExtData || "{}"); } catch (_) {}
+    await chrome.tabs.update(tab.id, { vivExtData: JSON.stringify({ ...ext, ...patch }) });
+  };
+  // Split view like Arc's: the page behind the bar and a new tab form a fresh Vivaldi tile group. "row" puts them
+  // side by side, "column" one above the other (measured from the rendered panes in Vivaldi 8.2). If the page was
+  // already in a group it leaves it. Vivaldi only honours the layout when every tile gets its data at once, so both
+  // tabs are written together and once more shortly after. The new tab opens the command bar for its address.
+  const splitView = async (tab, layout) => {
+    const fresh = await chrome.tabs.get(tab.id);
+    const previous = window.__vm.tilingOf(fresh);
+    const others = previous
+      ? (await chrome.tabs.query({ currentWindow: true })).filter((t) => t.id !== fresh.id && window.__vm.tilingOf(t)?.id === previous.id)
+      : [];
+    const created = await chrome.tabs.create({ active: true, index: fresh.index + 1 });
+    const id = crypto.randomUUID();
+    const write = () => Promise.all([fresh, created].map((t, index) =>
+      setExtData(t, { tiling: { id, layout, type: "selection", index } })));
+    await write();
+    setTimeout(() => write().catch(() => {}), 400);
+    if (others.length === 1) await setExtData(others[0], { tiling: undefined });
+    else await Promise.all(others.map((t, index) => setExtData(t, { tiling: { ...window.__vm.tilingOf(t), index } })));
+  };
+  const closeSplitView = async (tab) => {
+    const id = window.__vm.tilingOf(tab)?.id;
+    const peers = (await chrome.tabs.query({ currentWindow: true })).filter((t) => window.__vm.tilingOf(t)?.id === id);
+    await Promise.all(peers.map((t) => setExtData(t, { tiling: undefined })));
+  };
+
   // Quick actions, matched against what is typed. `tab` actions apply to the page behind the bar.
   const ACTIONS = [
     { label: "View History", words: "history visited", run: () => openPage("vivaldi://history") },
@@ -103,6 +134,9 @@
       await navigator.clipboard?.writeText(tab.url).catch(() => {});
       toast("Copied Current URL");
     } },
+    { label: "Split View: Side by Side", words: "split tile vertical columns", tab: true, run: (tab) => splitView(tab, "row") },
+    { label: "Split View: Top and Bottom", words: "split tile horizontal rows", tab: true, run: (tab) => splitView(tab, "column") },
+    { label: "Close Split View", words: "unsplit untile split", tab: true, when: (tab) => !!window.__vm.tilingOf(tab), run: closeSplitView },
     { label: "Duplicate Tab", words: "clone copy", tab: true, run: (tab) => chrome.tabs.duplicate(tab.id) },
     { label: "Mute / Unmute Tab", words: "sound audio silence", tab: true, run: (tab) =>
       chrome.tabs.update(tab.id, { muted: !tab.mutedInfo?.muted }) },
@@ -250,7 +284,7 @@
       .some((w) => w.startsWith(needle)) || a.label.toLowerCase().includes(needle));
     if (!hits.length) return [];
     const tab = hits.some((a) => a.tab) ? await pageBehindBar() : null;
-    return hits.filter((a) => !a.tab || tab).slice(0, 3)
+    return hits.filter((a) => (!a.tab || tab) && (!a.when || a.when(tab))).slice(0, 3)
       .map((action) => ({ type: "action", action, tab, label: action.label }));
   };
 

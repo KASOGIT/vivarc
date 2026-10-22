@@ -72,3 +72,4 @@ Things that cost time to find out:
 - `auto_hide.enabled` is a master switch: when it is on, every bar defaults to hidden unless its own `auto_hide.*` key is explicitly `false`.
 - A new profile's welcome tab is `chrome-extension://mpognobbkildjkofajifpdfhcoklimli/components/welcome/welcome.html`, and it can open after the mod has run. "Welcome to Vivaldi" is the start page's title, not the welcome tab's.
 - Vivaldi does not write a pref that equals its default, so a key missing from `Preferences` does not mean the set failed.
+- Split view is Vivaldi's tab tiling, stored in each tab's `vivExtData` JSON as `tiling: {id, layout, type, index}`. A mod can write it with `chrome.tabs.update(id, {vivExtData})`. Measured on the rendered panes: `row` is side by side, `column` is one above the other. Write all tiles at once, and start a fresh `id` for each split: Vivaldi restores tile groups with the session, and reusing an old group keeps its old layout.

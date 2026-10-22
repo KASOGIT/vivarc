@@ -412,3 +412,4 @@
 #vm-panel .vm-space { display: flex; align-items: center; justify-content: space-between; }
 #vm-panel .vm-space .vm-act { display: flex; visibility: hidden; }
 #vm-panel .vm-space:hover .vm-act { visibility: visible; }
+#vm-panel .vm-split-mark { flex: none; opacity: 0.55; font-size: 14px; }
