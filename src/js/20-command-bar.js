@@ -86,6 +86,29 @@
     if (button) press(button);
     else chrome.downloads?.showDefaultFolder?.();
   };
+  const setExtData = async (tab, patch) => {
+    const fresh = await chrome.tabs.get(tab.id);
+    let ext = {};
+    try { ext = JSON.parse(fresh.vivExtData || "{}"); } catch (_) {}
+    await chrome.tabs.update(tab.id, { vivExtData: JSON.stringify({ ...ext, ...patch }) });
+  };
+  // Split view like Arc's: the page behind the bar and a new tab share a Vivaldi tile group. "column" puts them
+  // side by side, "row" one above the other. The new tab opens the command bar for its address.
+  const splitView = async (tab, layout) => {
+    const fresh = await chrome.tabs.get(tab.id);
+    const existing = window.__vm.tilingOf(fresh);
+    const id = existing?.id ?? crypto.randomUUID();
+    const peers = (await chrome.tabs.query({ currentWindow: true })).filter((t) => window.__vm.tilingOf(t)?.id === id);
+    const created = await chrome.tabs.create({ active: true, index: fresh.index + 1 });
+    if (!existing) await setExtData(fresh, { tiling: { id, layout, type: "selection", index: 0 } });
+    await setExtData(created, { tiling: { id, layout: existing?.layout ?? layout, type: "selection", index: existing ? peers.length : 1 } });
+  };
+  const closeSplitView = async (tab) => {
+    const id = window.__vm.tilingOf(tab)?.id;
+    const peers = (await chrome.tabs.query({ currentWindow: true })).filter((t) => window.__vm.tilingOf(t)?.id === id);
+    await Promise.all(peers.map((t) => setExtData(t, { tiling: undefined })));
+  };
+
   // Quick actions, matched against what is typed. `tab` actions apply to the page behind the bar.
   const ACTIONS = [
     { label: "View History", words: "history visited", run: () => openPage("vivaldi://history") },
@@ -103,6 +126,9 @@
       await navigator.clipboard?.writeText(tab.url).catch(() => {});
       toast("Copied Current URL");
     } },
+    { label: "Split View: Side by Side", words: "split tile vertical columns", tab: true, run: (tab) => splitView(tab, "column") },
+    { label: "Split View: Top and Bottom", words: "split tile horizontal rows", tab: true, run: (tab) => splitView(tab, "row") },
+    { label: "Close Split View", words: "unsplit untile split", tab: true, when: (tab) => !!window.__vm.tilingOf(tab), run: closeSplitView },
     { label: "Duplicate Tab", words: "clone copy", tab: true, run: (tab) => chrome.tabs.duplicate(tab.id) },
     { label: "Mute / Unmute Tab", words: "sound audio silence", tab: true, run: (tab) =>
       chrome.tabs.update(tab.id, { muted: !tab.mutedInfo?.muted }) },
@@ -250,7 +276,7 @@
       .some((w) => w.startsWith(needle)) || a.label.toLowerCase().includes(needle));
     if (!hits.length) return [];
     const tab = hits.some((a) => a.tab) ? await pageBehindBar() : null;
-    return hits.filter((a) => !a.tab || tab).slice(0, 3)
+    return hits.filter((a) => (!a.tab || tab) && (!a.when || a.when(tab))).slice(0, 3)
       .map((action) => ({ type: "action", action, tab, label: action.label }));
   };
 

@@ -47,7 +47,12 @@
     console.warn("[vivarc] shortcut hook unavailable:", e);
   }
 
-  window.__vm = { config, store, normalise, onShortcut: (fn) => subscribers.add(fn) };
+  // Vivaldi keeps a tab's tile ("split view") membership in its vivExtData JSON: {tiling: {id, layout, type, index}}.
+  const tilingOf = (tab) => {
+    try { return JSON.parse(tab?.vivExtData || "{}").tiling; } catch (_) { return undefined; }
+  };
+
+  window.__vm = { config, store, normalise, tilingOf, onShortcut: (fn) => subscribers.add(fn) };
 
   // Vivaldi re-renders #browser's class list, so the marker classes are re-applied whenever they go missing.
   const markListeners = new Set();
