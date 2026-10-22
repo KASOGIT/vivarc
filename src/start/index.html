@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome to Vivarc</title>
+<style>
+  :root {
+    --bg: #14131c;
+    --card: #1e1c2b;
+    --line: #34314a;
+    --text: #f1f0f8;
+    --muted: #9b98b4;
+    --accent: #8f86e6;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f4f3fa; --card: #fff; --line: #dcd9ec; --text: #1c1a2b; --muted: #6c6987; --accent: #5b4fd6; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 56px 24px 80px;
+    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+  }
+  main { max-width: 860px; margin: 0 auto; }
+  h1 { margin: 0 0 8px; font-size: 40px; letter-spacing: -0.02em; }
+  h1 span { color: var(--accent); }
+  h2 { margin: 48px 0 14px; font-size: 20px; }
+  .lead { margin: 0; color: var(--muted); font-size: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .card { padding: 18px 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+  .card h3 { margin: 0 0 6px; font-size: 16px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+  .grid.two { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); }
+  table { width: 100%; border-collapse: collapse; border: 1px solid var(--line); border-radius: 16px; background: var(--card); overflow: hidden; }
+  td { padding: 10px 18px; border-top: 1px solid var(--line); font-size: 14.5px; }
+  tr:first-child td { border-top: 0; }
+  td:first-child { width: 190px; white-space: nowrap; }
+  td:last-child { color: var(--muted); }
+  kbd {
+    display: inline-block;
+    min-width: 26px;
+    padding: 1px 8px;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 7px;
+    font: 600 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+    text-align: center;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); font-size: 14px; }
+  .chip b { color: var(--accent); }
+  footer { margin-top: 56px; color: var(--muted); font-size: 13.5px; }
+  code { padding: 1px 6px; border-radius: 6px; background: var(--card); border: 1px solid var(--line); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Welcome to <span>Vivarc</span></h1>
+  <p class="lead">Arc's way of browsing, inside Vivaldi. A sidebar for your tabs, a command bar for everything else.</p>
+
+  <h2>The sidebar</h2>
+  <div class="grid two">
+    <div class="card"><h3>Favorites</h3><p>The tiles at the top. Drag a tab onto the sidebar, or right-click a tab and choose Add to Favorites.</p></div>
+    <div class="card"><h3>Pinned</h3><p>Your folders and links, always one click away. Drag to reorder, drop onto a folder to file things.</p></div>
+    <div class="card"><h3>Open tabs</h3><p>Below the divider. They stay until you close them, or hover the divider and press Clear.</p></div>
+    <div class="card"><h3>Your look</h3><p>Hover the space name and click the palette to pick a color, intensity and grain for each profile.</p></div>
+  </div>
+
+  <h2>Keyboard shortcuts</h2>
+  <table>
+    <tr><td><kbd>⌘</kbd> <kbd>T</kbd></td><td>Open the command bar</td></tr>
+    <tr><td><kbd>⌘</kbd> <kbd>L</kbd></td><td>Edit the current page's address</td></tr>
+    <tr><td><kbd>⌘</kbd> <kbd>S</kbd></td><td>Show or hide the sidebar</td></tr>
+    <tr><td><kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>C</kbd></td><td>Copy the current page's URL</td></tr>
+    <tr><td><kbd>⌘</kbd> <kbd>E</kbd></td><td>Vivaldi's own Quick Commands</td></tr>
+  </table>
+
+  <h2>The command bar</h2>
+  <div class="grid">
+    <div class="card"><h3>Jump to anything</h3><p>Type to find open tabs, bookmarks and history, or paste a URL. Anything else is a web search.</p></div>
+    <div class="card"><h3>Quick actions</h3><p>Type <code>history</code>, <code>downloads</code>, <code>pin</code>, <code>theme</code>… and run the action that appears.</p></div>
+    <div class="card"><h3>Search shortcuts</h3><p>Type a short keyword, then press <kbd>Tab</kbd> to search that site directly. The keywords below work out of the box.</p></div>
+  </div>
+  <h2>Search shortcuts</h2>
+  <div class="chips">
+    <span class="chip"><b>yt</b> YouTube</span>
+    <span class="chip"><b>g</b> Google</span>
+    <span class="chip"><b>d</b> DuckDuckGo</span>
+    <span class="chip"><b>gm</b> Gmail</span>
+    <span class="chip"><b>gd</b> Drive</span>
+    <span class="chip"><b>gc</b> Calendar</span>
+    <span class="chip"><b>m</b> Maps</span>
+    <span class="chip"><b>gh</b> GitHub</span>
+    <span class="chip"><b>so</b> Stack Overflow</span>
+    <span class="chip"><b>npm</b> npm</span>
+    <span class="chip"><b>mdn</b> MDN</span>
+    <span class="chip"><b>w</b> Wikipedia</span>
+    <span class="chip"><b>r</b> Reddit</span>
+    <span class="chip"><b>x</b> X</span>
+    <span class="chip"><b>li</b> LinkedIn</span>
+    <span class="chip"><b>az</b> Amazon</span>
+    <span class="chip"><b>tr</b> Translate</span>
+  </div>
+  <p class="lead" style="margin-top:14px;font-size:14.5px">Your own Vivaldi search engine nicknames work too, and win over these when they clash.</p>
+
+  <footer>
+    You can reopen this page any time: press <kbd>⌘</kbd> <kbd>T</kbd>, type <code>guide</code> and press Enter.
+    Vivarc is free software under the MIT license.
+  </footer>
+</main>
+</body>
+</html>

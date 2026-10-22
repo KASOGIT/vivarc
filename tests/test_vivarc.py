@@ -1,0 +1,172 @@
+import copy
+import json
+import os
+import sys
+import tempfile
+import unittest
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import vivarc  # noqa: E402
+
+DEFAULTS = {
+    "COMMAND_NEW_TAB": {"shortcuts": ["meta+t"], "gestures": ["2"]},
+    "COMMAND_SHOW_QUICK_COMMANDS": {"shortcuts": ["meta+t", "meta+e", "f2"]},
+    "COMMAND_PAGE_COPY_URL": {"shortcuts": ["meta+c"]},
+    "COMMAND_CLOSE_TAB": {"shortcuts": ["meta+w"]},
+    "COMMAND_SAVE_PAGE": {"shortcuts": ["meta+s"]},
+    "COMMAND_TOGGLE_AUTO_HIDE_TAB_BAR": {"shortcuts": []},
+}
+
+
+def prefs(**extra):
+    base = {"vivaldi": {"toolbars": {"tabbar_before": ["TabButton", "AddressField", "Spacer"]}}}
+    base.update(extra)
+    return base
+
+
+class PatchPreferences(unittest.TestCase):
+    def test_creates_the_full_default_action_list_when_the_profile_has_none(self):
+        new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS], "/css")
+        actions = new["vivaldi"]["actions"][0]
+        self.assertIn("COMMAND_CLOSE_TAB", actions)
+        self.assertEqual(actions["COMMAND_CLOSE_TAB"]["shortcuts"], ["meta+w"])
+
+    def test_frees_cmd_t_and_binds_copy_url(self):
+        new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS], "/css")
+        actions = new["vivaldi"]["actions"][0]
+        self.assertEqual(actions["COMMAND_NEW_TAB"]["shortcuts"], [])
+        self.assertEqual(actions["COMMAND_NEW_TAB"]["gestures"], ["2"])
+        self.assertEqual(actions["COMMAND_SHOW_QUICK_COMMANDS"]["shortcuts"], ["meta+e", "f2"])
+        self.assertIn("shift+meta+c", actions["COMMAND_PAGE_COPY_URL"]["shortcuts"])
+
+    def test_keeps_the_users_own_shortcuts(self):
+        mine = {"COMMAND_CLOSE_TAB": {"shortcuts": ["ctrl+q"]}, "COMMAND_NEW_TAB": {"shortcuts": ["meta+t", "ctrl+n"]}}
+        new, _ = vivarc.patch_preferences(prefs(vivaldi={"actions": [mine], "toolbars": {}}), [DEFAULTS], "/css")
+        actions = new["vivaldi"]["actions"][0]
+        self.assertEqual(actions["COMMAND_CLOSE_TAB"]["shortcuts"], ["ctrl+q"])
+        self.assertEqual(actions["COMMAND_NEW_TAB"]["shortcuts"], ["ctrl+n"])
+
+    def test_removes_the_tab_bar_spacer_and_sets_left_tabs_and_css_dir(self):
+        new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS], "/home/me/.vivarc/css")
+        self.assertEqual(new["vivaldi"]["toolbars"]["tabbar_before"], ["TabButton", "AddressField"])
+        self.assertEqual(new["vivaldi"]["tabs"]["bar"]["position"], 1)
+        self.assertEqual(new["vivaldi"]["appearance"]["css_ui_mods_directory"], "/home/me/.vivarc/css")
+
+    def test_cmd_s_toggles_the_sidebar_instead_of_saving_the_page(self):
+        new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS], "/css")
+        actions = new["vivaldi"]["actions"][0]
+        self.assertEqual(actions["COMMAND_TOGGLE_AUTO_HIDE_TAB_BAR"]["shortcuts"], ["meta+s"])
+        self.assertEqual(actions["COMMAND_SAVE_PAGE"]["shortcuts"], [])
+
+    def test_drops_the_workspace_button_and_swaps_vpn_for_downloads(self):
+        p = prefs(vivaldi={"toolbars": {
+            "tabbar_before": ["WorkspaceButton", "TabButton", "Spacer"],
+            "tabbar_after": ["NewTab", "VPNButton", "UpdateButton"]}})
+        new, _ = vivarc.patch_preferences(p, [DEFAULTS], "/css")
+        self.assertEqual(new["vivaldi"]["toolbars"]["tabbar_before"], ["TabButton"])
+        self.assertEqual(new["vivaldi"]["toolbars"]["tabbar_after"], ["NewTab", "PanelDownloads", "UpdateButton"])
+
+    def test_does_not_add_a_second_downloads_button(self):
+        p = prefs(vivaldi={"toolbars": {"tabbar_after": ["PanelDownloads", "VPNButton"]}})
+        new, _ = vivarc.patch_preferences(p, [DEFAULTS], "/css")
+        self.assertEqual(new["vivaldi"]["toolbars"]["tabbar_after"], ["PanelDownloads"])
+
+    def test_restore_brings_back_both_toolbars(self):
+        p = prefs(vivaldi={"toolbars": {
+            "tabbar_before": ["WorkspaceButton", "TabButton"], "tabbar_after": ["VPNButton"]}})
+        new, snap = vivarc.patch_preferences(p, [DEFAULTS], "/css")
+        restored = vivarc.restore_preferences(new, snap)
+        self.assertEqual(restored["vivaldi"]["toolbars"]["tabbar_before"], ["WorkspaceButton", "TabButton"])
+        self.assertEqual(restored["vivaldi"]["toolbars"]["tabbar_after"], ["VPNButton"])
+
+    def test_is_idempotent(self):
+        once, _ = vivarc.patch_preferences(prefs(), [DEFAULTS], "/css")
+        twice, _ = vivarc.patch_preferences(copy.deepcopy(once), [DEFAULTS], "/css")
+        self.assertEqual(once, twice)
+
+    def test_does_not_mutate_its_input(self):
+        original = prefs()
+        snapshot = copy.deepcopy(original)
+        vivarc.patch_preferences(original, [DEFAULTS], "/css")
+        self.assertEqual(original, snapshot)
+
+    def test_restore_brings_back_the_original_values_and_removes_added_keys(self):
+        original = prefs(vivaldi={"toolbars": {"tabbar_before": ["TabButton", "Spacer"]}, "tabs": {"bar": {"position": 0}}})
+        new, snap = vivarc.patch_preferences(original, [DEFAULTS], "/css")
+        restored = vivarc.restore_preferences(new, snap)
+        self.assertEqual(restored["vivaldi"]["toolbars"]["tabbar_before"], ["TabButton", "Spacer"])
+        self.assertEqual(restored["vivaldi"]["tabs"]["bar"]["position"], 0)
+        self.assertNotIn("actions", restored["vivaldi"])
+        self.assertNotIn("appearance", restored["vivaldi"])
+
+
+class LocalState(unittest.TestCase):
+    def test_adds_flags_without_overwriting_existing_ones(self):
+        ls = {"browser": {"enabled_labs_experiments": ["some-flag@1"]}}
+        new, added = vivarc.patch_local_state(ls)
+        self.assertEqual(new["browser"]["enabled_labs_experiments"][0], "some-flag@1")
+        self.assertIn("vivaldi-css-mods@1", new["browser"]["enabled_labs_experiments"])
+        self.assertIn("vivaldi-horizontal-pinned-tabs@1", new["browser"]["enabled_labs_experiments"])
+        self.assertEqual(sorted(added), ["vivaldi-css-mods@1", "vivaldi-horizontal-pinned-tabs@1"])
+
+    def test_creates_the_list_when_missing_and_only_reports_flags_it_added(self):
+        ls = {"browser": {"enabled_labs_experiments": ["vivaldi-css-mods@1"]}}
+        _, added = vivarc.patch_local_state(ls)
+        self.assertEqual(added, ["vivaldi-horizontal-pinned-tabs@1"])
+        fresh, _ = vivarc.patch_local_state({})
+        self.assertEqual(len(fresh["browser"]["enabled_labs_experiments"]), 2)
+
+    def test_restore_removes_only_what_was_added(self):
+        ls = {"browser": {"enabled_labs_experiments": ["vivaldi-css-mods@1"]}}
+        new, added = vivarc.patch_local_state(ls)
+        restored = vivarc.restore_local_state(new, added)
+        self.assertEqual(restored["browser"]["enabled_labs_experiments"], ["vivaldi-css-mods@1"])
+
+
+class WindowHtml(unittest.TestCase):
+    HTML = "<html><body>\n</body></html>"
+
+    def test_injects_one_script_block_before_body_end(self):
+        out = vivarc.inject_window_html(self.HTML)
+        self.assertEqual(out.count("vivarc.js"), 1)
+        self.assertLess(out.index("vivarc.js"), out.index("</body>"))
+
+    def test_injection_is_idempotent_and_removable(self):
+        once = vivarc.inject_window_html(self.HTML)
+        self.assertEqual(vivarc.inject_window_html(once), once)
+        self.assertEqual(vivarc.remove_window_html(once).strip(), self.HTML.strip())
+
+
+class Profiles(unittest.TestCase):
+    def test_lists_profiles_from_local_state_in_order(self):
+        ls = {"profile": {"info_cache": {"Profile 2": {"name": "Work"}, "Default": {"name": "Me"}}}}
+        self.assertEqual(vivarc.find_profiles(ls), [("Default", "Me"), ("Profile 2", "Work")])
+
+    def test_returns_default_when_local_state_has_no_profiles(self):
+        self.assertEqual(vivarc.find_profiles({}), [("Default", "Default")])
+
+
+class Bundle(unittest.TestCase):
+    def test_orders_files_by_name_and_prepends_config(self):
+        with tempfile.TemporaryDirectory() as d:
+            for name, body in (("20-b.js", "B();"), ("00-a.js", "A();")):
+                with open(os.path.join(d, name), "w") as f:
+                    f.write(body)
+            out = vivarc.build_bundle(d, {"suggestions": "off"}, extras=[("peek", "P();")])
+        self.assertTrue(out.startswith("window.__vmConfig = " + json.dumps({"suggestions": "off"})))
+        self.assertLess(out.index("A();"), out.index("B();"))
+        self.assertIn("P();", out)
+
+
+class BundleOrder(unittest.TestCase):
+    def test_pre_scripts_run_before_the_modules_that_read_their_globals(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "00-core.js"), "w") as f:
+                f.write("CORE();")
+            out = vivarc.build_bundle(d, {}, extras=[("peek", "PEEK();")], pre=[("icons", "ICONS();")])
+        self.assertLess(out.index("ICONS();"), out.index("CORE();"))
+        self.assertLess(out.index("CORE();"), out.index("PEEK();"))
+
+
+if __name__ == "__main__":
+    unittest.main()
