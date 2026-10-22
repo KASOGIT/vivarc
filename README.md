@@ -29,7 +29,7 @@ macOS, Vivaldi 8.x, Python 3 (preinstalled with the Xcode command line tools). W
 ## Install
 
 ```sh
-git clone https://github.com/<you>/vivarc.git && cd vivarc
+git clone https://github.com/KASOGIT/vivarc.git && cd vivarc
 # quit Vivaldi (Cmd+Q) first
 ./vivarc.py install
 ```
@@ -74,4 +74,4 @@ MIT, see [LICENSE](LICENSE). Peek is [VividPeek by PaRr0tBoY and contributors](h
 
 ## Support
 
-If Vivarc saves you time, you can [sponsor the project](https://github.com/sponsors/<you>). Issues and pull requests are welcome.
+If Vivarc saves you time, you can [sponsor the project](https://github.com/sponsors/KASOGIT). Issues and pull requests are welcome.
