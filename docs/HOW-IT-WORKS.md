@@ -59,3 +59,13 @@ profiles to Vivaldi's defaults, since they have no snapshot.
 - Vivaldi profiles are the equivalent of Arc spaces; each is its own window (switch with Cmd+`).
 - Vivaldi's own UI code cannot be called from a mod, so Cmd+T opens Vivarc's command bar, not Vivaldi's Quick Commands (Cmd+E and F2 still do).
 - macOS only for now.
+
+## Notes for contributors
+
+Things that cost time to find out:
+
+- Vivaldi toolbar buttons are found with `[data-name="<PanelId>"]` (for example `PanelDownloads`), not a `name` attribute.
+- They ignore a bare `.click()`. Send `pointerdown`, `mousedown`, `pointerup`, `mouseup`, `click` in that order.
+- Changing the layout inside a `dragstart` handler makes Chromium cancel the drag. Defer it with `requestAnimationFrame`.
+- Re-rendering the sidebar while a drag is running detaches the dragged node. Renders are held back until `dragend`.
+- A mod cannot call Vivaldi's own commands or reach its webpack modules; only `chrome.*`, `vivaldi.prefs`, `vivaldi.searchEngines` and `vivaldi.tabsPrivate` are available.
