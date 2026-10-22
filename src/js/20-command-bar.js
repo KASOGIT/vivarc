@@ -92,26 +92,29 @@
     try { ext = JSON.parse(fresh.vivExtData || "{}"); } catch (_) {}
     await chrome.tabs.update(tab.id, { vivExtData: JSON.stringify({ ...ext, ...patch }) });
   };
-  // Split view like Arc's: the page behind the bar and a new tab share a Vivaldi tile group. "row" puts them
-  // side by side, "column" one above the other (measured from the rendered panes in Vivaldi 8.2). Vivaldi only honours the layout when every tile gets its data at
-  // once, so both tabs are written together and once more shortly after. The new tab opens the command bar.
+  // Split view like Arc's: the page behind the bar and a new tab form a fresh Vivaldi tile group. "row" puts them
+  // side by side, "column" one above the other (measured from the rendered panes in Vivaldi 8.2). If the page was
+  // already in a group it leaves it. Vivaldi only honours the layout when every tile gets its data at once, so both
+  // tabs are written together and once more shortly after. The new tab opens the command bar for its address.
   const splitView = async (tab, layout) => {
     const fresh = await chrome.tabs.get(tab.id);
-    const existing = window.__vm.tilingOf(fresh);
-    const id = existing?.id ?? crypto.randomUUID();
-    const kind = existing?.layout ?? layout;
-    const peers = (await chrome.tabs.query({ currentWindow: true })).filter((t) => window.__vm.tilingOf(t)?.id === id);
+    const previous = window.__vm.tilingOf(fresh);
+    const others = previous
+      ? (await chrome.tabs.query({ currentWindow: true })).filter((t) => t.id !== fresh.id && window.__vm.tilingOf(t)?.id === previous.id)
+      : [];
     const created = await chrome.tabs.create({ active: true, index: fresh.index + 1 });
-    const members = [...peers.length ? peers : [fresh], created];
-    const write = () => Promise.all(members.map((t, index) =>
-      setExtData(t, { tiling: { id, layout: kind, type: "selection", index } })));
+    const id = crypto.randomUUID();
+    const write = () => Promise.all([fresh, created].map((t, index) =>
+      setExtData(t, { tiling: { id, layout, type: "selection", index } })));
     await write();
     setTimeout(() => write().catch(() => {}), 400);
+    if (others.length === 1) await setExtData(others[0], { tiling: undefined });
+    else await Promise.all(others.map((t, index) => setExtData(t, { tiling: { ...window.__vm.tilingOf(t), index } })));
     setTimeout(async () => {
       const rects = [...document.querySelectorAll("webview")].map((w) => w.getBoundingClientRect())
         .filter((r) => r.width > 80 && r.height > 80).map((r) => [Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)]);
       const log = await window.__vm.store.get("split-debug", []);
-      log.push({ layout: kind, rects });
+      log.push({ layout, rects });
       window.__vm.store.set("split-debug", log.slice(-8));
     }, 1500);
   };
