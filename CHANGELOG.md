@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Fix: the sidebar could stay empty after a restart when tab events cancelled the first bookmark load.
 - Quick actions Split View: Side by Side, Split View: Top and Bottom and Close Split View, built on Vivaldi's tab tiling. A split tab shows a ◫ mark in the sidebar.
 
 ## 0.1.0 - 2026-10-23
