@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/sidebar.png" alt="Vivarc sidebar in Vivaldi: favorites grid, pinned folders, open tabs" width="860">
+  <img src="docs/demo.gif" alt="Vivarc demo: split view, the command bar and a YouTube search shortcut in Vivaldi" width="860">
 </p>
 
 > **Arc is being discontinued on December 22, 2026**, according to the announcement email The Browser Company sent. If you want to keep the sidebar and command bar workflow somewhere else, Vivarc gives you most of it in Vivaldi, free and open source.
@@ -34,6 +34,10 @@ Requires macOS, Vivaldi 8.x and Python 3 (included with the Xcode command line t
 ## What you get
 
 **One sidebar.** A favorites grid on top, your pinned folders below, a divider with *Clear*, then your open tabs. Drag and drop between all of them, nest folders, rename in place, right-click for everything. Removed items go to Vivaldi's bookmark trash.
+
+<p align="center">
+  <img src="docs/screenshots/sidebar.png" alt="Vivarc sidebar: favorites grid, pinned folders, open tabs" width="760">
+</p>
 
 **A command bar on Cmd+T.** It opens over the page you are on. Type to jump to an open tab, a bookmark or a history entry, paste a URL, or search.
 
