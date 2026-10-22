@@ -87,7 +87,7 @@
   const ensureSideTabs = async () => {
     const position = await get("vivaldi.tabs.bar.position");
     if (position === 1 || position === 2 || position === "left" || position === "right") return;
-    await set("vivaldi.tabs.bar.position", 1);
+    await set("vivaldi.tabs.bar.position", "left"); // the UI compares the enum by name, so a number would not take effect live
   };
 
   const configure = async () => {
