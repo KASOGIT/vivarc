@@ -68,3 +68,7 @@ Things that cost time to find out:
 - Changing the layout inside a `dragstart` handler makes Chromium cancel the drag. Defer it with `requestAnimationFrame`.
 - Re-rendering the sidebar while a drag is running detaches the dragged node. Renders are held back until `dragend`.
 - A mod cannot call Vivaldi's own commands or reach its webpack modules; only `chrome.*`, `vivaldi.prefs`, `vivaldi.searchEngines` and `vivaldi.tabsPrivate` are available.
+- Enum prefs set through `vivaldi.prefs.set` only take effect live when set by name (`"left"`, `"right"`, `"overlay"`). A number is stored but the UI ignores it until restart. The installer writes numbers because it edits the file while Vivaldi is closed.
+- `auto_hide.enabled` is a master switch: when it is on, every bar defaults to hidden unless its own `auto_hide.*` key is explicitly `false`.
+- A new profile's welcome tab is `chrome-extension://mpognobbkildjkofajifpdfhcoklimli/components/welcome/welcome.html`, and it can open after the mod has run. "Welcome to Vivaldi" is the start page's title, not the welcome tab's.
+- Vivaldi does not write a pref that equals its default, so a key missing from `Preferences` does not mean the set failed.
