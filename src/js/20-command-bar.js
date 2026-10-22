@@ -92,8 +92,8 @@
     try { ext = JSON.parse(fresh.vivExtData || "{}"); } catch (_) {}
     await chrome.tabs.update(tab.id, { vivExtData: JSON.stringify({ ...ext, ...patch }) });
   };
-  // Split view like Arc's: the page behind the bar and a new tab share a Vivaldi tile group. "column" puts them
-  // side by side, "row" one above the other. The new tab opens the command bar for its address.
+  // Split view like Arc's: the page behind the bar and a new tab share a Vivaldi tile group. "row" puts them
+  // side by side, "column" one above the other (checked in Vivaldi 8.2). The new tab opens the command bar for its address.
   const splitView = async (tab, layout) => {
     const fresh = await chrome.tabs.get(tab.id);
     const existing = window.__vm.tilingOf(fresh);
@@ -126,8 +126,8 @@
       await navigator.clipboard?.writeText(tab.url).catch(() => {});
       toast("Copied Current URL");
     } },
-    { label: "Split View: Side by Side", words: "split tile vertical columns", tab: true, run: (tab) => splitView(tab, "column") },
-    { label: "Split View: Top and Bottom", words: "split tile horizontal rows", tab: true, run: (tab) => splitView(tab, "row") },
+    { label: "Split View: Side by Side", words: "split tile vertical columns", tab: true, run: (tab) => splitView(tab, "row") },
+    { label: "Split View: Top and Bottom", words: "split tile horizontal rows", tab: true, run: (tab) => splitView(tab, "column") },
     { label: "Close Split View", words: "unsplit untile split", tab: true, when: (tab) => !!window.__vm.tilingOf(tab), run: closeSplitView },
     { label: "Duplicate Tab", words: "clone copy", tab: true, run: (tab) => chrome.tabs.duplicate(tab.id) },
     { label: "Mute / Unmute Tab", words: "sound audio silence", tab: true, run: (tab) =>
