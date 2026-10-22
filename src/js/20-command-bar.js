@@ -110,13 +110,6 @@
     setTimeout(() => write().catch(() => {}), 400);
     if (others.length === 1) await setExtData(others[0], { tiling: undefined });
     else await Promise.all(others.map((t, index) => setExtData(t, { tiling: { ...window.__vm.tilingOf(t), index } })));
-    setTimeout(async () => {
-      const rects = [...document.querySelectorAll("webview")].map((w) => w.getBoundingClientRect())
-        .filter((r) => r.width > 80 && r.height > 80).map((r) => [Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)]);
-      const log = await window.__vm.store.get("split-debug", []);
-      log.push({ layout, rects });
-      window.__vm.store.set("split-debug", log.slice(-8));
-    }, 1500);
   };
   const closeSplitView = async (tab) => {
     const id = window.__vm.tilingOf(tab)?.id;
