@@ -66,13 +66,17 @@ Requires macOS, Vivaldi 8.x and Python 3 (included with the Xcode command line t
 
 **Also:** an optional link preview (Peek, by [PaRr0tBoY](https://github.com/PaRr0tBoY/Awesome-Vivaldi), downloaded from upstream and verified at install), and an importer for your Arc spaces and site icons.
 
-## Coming from Arc
+## Coming from Arc or Chrome
+
+**From Chrome (or Safari, Firefox, Edge):** use Vivaldi's own importer, **File > Import Bookmarks and Settings…**, and most Chrome extensions install from the Chrome Web Store. The guide page that opens in a new profile covers this too. Imported bookmarks stay in Vivaldi's bookmarks; pin a site into the sidebar with the `pin` or `favorites` quick action.
+
+**From Arc:**
 
 ```sh
 ./vivarc.py import-arc     # reads Arc's data (read only), writes ~/.vivarc/import/arc-<space>.html and your site icons
 ```
 
-In each Vivaldi profile: **Cmd+Shift+B > Import Bookmarks and Settings > HTML file**, pick the matching file. Quit Vivaldi and run `./vivarc.py apply` once to include the icons. Arc spaces become Vivaldi profiles.
+In each Vivaldi profile: **File > Import Bookmarks and Settings… > HTML file**, pick the matching file. Quit Vivaldi and run `./vivarc.py apply` once to include the icons. Arc spaces become Vivaldi profiles.
 
 ### Where Vivaldi differs from Arc
 
