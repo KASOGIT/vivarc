@@ -36,6 +36,7 @@ BLOCK = f'{BEGIN}\n<script src="vivarc.js"></script>\n{END}'
 FREED_KEY = "meta+t"  # the command bar listens for Cmd+T itself
 COPY_URL_KEY = "shift+meta+c"
 TOGGLE_SIDEBAR_KEY = "meta+s"
+SIDEBAR_TOOLBAR = ["TabButton", "Extensions", "FlexibleSpacer", "Back", "Reload", "Forward", "AddressField"]
 
 # Peek is community code (GPL-3.0, PaRr0tBoY/Awesome-Vivaldi). It is downloaded at install time from a
 # pinned commit and verified; nothing of it is stored in this repository.
@@ -51,6 +52,7 @@ TOUCHED = [
     ("vivaldi", "actions"),
     ("vivaldi", "toolbars", "tabbar_before"),
     ("vivaldi", "toolbars", "tabbar_after"),
+    ("vivaldi", "address_bar", "visible"),
     ("vivaldi", "tabs", "bar", "position"),
 ]
 
@@ -130,8 +132,10 @@ def patch_preferences(prefs, default_actions):
     _set(new, ("vivaldi", "actions"), actions_list)
 
     bar = _get(new, ("vivaldi", "toolbars", "tabbar_before"))
-    if bar is not _MISSING:
-        _set(new, ("vivaldi", "toolbars", "tabbar_before"), [x for x in bar if x not in ("Spacer", "WorkspaceButton")])
+    bar = ["WorkspaceButton"] if bar is _MISSING else bar
+    bar = [x for x in bar if x not in ("Spacer", "WorkspaceButton")]
+    _set(new, ("vivaldi", "toolbars", "tabbar_before"), bar if "AddressField" in bar else list(SIDEBAR_TOOLBAR))
+    _set(new, ("vivaldi", "address_bar", "visible"), False)
     after = _get(new, ("vivaldi", "toolbars", "tabbar_after"))
     if after is not _MISSING:
         _set(new, ("vivaldi", "toolbars", "tabbar_after"), swap_vpn_for_downloads(after))

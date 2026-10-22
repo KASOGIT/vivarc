@@ -10,8 +10,11 @@
   const COPY_URL = "shift+meta+c";
 
   // Bump when the steps change: profiles already set up then run the (idempotent) steps once more.
-  const VERSION = 4;
+  const VERSION = 5;
   const TOGGLE = "meta+s";
+
+  // The address bar and navigation buttons live inside the sidebar; the top bar is hidden.
+  const SIDEBAR_TOOLBAR = ["TabButton", "Extensions", "FlexibleSpacer", "Back", "Reload", "Forward", "AddressField"];
 
   const tidyToolbar = (list, remove, swap) => {
     const out = [];
@@ -25,18 +28,19 @@
 
   const tidyToolbars = async () => {
     const edits = [
-      ["tabbar_before", ["Spacer", "WorkspaceButton"], {}],
-      ["tabbar_after", [], { VPNButton: "PanelDownloads" }],
+      ["tabbar_before", ["Spacer", "WorkspaceButton"], {}, SIDEBAR_TOOLBAR],
+      ["tabbar_after", [], { VPNButton: "PanelDownloads" }, null],
     ];
     let whole = null;
-    for (const [name, remove, swap] of edits) {
+    for (const [name, remove, swap, required] of edits) {
       let list = await get(`vivaldi.toolbars.${name}`);
       if (!Array.isArray(list)) {
         whole ||= (await get("vivaldi.toolbars")) || {};
         list = whole[name];
       }
       if (!Array.isArray(list)) continue;
-      const next = tidyToolbar(list, remove, swap);
+      let next = tidyToolbar(list, remove, swap);
+      if (required && !next.includes("AddressField")) next = [...required];
       if (next.join() === list.join()) continue;
       if (whole && whole[name] === list) whole[name] = next;
       else await set(`vivaldi.toolbars.${name}`, next);
@@ -96,6 +100,7 @@
     if ((await window.__vm.store.get("bootstrap", 0)) >= VERSION) return;
     await bindShortcuts();
     await tidyToolbars();
+    await set("vivaldi.address_bar.visible", false);
     await replaceWelcome();
     await window.__vm.store.set("bootstrap", VERSION);
   };

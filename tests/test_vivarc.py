@@ -60,11 +60,19 @@ class PatchPreferences(unittest.TestCase):
 
     def test_drops_the_workspace_button_and_swaps_vpn_for_downloads(self):
         p = prefs(vivaldi={"toolbars": {
-            "tabbar_before": ["WorkspaceButton", "TabButton", "Spacer"],
+            "tabbar_before": ["WorkspaceButton", "TabButton", "AddressField", "Spacer"],
             "tabbar_after": ["NewTab", "VPNButton", "UpdateButton"]}})
         new, _ = vivarc.patch_preferences(p, [DEFAULTS])
-        self.assertEqual(new["vivaldi"]["toolbars"]["tabbar_before"], ["TabButton"])
+        self.assertEqual(new["vivaldi"]["toolbars"]["tabbar_before"], ["TabButton", "AddressField"])
         self.assertEqual(new["vivaldi"]["toolbars"]["tabbar_after"], ["NewTab", "PanelDownloads", "UpdateButton"])
+
+    def test_a_fresh_profile_gets_the_address_bar_inside_the_sidebar_and_none_on_top(self):
+        new, _ = vivarc.patch_preferences({}, [DEFAULTS])
+        bar = new["vivaldi"]["toolbars"]["tabbar_before"]
+        self.assertEqual(bar[-1], "AddressField")
+        self.assertIn("Back", bar)
+        self.assertNotIn("WorkspaceButton", bar)
+        self.assertIs(new["vivaldi"]["address_bar"]["visible"], False)
 
     def test_does_not_add_a_second_downloads_button(self):
         p = prefs(vivaldi={"toolbars": {"tabbar_after": ["PanelDownloads", "VPNButton"]}})
@@ -78,6 +86,7 @@ class PatchPreferences(unittest.TestCase):
         restored = vivarc.restore_preferences(new, snap)
         self.assertEqual(restored["vivaldi"]["toolbars"]["tabbar_before"], ["WorkspaceButton", "TabButton"])
         self.assertEqual(restored["vivaldi"]["toolbars"]["tabbar_after"], ["VPNButton"])
+        self.assertNotIn("address_bar", restored["vivaldi"])
 
     def test_is_idempotent(self):
         once, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])

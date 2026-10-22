@@ -492,12 +492,22 @@
     store.set("icons", icons);
   };
 
+  const STARTER_FAVORITES = [
+    ["Gmail", "https://mail.google.com/"],
+    ["Calendar", "https://calendar.google.com/"],
+    ["Drive", "https://drive.google.com/"],
+    ["YouTube", "https://www.youtube.com/"],
+    ["GitHub", "https://github.com/"],
+    ["Maps", "https://www.google.com/maps"],
+  ];
+
   let triedFirstRun = false;
   const createSpace = async (tree) => {
     const bar = tree[0]?.children?.[0];
     if (!bar) return;
     const space = await chrome.bookmarks.create({ parentId: bar.id, title: cfg.spaceFolderTitle });
-    await chrome.bookmarks.create({ parentId: space.id, title: "Favorites" });
+    const favs = await chrome.bookmarks.create({ parentId: space.id, title: "Favorites" });
+    for (const [title, url] of STARTER_FAVORITES) await chrome.bookmarks.create({ parentId: favs.id, title, url });
     await chrome.bookmarks.create({ parentId: space.id, title: "Pinned" });
   };
 

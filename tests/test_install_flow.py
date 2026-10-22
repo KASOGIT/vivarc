@@ -59,7 +59,8 @@ class InstallFlow(unittest.TestCase):
         self.run_cli("install", "--no-peek")
         for name in ("Default", "Profile 1"):
             vivaldi = self.prefs(name)["vivaldi"]
-            self.assertEqual(vivaldi["toolbars"]["tabbar_before"], ["TabButton"])
+            self.assertEqual(vivaldi["toolbars"]["tabbar_before"][-1], "AddressField")
+            self.assertNotIn("Spacer", vivaldi["toolbars"]["tabbar_before"])
             self.assertNotIn("appearance", vivaldi)
             self.assertEqual(vivaldi["actions"][0]["COMMAND_NEW_TAB"]["shortcuts"], [])
         res = os.path.join(self.app, vivarc.RESOURCES)
