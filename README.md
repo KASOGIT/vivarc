@@ -3,6 +3,8 @@
 **An Arc-style sidebar, command bar and theme editor for Vivaldi.**
 Favorites grid, pinned folders and open tabs in one panel. Cmd+T command bar with quick actions and search shortcuts. Drag and drop. Per-profile colour themes. One command to install, one to remove.
 
+> Arc is being discontinued on December 22, 2026, according to the announcement email The Browser Company sent. If you are looking for somewhere to land that keeps the sidebar and command bar workflow, this is one option.
+
 > Not affiliated with The Browser Company or Vivaldi Technologies. "Arc" and "Vivaldi" are their owners' trademarks; the name is used only to describe compatibility.
 
 <!-- screenshots: docs/screenshots/sidebar.png, command-bar.png, theme.png -->
