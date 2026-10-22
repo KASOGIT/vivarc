@@ -58,6 +58,12 @@ TOUCHED = [
     ("vivaldi", "panels", "position"),
     ("vivaldi", "auto_hide", "enabled"),
     ("vivaldi", "auto_hide", "panel"),
+    ("vivaldi", "auto_hide", "tab_bar"),
+    ("vivaldi", "auto_hide", "address_bar"),
+    ("vivaldi", "auto_hide", "status_bar"),
+    ("vivaldi", "auto_hide", "bookmarks_bar"),
+    ("vivaldi", "auto_hide", "show_introduction"),
+    ("vivaldi", "status_bar", "display"),
     ("vivaldi", "tabs", "bar", "width"),
     ("vivaldi", "tabs", "bar", "position"),
 ]
@@ -147,7 +153,10 @@ def patch_preferences(prefs, default_actions):
     _set(new, ("vivaldi", "toolbars", "tabbar_after"), after if "AccountButton" in after else list(SIDEBAR_BOTTOM))
     _set(new, ("vivaldi", "panels", "position"), 1)
     _set(new, ("vivaldi", "auto_hide", "enabled"), True)
-    _set(new, ("vivaldi", "auto_hide", "panel"), True)
+    for key, value in (("panel", True), ("tab_bar", False), ("address_bar", False), ("status_bar", False),
+                       ("bookmarks_bar", False), ("show_introduction", False)):
+        _set(new, ("vivaldi", "auto_hide", key), value)
+    _set(new, ("vivaldi", "status_bar", "display"), 2)  # overlay: only appears on hover
     if _get(new, ("vivaldi", "tabs", "bar", "width")) is _MISSING:
         _set(new, ("vivaldi", "tabs", "bar", "width"), SIDEBAR_WIDTH)
     _set(new, ("vivaldi", "tabs", "bar", "position"), 1)

@@ -87,6 +87,17 @@ class PatchPreferences(unittest.TestCase):
         self.assertIs(new["vivaldi"]["auto_hide"]["enabled"], True)
         self.assertIs(new["vivaldi"]["auto_hide"]["panel"], True)
 
+    def test_auto_hide_starts_with_the_sidebar_visible_and_no_introduction_popup(self):
+        new, _ = vivarc.patch_preferences({}, [DEFAULTS])
+        hide = new["vivaldi"]["auto_hide"]
+        for bar in ("tab_bar", "address_bar", "status_bar", "bookmarks_bar"):
+            self.assertIs(hide[bar], False)
+        self.assertIs(hide["show_introduction"], False)
+
+    def test_the_status_bar_only_overlays(self):
+        new, _ = vivarc.patch_preferences({}, [DEFAULTS])
+        self.assertEqual(new["vivaldi"]["status_bar"]["display"], 2)
+
     def test_keeps_a_sidebar_width_the_user_already_chose(self):
         mine = {"vivaldi": {"tabs": {"bar": {"width": 500}}}}
         new, _ = vivarc.patch_preferences(mine, [DEFAULTS])
@@ -109,6 +120,7 @@ class PatchPreferences(unittest.TestCase):
         self.assertNotIn("address_bar", restored["vivaldi"])
         self.assertNotIn("panels", restored["vivaldi"])
         self.assertNotIn("auto_hide", restored["vivaldi"])
+        self.assertNotIn("status_bar", restored["vivaldi"])
 
     def test_is_idempotent(self):
         once, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])
