@@ -545,17 +545,28 @@
     cacheIcons();
   };
 
+  // Calls inside the debounce window are merged, and a request to reload bookmarks is never lost to a later
+  // tab-only refresh (at start-up the tab events used to cancel the first bookmark load, leaving the sidebar empty).
   let timer = 0;
+  let wantBookmarks = false;
+  let failures = 0;
   function refresh(withBookmarks) {
+    wantBookmarks ||= !!withBookmarks;
     clearTimeout(timer);
     timer = setTimeout(async () => {
       if (drag) { refreshAfterDrag = true; return; } // re-rendering would detach the node being dragged
       refreshAfterDrag = false;
+      const bookmarks = wantBookmarks || !state.space;
+      wantBookmarks = false;
       try {
-        if (withBookmarks) await loadBookmarks();
+        if (bookmarks) await loadBookmarks();
         await loadTabs();
         render();
-      } catch (e) { console.warn("[vivarc] sidebar:", e); }
+        failures = 0;
+      } catch (e) {
+        console.warn("[vivarc] sidebar:", e);
+        if (++failures <= 5) { wantBookmarks = bookmarks; setTimeout(() => refresh(false), 1500); }
+      }
     }, 80);
   }
 
