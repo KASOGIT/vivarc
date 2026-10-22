@@ -107,6 +107,13 @@
       setExtData(t, { tiling: { id, layout: kind, type: "selection", index } })));
     await write();
     setTimeout(() => write().catch(() => {}), 400);
+    setTimeout(async () => {
+      const rects = [...document.querySelectorAll("webview")].map((w) => w.getBoundingClientRect())
+        .filter((r) => r.width > 80 && r.height > 80).map((r) => [Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)]);
+      const log = await window.__vm.store.get("split-debug", []);
+      log.push({ layout: kind, rects });
+      window.__vm.store.set("split-debug", log.slice(-8));
+    }, 1500);
   };
   const closeSplitView = async (tab) => {
     const id = window.__vm.tilingOf(tab)?.id;
