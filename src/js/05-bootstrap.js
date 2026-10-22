@@ -64,19 +64,37 @@
     await set("vivaldi.actions", actions);
   };
 
-  // A brand-new profile opens Vivaldi's own welcome tab; Vivarc's guide takes its place.
+  // A brand-new profile opens Vivaldi's own welcome tab, possibly after this code has run:
+  // watch for it for a while and swap in Vivarc's guide.
+  const isWelcome = (t) => /^(vivaldi|chrome):\/\/(vivaldi-webui\/)?welcome|\/components\/welcome\/welcome\.html/.test(t.pendingUrl || t.url || "");
   const replaceWelcome = async () => {
     if (!cfg.startUrl) return;
     await set("vivaldi.startup.has_seen_welcome_page", true);
-    const tabs = await chrome.tabs.query({ currentWindow: true });
-    const welcome = tabs.find((t) => /^(vivaldi|chrome):\/\/(vivaldi-webui\/)?welcome/.test(t.pendingUrl || t.url || "") || t.title === "Welcome to Vivaldi");
-    if (welcome) await chrome.tabs.update(welcome.id, { url: cfg.startUrl });
+    let done = false;
+    const swap = (tab) => {
+      if (done || !isWelcome(tab)) return;
+      done = true;
+      chrome.tabs.update(tab.id, { url: cfg.startUrl }).catch((e) => console.warn("[vivarc] guide page:", e));
+    };
+    (await chrome.tabs.query({ currentWindow: true })).forEach(swap);
+    chrome.tabs.onCreated.addListener(swap);
+    chrome.tabs.onUpdated.addListener((_id, _change, tab) => swap(tab));
+    setTimeout(() => { done = true; }, 20000);
+  };
+
+  // The sidebar needs the tab bar on a side. A new profile's welcome flow can reset the position after
+  // the first set, so it is checked again at every start and a few times early on.
+  const ensureSideTabs = async () => {
+    const position = await get("vivaldi.tabs.bar.position");
+    if (position === 1 || position === 2 || position === "left" || position === "right") return;
+    await set("vivaldi.tabs.bar.position", 1);
   };
 
   const configure = async () => {
+    await ensureSideTabs();
+    for (const delay of [4000, 12000, 30000]) setTimeout(() => ensureSideTabs().catch(() => {}), delay);
     if ((await window.__vm.store.get("bootstrap", 0)) >= VERSION) return;
     await bindShortcuts();
-    await set("vivaldi.tabs.bar.position", 1);
     await tidyToolbars();
     await replaceWelcome();
     await window.__vm.store.set("bootstrap", VERSION);
