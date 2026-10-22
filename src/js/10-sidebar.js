@@ -41,7 +41,7 @@
 
   const letterIcon = (url) => {
     let host = "?";
-    try { host = new URL(url).hostname.replace(/^www\./, "") || "?"; } catch (_) {}
+    try { host = new URL(url).hostname.replace(/^www\./, "") || (url.startsWith("file:") ? "vivarc" : "?"); } catch (_) {}
     let hash = 0;
     for (const ch of host) hash = (hash * 31 + ch.charCodeAt(0)) % 360;
     const span = el("span", "vm-letter", host[0].toUpperCase());
@@ -501,6 +501,20 @@
     ["Maps", "https://www.google.com/maps"],
   ];
 
+  // A pinned link, a folder with two links, and a folder nested inside it, so the layout is visible on day one.
+  const addStarterPins = async (pinnedId) => {
+    if (cfg.startUrl) await chrome.bookmarks.create({ parentId: pinnedId, title: "Vivarc Guide", url: cfg.startUrl });
+    const reading = await chrome.bookmarks.create({ parentId: pinnedId, title: "Reading" });
+    await chrome.bookmarks.create({ parentId: reading.id, title: "Hacker News", url: "https://news.ycombinator.com/" });
+    await chrome.bookmarks.create({ parentId: reading.id, title: "Wikipedia", url: "https://www.wikipedia.org/" });
+    const dev = await chrome.bookmarks.create({ parentId: reading.id, title: "Dev" });
+    await chrome.bookmarks.create({ parentId: dev.id, title: "MDN Web Docs", url: "https://developer.mozilla.org/" });
+    await chrome.bookmarks.create({ parentId: dev.id, title: "Stack Overflow", url: "https://stackoverflow.com/" });
+    openFolders.add(reading.id);
+    openFolders.add(dev.id);
+    saveOpen();
+  };
+
   let triedFirstRun = false;
   const createSpace = async (tree) => {
     const bar = tree[0]?.children?.[0];
@@ -508,7 +522,8 @@
     const space = await chrome.bookmarks.create({ parentId: bar.id, title: cfg.spaceFolderTitle });
     const favs = await chrome.bookmarks.create({ parentId: space.id, title: "Favorites" });
     for (const [title, url] of STARTER_FAVORITES) await chrome.bookmarks.create({ parentId: favs.id, title, url });
-    await chrome.bookmarks.create({ parentId: space.id, title: "Pinned" });
+    const pinned = await chrome.bookmarks.create({ parentId: space.id, title: "Pinned" });
+    await addStarterPins(pinned.id);
   };
 
   const loadBookmarks = async () => {

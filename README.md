@@ -45,7 +45,7 @@ macOS may ask you to allow your terminal under **System Settings > Privacy & Sec
 ```
 
 In each Vivaldi profile: **Cmd+Shift+B > Import Bookmarks and Settings > HTML file**, pick the matching file. Quit Vivaldi and run `./vivarc.py apply` once to include the icons.
-Arc spaces map to Vivaldi profiles (each its own window; switch with Cmd+`).
+Arc spaces map to Vivaldi profiles; see [Where Vivaldi differs from Arc](#where-vivaldi-differs-from-arc).
 
 ### After a Vivaldi update
 
@@ -61,6 +61,14 @@ An update replaces `Vivaldi.app` and removes the script. Quit Vivaldi, then (thi
 ```sh
 ./vivarc.py uninstall  # restores your preferences and window.html; your bookmarks are left alone
 ```
+
+## Where Vivaldi differs from Arc
+
+- **Spaces are profiles.** Vivaldi has no spaces inside one window. Each Vivaldi profile (Perso, Work...) is its own window with its own bookmarks, logins and Vivarc sidebar. Switch between them with **Cmd+`** (macOS cycles the windows of the active app).
+- **Links do not pick a space.** Arc can send a link to a given space; Vivaldi opens links from other apps in whichever profile was used last. The workaround is [Finicky](https://github.com/johnste/finicky), a tiny app that becomes your default browser and routes each link to a profile by domain:
+  1. `brew install --cask finicky`, then set Finicky as the default browser in System Settings.
+  2. Copy [templates/finicky.js](templates/finicky.js) to `~/.finicky.js` and edit it: one `handlers` entry per space, with the domains you want in it and the profile name as shown in Vivaldi's profile menu.
+- **Not built yet:** Boosts, automatic archiving of old tabs, and Arc's share links.
 
 ## Safety
 
