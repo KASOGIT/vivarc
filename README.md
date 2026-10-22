@@ -27,7 +27,7 @@ git clone https://github.com/KASOGIT/vivarc.git && cd vivarc
 ./vivarc.py install
 ```
 
-Open Vivaldi. That's it. Every profile gets the sidebar, and profiles you create later set themselves up the first time they open (no restart). A new profile starts with a few example favorites and pins so you can see how it works, and a short guide page.
+Open Vivaldi. That's it. Every profile gets the sidebar, and profiles you create later set themselves up the first time they open (no restart). Each profile starts with a few example favorites and pins so you can see how it works, and a new profile opens a short guide page.
 
 Requires macOS, Vivaldi 8.x and Python 3 (included with the Xcode command line tools). macOS may ask you to allow your terminal under **System Settings > Privacy & Security > App Management**, because the script edits `Vivaldi.app`.
 
