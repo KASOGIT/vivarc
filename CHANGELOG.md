@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.0 - 2026-10-23
 - Sidebar: favorites grid, pinned folders, divider with Clear, open tabs in one scrollable panel.
 - Drag and drop between favorites, pinned folders and open tabs; context menus; inline folder rename.
 - Command bar on Cmd+T: tabs, bookmarks, history, URLs, search suggestions, `yt` + Tab engine mode.
