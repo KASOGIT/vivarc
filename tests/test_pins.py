@@ -1,28 +1,12 @@
 import json
-import os
 import shutil
-import subprocess
 import unittest
 
-MODULE = os.path.join(os.path.dirname(__file__), "..", "src", "js", "08-pins.js")
-
-HARNESS = """
-const fs = require("fs"), vm = require("vm");
-globalThis.window = { __vm: {} };
-vm.runInThisContext(fs.readFileSync(process.argv[1], "utf8"));
-const pins = window.__vm.pins;
-const input = JSON.parse(process.argv[2]);
-const out = (function () { return eval(input.expr); })();
-console.log(JSON.stringify(out === undefined ? null : out, (k, v) => (v === undefined ? null : v)));
-"""
+from jsrun import run_js
 
 
 def js(expr, **data):
-    """Evaluate `expr` against the pins module; `data` entries are available as variables."""
-    source = "".join(f"const {k} = {json.dumps(v)};\n" for k, v in data.items()) + f"return ({expr});"
-    result = subprocess.run(["node", "-e", HARNESS, MODULE, json.dumps({"expr": f"(() => {{ {source} }})()"})],
-                            capture_output=True, text=True, check=True)
-    return json.loads(result.stdout)
+    return run_js("08-pins.js", expr, **data)
 
 
 def tab(id, url, index=0, active=False, ext=None, status="complete"):
