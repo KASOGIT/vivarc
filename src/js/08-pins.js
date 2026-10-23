@@ -38,9 +38,12 @@
     } catch (_) { return url || ""; }
   };
 
+  // Until the landing page is known (the pin is still loading or redirecting) the tab is not shown as away.
   const away = (tab, pinUrl) => {
+    const home = homeOf(tab);
+    if (home === undefined) return false;
     const here = norm(tab.url);
-    return here !== norm(pinUrl) && here !== homeOf(tab);
+    return here !== norm(pinUrl) && here !== home;
   };
 
   // pins: [{ id, url }]. Returns which tab each pin owns, and the vivExtData patches that make it so.
@@ -57,6 +60,10 @@
       if (known.has(id) && !bound.has(id)) {
         bound.set(id, tab);
         claimed.add(tab.id);
+        const pin = pins.find((p) => p.id === id);
+        if (homeOf(tab) === undefined && tab.status === "complete" && sameSite(tab.url, pin.url)) {
+          writes.push({ tabId: tab.id, patch: { [HOME]: norm(tab.url) } });
+        }
       } else {
         writes.push({ tabId: tab.id, patch: { [PIN]: undefined, [HOME]: undefined } });
       }

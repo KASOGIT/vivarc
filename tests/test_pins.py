@@ -59,6 +59,17 @@ class Binding(unittest.TestCase):
         result = plan([tab(1, "https://git.example.com/org/repo/actions", status="loading")], [self.PIN])
         self.assertEqual(result["writes"], [{"tabId": 1, "patch": {"vivarcPin": "p1"}}])
 
+    def test_a_bound_tab_without_a_landing_url_gets_one_once_it_has_loaded_on_the_pinned_site(self):
+        loaded = tab(1, "https://git.example.com/org/repo/actions/runs/1", ext={"vivarcPin": "p1"})
+        self.assertEqual(plan([loaded], [self.PIN])["writes"], [{"tabId": 1, "patch": {
+            "vivarcHome": "https://git.example.com/org/repo/actions/runs/1"}}])
+
+    def test_a_bound_tab_that_is_still_loading_or_elsewhere_gets_no_landing_url_yet(self):
+        loading = tab(1, "https://git.example.com/org/repo/actions", ext={"vivarcPin": "p1"}, status="loading")
+        elsewhere = tab(2, "https://other.example.org/", ext={"vivarcPin": "p2"})
+        pin_list = [self.PIN, {"id": "p2", "url": "https://git.example.com/other"}]
+        self.assertEqual(plan([loading, elsewhere], pin_list)["writes"], [])
+
     def test_the_longest_matching_pin_wins(self):
         pin_list = [{"id": "short", "url": "https://x.example.com/a"}, {"id": "long", "url": "https://x.example.com/a/b"}]
         result = plan([tab(1, "https://x.example.com/a/b/c")], pin_list)
@@ -130,6 +141,9 @@ class AtHome(unittest.TestCase):
         t = tab(1, tab_url, ext={"vivarcPin": "p", **({"vivarcHome": home} if home else {})})
         return js("pins.away(t, pinUrl)", t=t, pinUrl=pin_url)
 
+    def test_a_tab_whose_landing_page_is_not_known_yet_is_never_away(self):
+        self.assertFalse(self.away("https://www.example.org/en/redirected-while-loading", "https://www.example.org/"))
+
     def test_the_pinned_url_itself_is_home_even_with_a_trailing_slash_or_a_hash(self):
         self.assertFalse(self.away("https://docs.example.com/page/", "https://docs.example.com/page"))
         self.assertFalse(self.away("https://docs.example.com/page#section", "https://docs.example.com/page"))
@@ -141,14 +155,15 @@ class AtHome(unittest.TestCase):
         self.assertFalse(self.away("https://mail.example.com/mail/u/0/", pin, home))
 
     def test_another_page_of_the_site_is_away(self):
-        self.assertTrue(self.away("https://video.example.com/watch?v=1", "https://video.example.com/"))
+        self.assertTrue(self.away("https://video.example.com/watch?v=1", "https://video.example.com/", "https://video.example.com"))
         self.assertTrue(self.away("https://mail.example.com/settings", "https://mail.example.com/", "https://mail.example.com/mail/u/0"))
 
     def test_a_different_query_counts_as_away(self):
-        self.assertTrue(self.away("https://git.example.com/org/repo/actions?query=x", "https://git.example.com/org/repo/actions"))
+        self.assertTrue(self.away("https://git.example.com/org/repo/actions?query=x", "https://git.example.com/org/repo/actions",
+                                  "https://git.example.com/org/repo/actions"))
 
     def test_another_site_is_away(self):
-        self.assertTrue(self.away("https://other.example.org/", "https://docs.example.com/page"))
+        self.assertTrue(self.away("https://other.example.org/", "https://docs.example.com/page", "https://docs.example.com/page"))
 
 
 if __name__ == "__main__":
