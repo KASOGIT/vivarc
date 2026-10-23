@@ -12,7 +12,7 @@ Vivaldi's UI is a web page (`window.html`). Vivarc adds one script and one style
 
 ## Why a Vivaldi update removes the JS
 
-An update replaces `Vivaldi.app`, including `window.html`. Run `./vivarc.py apply` after updating (with Vivaldi closed).
+An update replaces `Vivaldi.app`, including `window.html`. Run `./vivarc.py update` after updating: it pulls (git checkout) or downloads the latest release when there is one, then re-runs `install`. The installer leaves `~/Applications/Update Vivarc.command`, a double-clickable script that does this and reopens Vivaldi. It is generated locally, so macOS does not quarantine it, and `uninstall` removes it. A background job cannot do this on its own: macOS only lets a terminal you have granted App Management edit `Vivaldi.app`.
 `./vivarc.py status` tells you whether the JS is in place. Until you re-apply, Vivaldi simply looks like normal Vivaldi.
 
 ## Configuration

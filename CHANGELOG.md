@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- `update` command: fetches the latest release (or pulls a git checkout) and re-applies it. The installer leaves a double-clickable "Update Vivarc" in your Applications folder that runs it after a Vivaldi update and reopens Vivaldi. `uninstall` removes it. If you are on 0.1.2, paste the install line once to get it.
+
 ## 0.1.2 - 2026-10-23
 - One-line installer for everyone (also updates and repairs): downloads the latest release and runs it, no git needed.
 - The installer checks that macOS allows editing Vivaldi before changing anything, opens the App Management settings page and waits, offers to quit Vivaldi, refuses to run as root, and detects files left owned by root after an earlier sudo run.
