@@ -412,4 +412,16 @@
 #vm-panel .vm-space { display: flex; align-items: center; justify-content: space-between; }
 #vm-panel .vm-space .vm-act { display: flex; visibility: hidden; }
 #vm-panel .vm-space:hover .vm-act { visibility: visible; }
+#vm-panel .vm-away-mark { flex: none; opacity: 0.5; margin: 0 -2px 0 -4px; }
+#vm-panel .vm-fav { position: relative; }
+#vm-panel .vm-fav.away::after {
+  content: "";
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--colorHighlightBg, #7b8cff);
+}
 #vm-panel .vm-split-mark { flex: none; opacity: 0.55; font-size: 14px; }
