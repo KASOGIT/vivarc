@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Fix: the installer's questions ("Quit Vivaldi now?", the App Management "press Enter" step) never reached the terminal and always fell through to "nothing was changed". They now work.
+- `update` (and so Update Vivarc and the reminder) closes Vivaldi by itself, and the Update Vivarc script reopens it afterwards, also when the update fails.
+
 ## 0.1.4 - 2026-10-23
 - Optional update reminder: `install` asks once; when a Vivaldi update has removed Vivarc, a dialog offers to bring it back (opens Update Vivarc). Turn it on or off with `reminder on|off`; `uninstall` removes it.
 
