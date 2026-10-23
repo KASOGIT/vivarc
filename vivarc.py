@@ -26,7 +26,7 @@ import sys
 import time
 import urllib.request
 
-VERSION = "0.1.6"
+VERSION = "0.1.7"
 HOME = os.path.expanduser("~")
 HERE = os.path.dirname(os.path.abspath(__file__))
 HOME_DIR = os.path.join(HOME, ".vivarc")
