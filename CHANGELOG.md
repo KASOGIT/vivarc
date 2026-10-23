@@ -1,8 +1,20 @@
 # Changelog
 
 ## Unreleased
+- Right-click a favorite or a pinned tab and pick Rename… to change its name. A favorite's name is edited in a field under its row (the tile only shows the icon); Enter saves, Escape cancels.
+- Fix: some favorites (Gmail for example) showed a letter instead of their icon after restarting Vivaldi, until they were opened again. Large favicons are now shrunk to 64px before being cached, instead of not being cached at all.
 - Profile switcher: the bottom bar shows your Vivaldi profiles as round avatars in place of the account button. Click one to open or focus that profile, or press Cmd+Ctrl+1..9. A **+** creates a new profile and right-clicking your own avatar opens Vivaldi's profile manager.
 - Every profile now gets the Downloads button in the bottom bar (profiles without Vivaldi's VPN button never had it).
+
+## 0.1.10 - 2026-10-24
+- Fix: with a theme on, the hidden sidebar (Cmd+S) still could not be clicked when it slid back in on hover.
+
+## 0.1.9 - 2026-10-24
+- Fix: with the sidebar hidden (Cmd+S), nothing in it could be clicked when it slid back in on hover.
+
+## 0.1.8 - 2026-10-24
+- The favorites grid shrinks its tiles (down to 72px) before dropping a column, instead of jumping straight from 3 to 2 columns.
+- The sidebar can no longer be resized below 220px.
 
 ## 0.1.7 - 2026-10-23
 - Like Arc, a pinned tab stays on its pin when you navigate inside it, instead of turning into a separate open tab and leaving the pin looking closed. The row shows a `/` and the current page's title (the pin's name is in the tooltip); hover it for "Back to pinned page" and "Separate From Pinned Tab" (also in the right-click menu, and for favorites). The link is stored in the tab's session data, so it survives a restart.

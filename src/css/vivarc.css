@@ -9,6 +9,8 @@
 #browser.vm-hide-workspaces #tabs-tabbar-container .button-toolbar.workspace-popup { display: none; }
 #browser.vm-on #tabs-container > .vm-strip-hidden { display: none !important; }
 #browser.vm-on #tabs-tabbar-container .button-toolbar.newtab { display: none !important; }
+/* Vivaldi lets the side tab bar shrink to a few pixels; the sidebar is unusable below this width */
+#browser.vm-on #tabs-tabbar-container:is(.left, .right) { min-width: 220px; }
 #browser.vm-on #tabs-container > .vm-collapsed:not(:focus-within) {
   height: 0 !important;
   min-height: 0 !important;
@@ -51,6 +53,9 @@
   font-size: 13.5px;
   user-select: none;
 }
+/* With the sidebar auto-hidden (Cmd+S), Vivaldi makes the revealed bar a window drag region, which
+   swallows every click. Vivarc's own UI opts out, including the menus and popovers that float over it. */
+#vm-panel, .vm-menu, .vm-theme-pop, #vm-cmd, .vm-rename-float { app-region: no-drag; }
 #vm-panel .vm-scroll {
   flex: 1 1 auto;
   min-height: 0;
@@ -61,8 +66,8 @@
 #vm-panel .vm-favs {
   flex: none;
   display: grid;
-  grid-template-columns: repeat(auto-fill, 96px);
-  justify-content: start;
+  /* Tiles shrink down to 72px before the grid drops a column */
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
   gap: 8px;
   margin: 0;
   padding: 0 0 8px;
@@ -274,6 +279,21 @@
   font-weight: 600;
   box-shadow: none;
 }
+.vm-rename-float {
+  position: fixed;
+  z-index: 100002;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--vm-text) 30%, transparent);
+  border-radius: 8px;
+  outline: 0;
+  background: var(--vm-surface);
+  color: var(--vm-text);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
 
 /* Bottom toolbar (profile button): shorter, content centred so it sits lower */
 #browser.vm-on.vm-compact-bottom #tabs-tabbar-container .toolbar-tabbar-after {
@@ -354,6 +374,7 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  app-region: none; /* app-region is inherited: drawn last over the whole bar, it would undo the panel's no-drag */
   background-image: var(--vm-noise);
   opacity: var(--vm-grain, 0.1);
   mix-blend-mode: overlay;
