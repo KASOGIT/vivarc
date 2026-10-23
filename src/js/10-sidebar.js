@@ -330,12 +330,12 @@
     row.style.paddingLeft = `${8 + depth * 20}px`;
     const tab = boundTab(node);
     const away = isAway(tab, node);
-    row.title = away ? `${tab.title || ""}\n${tab.url}`.trim() : node.url;
+    row.title = away ? `${node.title || node.url}\n${tab.url}` : node.url;
     if (tab?.active) row.classList.add("active");
     if (away) row.classList.add("away");
     row.append(iconEl(node.url, away ? undefined : tab?.favIconUrl));
     if (away) row.append(el("span", "vm-away-mark", "/"));
-    row.append(el("span", "vm-title", node.title || node.url));
+    row.append(el("span", "vm-title", away ? (tab.title || tab.url) : (node.title || node.url)));
     if (away) row.append(actionButton("↩", "Back to pinned page", () => backToPin(tab, node)));
     if (!tab) row.append(actionButton("×", "Remove from Pinned", () => discard(node)));
     else if (away) row.append(actionButton("–", "Separate From Pinned Tab", () => separate(tab, node)));
