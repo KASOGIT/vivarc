@@ -36,7 +36,7 @@ Every profile gets the sidebar, and profiles you create later set themselves up 
 
 Requires macOS and Vivaldi 8.x. If your Mac has never had developer tools, macOS shows an "Install" window the first time (it is Apple's free command line tools, which include Python); click Install, wait, then paste the line again.
 
-**Updating, and after a Vivaldi update:** Vivaldi updates replace the app and remove Vivarc. Double-click **Update Vivarc**. It is in the `Applications` folder inside your home folder: in Finder press Cmd+Shift+H, then open `Applications` (not the one in the sidebar). It fetches the latest Vivarc, puts it back into Vivaldi and reopens Vivaldi. The same thing from Terminal: `python3 ~/.vivarc/app/vivarc.py update`, or paste the install line again. If macOS asks for the App Management permission again, allow it the same way as at install.
+**Updating, and after a Vivaldi update:** Vivaldi updates replace the app and remove Vivarc. Double-click **Update Vivarc**. It is in the `Applications` folder inside your home folder: in Finder press Cmd+Shift+H, then open `Applications` (not the one in the sidebar). It fetches the latest Vivarc, puts it back into Vivaldi and reopens Vivaldi. The same thing from Terminal: `python3 ~/.vivarc/app/vivarc.py update`, or paste the install line again. If macOS asks for the App Management permission again, allow it the same way as at install. The installer also offers an optional reminder: when a Vivaldi update removes Vivarc, a small dialog asks whether to bring it back. Switch it on or off with `python3 ~/.vivarc/app/vivarc.py reminder on` (or `off`).
 
 **Uninstall:** `python3 ~/.vivarc/app/vivarc.py uninstall` restores your settings. Your bookmarks are never deleted.
 
