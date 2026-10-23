@@ -20,16 +20,38 @@
 
 ## Install
 
-Quit Vivaldi (Cmd+Q), then:
+No developer experience needed. It takes about two minutes.
+
+1. Open **Terminal** (press Cmd+Space, type `Terminal`, press Enter).
+2. Paste this line and press Enter:
+
+   ```sh
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/KASOGIT/vivarc/main/install.sh)"
+   ```
+
+3. Follow what it says. It offers to close Vivaldi for you, and if macOS asks for a permission (**App Management**) it opens the right settings page and waits while you switch it on for Terminal.
+4. Open Vivaldi.
+
+Every profile gets the sidebar, and profiles you create later set themselves up the first time they open (no restart). Each profile starts with a few example favorites and pins so you can see how it works, and a new profile opens a short guide page.
+
+Requires macOS and Vivaldi 8.x. If your Mac has never had developer tools, macOS shows an "Install" window the first time (it is Apple's free command line tools, which include Python); click Install, wait, then paste the line again.
+
+**Updating, and after a Vivaldi update:** paste the same line again. It fetches the latest Vivarc and puts it back into Vivaldi. Vivaldi updates replace the app and remove Vivarc, so you will need this every time Vivaldi updates.
+
+**Uninstall:** `python3 ~/.vivarc/app/vivarc.py uninstall` restores your settings. Your bookmarks are never deleted.
+
+### Troubleshooting
+
+- **"Operation not permitted" or "macOS blocked writing into Vivaldi.app":** switch on Terminal under System Settings > Privacy & Security > App Management, then paste the line again. **Do not use `sudo`**: it does not help and can leave files only root can change.
+- **Already used `sudo`?** Run `sudo chown -R "$(whoami)" ~/.vivarc` once, then paste the install line again (without `sudo`).
+- **"Vivaldi not found":** Vivarc looks in `/Applications/Vivaldi.app`. If yours is elsewhere, use the developer install below with `--app`.
+
+### For developers
 
 ```sh
 git clone https://github.com/KASOGIT/vivarc.git && cd vivarc
-./vivarc.py install
+./vivarc.py install       # also: apply, status, uninstall, import-arc
 ```
-
-Open Vivaldi. That's it. Every profile gets the sidebar, and profiles you create later set themselves up the first time they open (no restart). Each profile starts with a few example favorites and pins so you can see how it works, and a new profile opens a short guide page.
-
-Requires macOS, Vivaldi 8.x and Python 3 (included with the Xcode command line tools). macOS may ask you to allow your terminal under **System Settings > Privacy & Security > App Management**, because the script edits `Vivaldi.app`.
 
 ## What you get
 
@@ -88,14 +110,7 @@ In each Vivaldi profile: **File > Import Bookmarks and Settings… > HTML file**
 
 ## Keeping it working
 
-A Vivaldi update replaces `Vivaldi.app` and removes the script. Quit Vivaldi, then:
-
-```sh
-./vivarc.py apply
-./vivarc.py status     # shows what is installed
-```
-
-To remove everything: `./vivarc.py uninstall` restores your preferences and `window.html`. Your bookmarks, including the `Vivarc` folder, are left alone.
+After a Vivaldi update, paste the install line again (see [Install](#install)). To check what is installed: `python3 ~/.vivarc/app/vivarc.py status`. To remove everything: `python3 ~/.vivarc/app/vivarc.py uninstall` restores your preferences and `window.html`. Your bookmarks, including the `Vivarc` folder, are left alone.
 
 ## Safety
 
