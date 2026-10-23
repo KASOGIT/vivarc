@@ -102,7 +102,7 @@ In each Vivaldi profile: **File > Import Bookmarks and Settings… > HTML file**
 
 ### Where Vivaldi differs from Arc
 
-- **Spaces are profiles.** Vivaldi has no spaces inside one window. Each Vivaldi profile (Perso, Work...) is its own window with its own bookmarks, logins and Vivarc sidebar. Switch between them with **Cmd+`** (macOS cycles the windows of the active app).
+- **Spaces are profiles.** Vivaldi has no spaces inside one window. Each Vivaldi profile (Perso, Work...) is its own window with its own bookmarks, logins and Vivarc sidebar. Switch between them with the **profile chips in the bottom bar** (click one, press **Cmd+Ctrl+1..9** for the nth, or **Cmd+Option+Left/Right** for the previous/next, as in Arc; Vivaldi's own use of Cmd+Option+arrows for switching tabs is given up for this, and Ctrl+Tab still cycles tabs). The **+** at the end creates a profile, and right-clicking your own chip opens Vivaldi's profile manager.
 - **Links do not pick a space.** Arc can send a link to a given space; Vivaldi opens links from other apps in whichever profile was used last. The workaround is [Finicky](https://github.com/johnste/finicky), a tiny app that becomes your default browser and routes each link to a profile by domain:
   1. `brew install --cask finicky`, then set Finicky as the default browser in System Settings.
   2. Copy [templates/finicky.js](templates/finicky.js) to `~/.finicky.js` and edit it: one `handlers` entry per space, with the domains you want in it and the profile name as shown in Vivaldi's profile menu.
