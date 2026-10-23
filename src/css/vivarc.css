@@ -9,6 +9,8 @@
 #browser.vm-hide-workspaces #tabs-tabbar-container .button-toolbar.workspace-popup { display: none; }
 #browser.vm-on #tabs-container > .vm-strip-hidden { display: none !important; }
 #browser.vm-on #tabs-tabbar-container .button-toolbar.newtab { display: none !important; }
+/* Vivaldi lets the side tab bar shrink to a few pixels; the sidebar is unusable below this width */
+#browser.vm-on #tabs-tabbar-container:is(.left, .right) { min-width: 220px; }
 #browser.vm-on #tabs-container > .vm-collapsed:not(:focus-within) {
   height: 0 !important;
   min-height: 0 !important;
@@ -61,8 +63,8 @@
 #vm-panel .vm-favs {
   flex: none;
   display: grid;
-  grid-template-columns: repeat(auto-fill, 96px);
-  justify-content: start;
+  /* Tiles shrink down to 72px before the grid drops a column */
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
   gap: 8px;
   margin: 0;
   padding: 0 0 8px;
