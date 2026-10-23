@@ -517,8 +517,8 @@ def cmd_install(args):
     except PermissionError as error:
         permission_hint(error)
     write_update_command(UPDATE_COMMAND)
-    say("Done. Open Vivaldi. After a Vivaldi update, double-click \"Update Vivarc\" in your Applications folder "
-        "(inside your home folder) to bring Vivarc back.")
+    say("Done. Open Vivaldi. After a Vivaldi update, double-click \"Update Vivarc\" to bring Vivarc back: "
+        "in Finder press Cmd+Shift+H, then open Applications. It is the file ~/Applications/Update Vivarc.command.")
 
 
 def cmd_apply(args):
