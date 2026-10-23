@@ -530,24 +530,33 @@
     fitHeight();
   };
 
+  const ICON_MAX = 20000;
+  const dataUrl = (blob) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+  // Some favicons are multi-size .ico files (Gmail's is 26 KB): too big to keep as is, so they are
+  // redrawn at 64px, enough for the 24px tiles on a Retina screen.
+  const shrinkIcon = async (blob) => {
+    const bitmap = await createImageBitmap(blob, { resizeWidth: 64, resizeHeight: 64, resizeQuality: "high" });
+    const canvas = new OffscreenCanvas(64, 64);
+    canvas.getContext("2d").drawImage(bitmap, 0, 0);
+    return dataUrl(await canvas.convertToBlob({ type: "image/png" }));
+  };
   const cacheIcons = async () => {
     for (const t of state.tabs) {
       const src = t.favIconUrl;
       const origin = originOf(t.url);
       if (!src || !/^https?:/.test(origin) || icons[origin] === src || icons[origin]?.startsWith("data:")) continue;
       let value = src;
-      if (!src.startsWith("data:")) {
-        try {
-          const blob = await (await fetch(src)).blob();
-          value = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-        } catch (_) {}
-      }
-      if (value.length < 20000) icons[origin] = value;
+      try {
+        const blob = await (await fetch(src)).blob();
+        value = await dataUrl(blob);
+        if (value.length >= ICON_MAX) value = await shrinkIcon(blob);
+      } catch (_) {}
+      if (value.length < ICON_MAX) icons[origin] = value;
     }
     store.set("icons", icons);
   };

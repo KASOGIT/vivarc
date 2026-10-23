@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Fix: some favorites (Gmail for example) showed a letter instead of their icon after restarting Vivaldi, until they were opened again. Large favicons are now shrunk to 64px before being cached, instead of not being cached at all.
+
 ## 0.1.10 - 2026-10-24
 - Fix: with a theme on, the hidden sidebar (Cmd+S) still could not be clicked when it slid back in on hover.
 
