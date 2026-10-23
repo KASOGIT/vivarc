@@ -2,7 +2,8 @@
 """Vivarc: an Arc-style sidebar, command bar and theme editor for Vivaldi (macOS).
 
     ./vivarc.py install        set everything up (Vivaldi must be closed)
-    ./vivarc.py apply          re-inject the JS after a Vivaldi update
+    ./vivarc.py update         fetch the latest Vivarc and re-apply it (also after a Vivaldi update)
+    ./vivarc.py apply          re-inject the JS only
     ./vivarc.py status         show what is installed
     ./vivarc.py import-arc     export your Arc spaces for import into Vivaldi
     ./vivarc.py uninstall      put everything back
@@ -17,6 +18,7 @@ import os
 import pathlib
 import platform
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -29,6 +31,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 HOME_DIR = os.path.join(HOME, ".vivarc")
 DEFAULT_APP = os.environ.get("VIVARC_APP", "/Applications/Vivaldi.app")
 DEFAULT_DATA = os.environ.get("VIVARC_DATA_DIR", os.path.join(HOME, "Library", "Application Support", "Vivaldi"))
+UPDATE_COMMAND = os.path.join(HOME, "Applications", "Update Vivarc.command")
+UPDATE_MARK = "# Created by Vivarc"
+RELEASES_LATEST = "https://github.com/KASOGIT/vivarc/releases/latest"
 RESOURCES = "Contents/Frameworks/Vivaldi Framework.framework/Resources/vivaldi"
 
 BEGIN, END = "<!-- vivarc:begin -->", "<!-- vivarc:end -->"
@@ -427,6 +432,35 @@ def apply_js(app, resources, with_peek):
     write_atomic(html_path, inject_window_html(html))
 
 
+def is_newer(tag, current):
+    try:
+        return tuple(int(n) for n in tag.lstrip("v").split(".")) > tuple(int(n) for n in current.split("."))
+    except (AttributeError, ValueError):
+        return False
+
+
+def latest_release_tag():
+    try:
+        with urllib.request.urlopen(RELEASES_LATEST, timeout=10) as response:
+            return response.geturl().rsplit("/", 1)[-1]
+    except OSError:
+        return None
+
+
+def write_update_command(path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    script = ("#!/bin/bash\n"
+              f"{UPDATE_MARK}: updates Vivarc and brings it back after a Vivaldi update.\n"
+              f"/usr/bin/python3 {shlex.quote(os.path.join(HERE, 'vivarc.py'))} update && open -a Vivaldi\n")
+    write_atomic(path, script)
+    os.chmod(path, 0o755)
+
+
+def remove_update_command(path):
+    if os.path.exists(path) and UPDATE_MARK in read_text(path):
+        os.remove(path)
+
+
 def permission_hint(error):
     die(f"{error}\nmacOS blocked writing into Vivaldi.app. Open System Settings > Privacy & Security > "
         "App Management, allow your terminal app, then run the command again.")
@@ -482,7 +516,9 @@ def cmd_install(args):
         apply_js(app, resources, not args.no_peek)
     except PermissionError as error:
         permission_hint(error)
-    say("Done. Open Vivaldi. After a Vivaldi update, run the same install command again to bring Vivarc back.")
+    write_update_command(UPDATE_COMMAND)
+    say("Done. Open Vivaldi. After a Vivaldi update, double-click \"Update Vivarc\" in your Applications folder "
+        "(inside your home folder) to bring Vivarc back.")
 
 
 def cmd_apply(args):
@@ -495,6 +531,27 @@ def cmd_apply(args):
     except PermissionError as error:
         permission_hint(error)
     say(f"Re-applied to Vivaldi {app_version(args.app)}" + (". Restart Vivaldi to see it." if vivaldi_running() else ""))
+
+
+def cmd_update(args):
+    extra = ["--no-peek"] if args.no_peek else []
+    if os.path.isdir(os.path.join(HERE, ".git")):
+        pulled = subprocess.run(["git", "-C", HERE, "pull", "--ff-only"], capture_output=True, text=True)
+        if pulled.returncode == 0:
+            argv = [sys.executable, os.path.join(HERE, "vivarc.py"), "--app", args.app, "--data-dir", args.data_dir, "install", *extra]
+            os.execve(sys.executable, argv, os.environ)
+        say(f"git pull did not work ({pulled.stderr.strip()}); re-applying the code you have.")
+    else:
+        latest = latest_release_tag()
+        if is_newer(latest, VERSION):
+            say(f"Updating Vivarc {VERSION} to {latest.lstrip('v')}...")
+            env = {**os.environ, "VIVARC_APP": args.app, "VIVARC_DATA_DIR": args.data_dir}
+            os.execve("/bin/bash", ["/bin/bash", os.path.join(HERE, "install.sh"), *extra], env)
+        elif latest is None:
+            say("Could not check for a new version (offline?). Re-applying the one you have.")
+        else:
+            say(f"Vivarc {VERSION} is up to date. Re-applying it.")
+    cmd_install(args)
 
 
 def cmd_uninstall(args):
@@ -529,6 +586,7 @@ def cmd_uninstall(args):
             os.remove(bundle)
     except PermissionError as error:
         permission_hint(error)
+    remove_update_command(UPDATE_COMMAND)
     if args.purge:
         shutil.rmtree(HOME_DIR, ignore_errors=True)
     say("Vivarc removed. Your bookmarks (including the Vivarc folder) were left alone.")
@@ -562,6 +620,9 @@ def main(argv=None):
     install.add_argument("--no-peek", action="store_true")
     install.add_argument("--dry-run", action="store_true")
     sub.add_parser("apply")
+    update = sub.add_parser("update")
+    update.add_argument("--no-peek", action="store_true")
+    update.set_defaults(dry_run=False)
     uninstall = sub.add_parser("uninstall")
     uninstall.add_argument("--purge", action="store_true", help="also delete ~/.vivarc")
     sub.add_parser("status")
@@ -571,7 +632,7 @@ def main(argv=None):
     if platform.system() != "Darwin":
         die("Vivarc currently supports macOS only")
     check_not_root()
-    {"install": cmd_install, "apply": cmd_apply, "uninstall": cmd_uninstall,
+    {"install": cmd_install, "apply": cmd_apply, "update": cmd_update, "uninstall": cmd_uninstall,
      "status": cmd_status, "import-arc": cmd_import_arc}[args.command](args)
 
 

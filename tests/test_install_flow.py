@@ -41,6 +41,7 @@ class InstallFlow(unittest.TestCase):
         self.home = os.path.join(self.tmp, "home")
         patches = [
             mock.patch.object(vivarc, "HOME_DIR", self.home),
+            mock.patch.object(vivarc, "UPDATE_COMMAND", os.path.join(self.tmp, "Applications", "Update Vivarc.command")),
             mock.patch.object(vivarc, "vivaldi_running", return_value=False),
             mock.patch.object(vivarc, "app_version", return_value="9.9.9"),
             mock.patch.object(vivarc, "ask", return_value=None),
@@ -153,6 +154,12 @@ class InstallFlow(unittest.TestCase):
         self.run_cli("apply")
         with open(bundle) as f:
             self.assertIn("[vivarc] core started", f.read())
+
+    def test_install_leaves_a_double_clickable_update_script_and_uninstall_removes_it(self):
+        self.run_cli("install", "--no-peek")
+        self.assertTrue(os.path.exists(vivarc.UPDATE_COMMAND))
+        self.run_cli("uninstall")
+        self.assertFalse(os.path.exists(vivarc.UPDATE_COMMAND))
 
     def test_refuses_to_run_while_vivaldi_is_open(self):
         with mock.patch.object(vivarc, "vivaldi_running", return_value=True):
