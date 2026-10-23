@@ -15,6 +15,8 @@ DEFAULTS = {
     "COMMAND_CLOSE_TAB": {"shortcuts": ["meta+w"]},
     "COMMAND_SAVE_PAGE": {"shortcuts": ["meta+s"]},
     "COMMAND_TOGGLE_AUTO_HIDE_TAB_BAR": {"shortcuts": []},
+    "COMMAND_TAB_SWITCH_BACK_SETTING": {"shortcuts": ["alt+meta+left", "ctrl+shift+tab"]},
+    "COMMAND_TAB_SWITCH_FORWARD_SETTING": {"shortcuts": ["alt+meta+right"]},
 }
 
 
@@ -30,6 +32,12 @@ class PatchPreferences(unittest.TestCase):
         actions = new["vivaldi"]["actions"][0]
         self.assertIn("COMMAND_CLOSE_TAB", actions)
         self.assertEqual(actions["COMMAND_CLOSE_TAB"]["shortcuts"], ["meta+w"])
+
+    def test_frees_cmd_option_left_and_right_for_the_profile_switcher_and_keeps_the_other_tab_shortcuts(self):
+        new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])
+        actions = new["vivaldi"]["actions"][0]
+        self.assertEqual(actions["COMMAND_TAB_SWITCH_BACK_SETTING"]["shortcuts"], ["ctrl+shift+tab"])
+        self.assertEqual(actions["COMMAND_TAB_SWITCH_FORWARD_SETTING"]["shortcuts"], [])
 
     def test_frees_cmd_t_and_binds_copy_url(self):
         new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])

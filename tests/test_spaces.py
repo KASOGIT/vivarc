@@ -52,6 +52,37 @@ class ProfileChips(unittest.TestCase):
 
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class PreviousAndNext(unittest.TestCase):
+    PROFILES = [profile("C", "/p/3"), profile("A", "/p/1"), profile("B", "/p/2", active=True)]
+
+    def path(self, combo, profiles=None):
+        return js("spaces.pathForShortcut(profiles, combo)", profiles=profiles or self.PROFILES, combo=combo)
+
+    def test_cmd_option_right_goes_to_the_next_profile_by_name(self):
+        self.assertEqual(self.path("meta+alt+right"), "/p/3")
+
+    def test_cmd_option_left_goes_to_the_previous_profile(self):
+        self.assertEqual(self.path("alt+meta+left"), "/p/1")
+
+    def test_it_wraps_around_at_either_end(self):
+        at_end = [profile("A", "/p/1"), profile("B", "/p/2"), profile("C", "/p/3", active=True)]
+        at_start = [profile("A", "/p/1", active=True), profile("B", "/p/2"), profile("C", "/p/3")]
+        self.assertEqual(self.path("alt+meta+right", at_end), "/p/1")
+        self.assertEqual(self.path("alt+meta+left", at_start), "/p/3")
+
+    def test_with_two_profiles_both_directions_go_to_the_other_one(self):
+        two = [profile("A", "/p/1", active=True), profile("B", "/p/2")]
+        self.assertEqual(self.path("alt+meta+right", two), "/p/2")
+        self.assertEqual(self.path("alt+meta+left", two), "/p/2")
+
+    def test_nothing_happens_without_a_second_profile_or_with_other_modifiers(self):
+        self.assertIsNone(self.path("alt+meta+right", [profile("A", "/p/1", active=True)]))
+        self.assertIsNone(self.path("meta+right"))
+        self.assertIsNone(self.path("alt+meta+shift+right"))
+        self.assertIsNone(self.path("alt+meta+up"))
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class AccountButton(unittest.TestCase):
     def test_the_button_is_wanted_only_when_there_are_no_chips_to_replace_it(self):
         two = [profile("A", "/p/1", active=True), profile("B", "/p/2")]

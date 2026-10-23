@@ -4,6 +4,7 @@
 - Right-click a favorite or a pinned tab and pick Rename… to change its name. A favorite's name is edited in a field under its row (the tile only shows the icon); Enter saves, Escape cancels.
 - Fix: some favorites (Gmail for example) showed a letter instead of their icon after restarting Vivaldi, until they were opened again. Large favicons are now shrunk to 64px before being cached, instead of not being cached at all.
 - Profile switcher: the bottom bar shows your Vivaldi profiles as round avatars in place of the account button. Click one to open or focus that profile, or press Cmd+Ctrl+1..9. A **+** creates a new profile and right-clicking your own avatar opens Vivaldi's profile manager.
+- Cmd+Option+Left/Right switches to the previous/next profile, like Arc's spaces (it replaces Vivaldi's own use of that combo for switching tabs; Ctrl+Tab still cycles tabs).
 - Every profile now gets the Downloads button in the bottom bar (profiles without Vivaldi's VPN button never had it).
 
 ## 0.1.10 - 2026-10-24

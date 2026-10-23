@@ -10,8 +10,9 @@
   const COPY_URL = "shift+meta+c";
 
   // Bump when the steps change: profiles already set up then run the (idempotent) steps once more.
-  const VERSION = 7;
+  const VERSION = 8;
   const TOGGLE = "meta+s";
+  const PROFILE_KEYS = ["alt+meta+left", "alt+meta+right"]; // the profile switcher's previous/next, like Arc's spaces
 
   // The address bar and navigation buttons live inside the sidebar; the top bar is hidden.
   const SIDEBAR_TOOLBAR = ["TabButton", "Extensions", "FlexibleSpacer", "Back", "Reload", "Forward", "AddressField"];
@@ -67,6 +68,9 @@
     if (!copy.shortcuts.includes(COPY_URL)) copy.shortcuts.push(COPY_URL);
     command("COMMAND_SAVE_PAGE").shortcuts = command("COMMAND_SAVE_PAGE").shortcuts.filter((s) => s !== TOGGLE);
     command("COMMAND_TOGGLE_AUTO_HIDE_TAB_BAR").shortcuts = [TOGGLE];
+    for (const cmd of Object.values(table)) {
+      if (Array.isArray(cmd?.shortcuts)) cmd.shortcuts = cmd.shortcuts.filter((s) => !PROFILE_KEYS.includes(s));
+    }
     await set("vivaldi.actions", actions);
   };
 

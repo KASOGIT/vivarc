@@ -46,6 +46,7 @@ BEGIN, END = "<!-- vivarc:begin -->", "<!-- vivarc:end -->"
 BLOCK = f'{BEGIN}\n<script src="vivarc.js"></script>\n{END}'
 FREED_KEY = "meta+t"  # the command bar listens for Cmd+T itself
 COPY_URL_KEY = "shift+meta+c"
+PROFILE_KEYS = ("alt+meta+left", "alt+meta+right")  # Vivarc uses them for the previous/next profile, as Arc does for spaces
 TOGGLE_SIDEBAR_KEY = "meta+s"
 SIDEBAR_WIDTH = 323
 SIDEBAR_BOTTOM = ["NewTab", "FlexibleSpacer", "AccountButton", "FlexibleSpacer", "PanelDownloads", "UpdateButton"]
@@ -148,9 +149,12 @@ def patch_preferences(prefs, default_actions):
     for name, cmd in defaults.items():
         if TOGGLE_SIDEBAR_KEY in cmd.get("shortcuts", []):
             _command(actions, defaults, name)
+    for name, cmd in defaults.items():
+        if any(key in cmd.get("shortcuts", []) for key in PROFILE_KEYS):
+            _command(actions, defaults, name)
     for cmd in actions.values():
         if isinstance(cmd, dict):
-            cmd["shortcuts"] = [s for s in cmd.get("shortcuts", []) if s != TOGGLE_SIDEBAR_KEY]
+            cmd["shortcuts"] = [s for s in cmd.get("shortcuts", []) if s != TOGGLE_SIDEBAR_KEY and s not in PROFILE_KEYS]
     _command(actions, defaults, "COMMAND_TOGGLE_AUTO_HIDE_TAB_BAR")["shortcuts"] = [TOGGLE_SIDEBAR_KEY]
     _set(new, ("vivaldi", "actions"), actions_list)
 
