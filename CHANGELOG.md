@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 - 2026-10-23
 - One-line installer for everyone (also updates and repairs): downloads the latest release and runs it, no git needed.
 - The installer checks that macOS allows editing Vivaldi before changing anything, opens the App Management settings page and waits, offers to quit Vivaldi, refuses to run as root, and detects files left owned by root after an earlier sudo run.
 - `apply` works while Vivaldi is open; the bundle is written atomically.
