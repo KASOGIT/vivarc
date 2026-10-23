@@ -80,6 +80,38 @@ class Replaced(Exception):
     """os.execve never returns; the fake stops the run the same way."""
 
 
+class UpdateApp(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.app = os.path.join(self.tmp, "Applications", "Update Vivarc.app")
+
+    def test_is_a_real_app_that_opens_the_update_script_in_terminal(self):
+        vivarc.write_update_app(self.app, "/x/Update Vivarc.command")
+        self.assertTrue(os.path.exists(os.path.join(self.app, "Contents", "Info.plist")))
+        source = subprocess.run(["osadecompile", os.path.join(self.app, "Contents", "Resources", "Scripts", "main.scpt")],
+                                capture_output=True, text=True).stdout
+        self.assertIn("open -a Terminal", source)
+        self.assertIn("/x/Update Vivarc.command", source)
+
+    def test_regenerating_replaces_the_old_app(self):
+        vivarc.write_update_app(self.app, "/old.command")
+        vivarc.write_update_app(self.app, "/new.command")
+        source = subprocess.run(["osadecompile", os.path.join(self.app, "Contents", "Resources", "Scripts", "main.scpt")],
+                                capture_output=True, text=True).stdout
+        self.assertIn("/new.command", source)
+        self.assertNotIn("/old.command", source)
+
+    def test_removal_only_touches_an_app_made_by_vivarc(self):
+        vivarc.write_update_app(self.app, "/x.command")
+        vivarc.remove_update_app(self.app)
+        self.assertFalse(os.path.exists(self.app))
+        os.makedirs(self.app)
+        vivarc.remove_update_app(self.app)
+        self.assertTrue(os.path.exists(self.app))
+        vivarc.remove_update_app(os.path.join(self.tmp, "missing.app"))
+
+
 class Update(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
