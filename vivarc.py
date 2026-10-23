@@ -17,6 +17,7 @@ import json
 import os
 import pathlib
 import platform
+import plistlib
 import re
 import shlex
 import shutil
@@ -34,6 +35,9 @@ DEFAULT_DATA = os.environ.get("VIVARC_DATA_DIR", os.path.join(HOME, "Library", "
 UPDATE_COMMAND = os.path.join(HOME, "Applications", "Update Vivarc.command")
 UPDATE_MARK = "# Created by Vivarc"
 RELEASES_LATEST = "https://github.com/KASOGIT/vivarc/releases/latest"
+REMINDER_LABEL = "com.vivarc.reminder"
+REMINDER_PLIST = os.path.join(HOME, "Library", "LaunchAgents", f"{REMINDER_LABEL}.plist")
+REMIND_EVERY = 12 * 3600
 RESOURCES = "Contents/Frameworks/Vivaldi Framework.framework/Resources/vivaldi"
 
 BEGIN, END = "<!-- vivarc:begin -->", "<!-- vivarc:end -->"
@@ -461,6 +465,54 @@ def remove_update_command(path):
         os.remove(path)
 
 
+def needs_reapply(resources):
+    html_path = os.path.join(resources, "window.html")
+    if not os.path.exists(html_path):
+        return False
+    return BEGIN not in read_text(html_path) or not os.path.exists(os.path.join(resources, "vivarc.js"))
+
+
+def prompt_update(message):
+    script = (f'display dialog "{message}" with title "Vivarc" buttons {{"Later", "Update Vivarc"}} '
+              'default button "Update Vivarc" giving up after 300')
+    out = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+    return "button returned:Update Vivarc" in out.stdout
+
+
+def open_in_terminal(path):
+    subprocess.run(["open", "-a", "Terminal", path], check=False)
+
+
+def launchctl(*args):
+    subprocess.run(["launchctl", *args], capture_output=True, check=False)
+
+
+def enable_reminder(app):
+    for folder in ("Documents", "Desktop", "Downloads"):
+        if HERE.startswith(os.path.join(HOME, folder) + os.sep):
+            say(f"Note: macOS does not let background jobs read ~/{folder}, so the reminder cannot run from this copy. "
+                "Use the copy the one-line install puts in ~/.vivarc/app.")
+    agent = {
+        "Label": REMINDER_LABEL,
+        "ProgramArguments": ["/usr/bin/python3", os.path.join(HERE, "vivarc.py"), "--app", app, "remind"],
+        "RunAtLoad": True,
+        "StartInterval": 3600,
+        "WatchPaths": [os.path.join(app, "Contents", "Info.plist")],
+    }
+    os.makedirs(os.path.dirname(REMINDER_PLIST), exist_ok=True)
+    with open(REMINDER_PLIST, "wb") as f:
+        plistlib.dump(agent, f)
+    domain = f"gui/{os.getuid()}"
+    launchctl("bootout", f"{domain}/{REMINDER_LABEL}")
+    launchctl("bootstrap", domain, REMINDER_PLIST)
+
+
+def disable_reminder():
+    launchctl("bootout", f"gui/{os.getuid()}/{REMINDER_LABEL}")
+    if os.path.exists(REMINDER_PLIST):
+        os.remove(REMINDER_PLIST)
+
+
 def permission_hint(error):
     die(f"{error}\nmacOS blocked writing into Vivaldi.app. Open System Settings > Privacy & Security > "
         "App Management, allow your terminal app, then run the command again.")
@@ -517,6 +569,11 @@ def cmd_install(args):
     except PermissionError as error:
         permission_hint(error)
     write_update_command(UPDATE_COMMAND)
+    if os.path.exists(REMINDER_PLIST):
+        enable_reminder(app)
+    elif (ask("Show a reminder when a Vivaldi update removes Vivarc? [y/N] ") or "").lower() in ("y", "yes"):
+        enable_reminder(app)
+        say("Reminder on. Turn it off any time with: python3 ~/.vivarc/app/vivarc.py reminder off")
     say("Done. Open Vivaldi. After a Vivaldi update, double-click \"Update Vivarc\" to bring Vivarc back: "
         "in Finder press Cmd+Shift+H, then open Applications. It is the file ~/Applications/Update Vivarc.command.")
 
@@ -554,6 +611,30 @@ def cmd_update(args):
     cmd_install(args)
 
 
+def cmd_remind(args):
+    resources = os.path.join(args.app, RESOURCES)
+    if not needs_reapply(resources):
+        return
+    stamp = os.path.join(HOME_DIR, "reminded")
+    if os.path.exists(stamp) and time.time() - float(read_text(stamp)) < REMIND_EVERY:
+        return
+    os.makedirs(HOME_DIR, exist_ok=True)
+    write_atomic(stamp, str(time.time()))
+    if prompt_update("Vivaldi was updated and Vivarc is no longer active. Bring it back now?"):
+        if not os.path.exists(UPDATE_COMMAND):
+            write_update_command(UPDATE_COMMAND)
+        open_in_terminal(UPDATE_COMMAND)
+
+
+def cmd_reminder(args):
+    if args.state == "on":
+        enable_reminder(args.app)
+        say("Reminder on: you will be asked when a Vivaldi update removes Vivarc.")
+    else:
+        disable_reminder()
+        say("Reminder off.")
+
+
 def cmd_uninstall(args):
     resources = os.path.join(args.app, RESOURCES)
     ensure_vivaldi_closed()
@@ -587,6 +668,7 @@ def cmd_uninstall(args):
     except PermissionError as error:
         permission_hint(error)
     remove_update_command(UPDATE_COMMAND)
+    disable_reminder()
     if args.purge:
         shutil.rmtree(HOME_DIR, ignore_errors=True)
     say("Vivarc removed. Your bookmarks (including the Vivarc folder) were left alone.")
@@ -598,6 +680,7 @@ def cmd_status(args):
     injected = os.path.exists(html_path) and BEGIN in read_text(html_path)
     say(f"Vivarc {VERSION}; Vivaldi {app_version(args.app)} (running: {vivaldi_running()})")
     say(f"JS injected: {injected}" + ("" if injected else "  -> run ./vivarc.py apply"))
+    say(f"Update reminder: {'on' if os.path.exists(REMINDER_PLIST) else 'off'}")
     state = load_state()
     for directory, name in find_profiles(read_json(os.path.join(args.data_dir, "Local State"))):
         path = os.path.join(args.data_dir, directory, "Preferences")
@@ -620,6 +703,9 @@ def main(argv=None):
     install.add_argument("--no-peek", action="store_true")
     install.add_argument("--dry-run", action="store_true")
     sub.add_parser("apply")
+    sub.add_parser("remind", help="ask to re-apply when Vivaldi has been updated (run by the reminder)")
+    reminder = sub.add_parser("reminder", help="turn the update reminder on or off")
+    reminder.add_argument("state", choices=["on", "off"])
     update = sub.add_parser("update")
     update.add_argument("--no-peek", action="store_true")
     update.set_defaults(dry_run=False)
@@ -632,7 +718,7 @@ def main(argv=None):
     if platform.system() != "Darwin":
         die("Vivarc currently supports macOS only")
     check_not_root()
-    {"install": cmd_install, "apply": cmd_apply, "update": cmd_update, "uninstall": cmd_uninstall,
+    {"install": cmd_install, "apply": cmd_apply, "update": cmd_update, "remind": cmd_remind, "reminder": cmd_reminder, "uninstall": cmd_uninstall,
      "status": cmd_status, "import-arc": cmd_import_arc}[args.command](args)
 
 

@@ -41,6 +41,8 @@ class InstallFlow(unittest.TestCase):
         self.home = os.path.join(self.tmp, "home")
         patches = [
             mock.patch.object(vivarc, "HOME_DIR", self.home),
+            mock.patch.object(vivarc, "REMINDER_PLIST", os.path.join(self.tmp, "LaunchAgents", "reminder.plist")),
+            mock.patch.object(vivarc, "launchctl"),
             mock.patch.object(vivarc, "UPDATE_COMMAND", os.path.join(self.tmp, "Applications", "Update Vivarc.command")),
             mock.patch.object(vivarc, "vivaldi_running", return_value=False),
             mock.patch.object(vivarc, "app_version", return_value="9.9.9"),
@@ -160,6 +162,15 @@ class InstallFlow(unittest.TestCase):
         self.assertTrue(os.path.exists(vivarc.UPDATE_COMMAND))
         self.run_cli("uninstall")
         self.assertFalse(os.path.exists(vivarc.UPDATE_COMMAND))
+
+    def test_install_only_turns_the_reminder_on_when_the_user_says_yes(self):
+        self.run_cli("install", "--no-peek")
+        self.assertFalse(os.path.exists(vivarc.REMINDER_PLIST))
+        with mock.patch.object(vivarc, "ask", return_value="y"):
+            self.run_cli("install", "--no-peek")
+        self.assertTrue(os.path.exists(vivarc.REMINDER_PLIST))
+        self.run_cli("uninstall")
+        self.assertFalse(os.path.exists(vivarc.REMINDER_PLIST))
 
     def test_refuses_to_run_while_vivaldi_is_open(self):
         with mock.patch.object(vivarc, "vivaldi_running", return_value=True):
