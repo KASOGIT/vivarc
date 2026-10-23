@@ -283,16 +283,15 @@
     return b;
   };
 
-  const startRename = (titleEl, node) => {
-    const field = el("input", "vm-rename");
+  const editTitle = (field, node, cleanup = () => {}) => {
     field.value = node.title;
-    titleEl.replaceWith(field);
     field.focus();
     field.select();
     let done = false;
     const finish = (commit) => {
       if (done) return;
       done = true;
+      cleanup();
       const title = field.value.trim();
       if (commit && title && title !== node.title) chrome.bookmarks.update(node.id, { title });
       else refresh(true);
@@ -305,12 +304,30 @@
     field.addEventListener("blur", () => finish(true));
     field.addEventListener("click", (e) => e.stopPropagation());
   };
+  const startRename = (titleEl, node) => {
+    const field = el("input", "vm-rename");
+    titleEl.replaceWith(field);
+    editTitle(field, node);
+  };
+  // A favorite tile only shows its icon, so its name is edited in a field floating under its row of the grid.
+  const renameFavorite = (tile, node) => {
+    const grid = tile.closest(".vm-favs");
+    if (!grid) return;
+    const box = grid.getBoundingClientRect();
+    const field = el("input", "vm-rename-float");
+    field.style.left = `${box.left}px`;
+    field.style.top = `${tile.getBoundingClientRect().bottom + 6}px`;
+    field.style.width = `${box.width}px`;
+    (document.querySelector("#browser") || document.body).append(field);
+    editTitle(field, node, () => field.remove());
+  };
 
   const bookmarkMenu = (node, isFav) => (e) => {
     const tab = boundTab(node);
     showMenu(e, [
       ["Open in New Tab", () => chrome.tabs.create({ url: node.url })],
       ["Copy Link", () => copy(node.url)],
+      ["Rename…", () => { state.renameId = node.id; refresh(true); }],
       ...(isAway(tab, node) ? [
         [isFav ? "Back to Favorite Page" : "Back to Pinned Page", () => backToPin(tab, node)],
         ["Separate From Pinned Tab", () => separate(tab, node)],
@@ -335,7 +352,8 @@
     if (away) row.classList.add("away");
     row.append(iconEl(node.url, away ? undefined : tab?.favIconUrl));
     if (away) row.append(el("span", "vm-away-mark", "/"));
-    row.append(el("span", "vm-title", away ? (tab.title || tab.url) : (node.title || node.url)));
+    const title = el("span", "vm-title", away ? (tab.title || tab.url) : (node.title || node.url));
+    row.append(title);
     if (away) row.append(actionButton("↩", "Back to pinned page", () => backToPin(tab, node)));
     if (!tab) row.append(actionButton("×", "Remove from Pinned", () => discard(node)));
     else if (away) row.append(actionButton("–", "Separate From Pinned Tab", () => separate(tab, node)));
@@ -349,6 +367,10 @@
         await insertPinned(data, node.parentId, node.index + (zone === "after" ? 1 : 0));
       },
     });
+    if (state.renameId === node.id) {
+      state.renameId = null;
+      setTimeout(() => startRename(title, node), 0);
+    }
     return row;
   };
 
@@ -426,6 +448,10 @@
         await insertPinned(data, node.parentId, node.index + (zone === "after" ? 1 : 0));
       },
     });
+    if (state.renameId === node.id) {
+      state.renameId = null;
+      setTimeout(() => renameFavorite(tile, node), 0);
+    }
     return tile;
   };
 
