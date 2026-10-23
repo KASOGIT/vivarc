@@ -12,7 +12,7 @@
   const seedIcons = window.__vmIcons || {};
   let icons = {};
   const saveOpen = () => store.set("open", [...openFolders]);
-  const state = { space: null, favs: null, pinned: null, trash: null, tabs: [], renameId: null };
+  const state = { space: null, favs: null, pinned: null, trash: null, tabs: [], bound: new Map(), renameId: null };
   let panel = null;
 
   const ICON_CLOSED =
@@ -27,13 +27,8 @@
     return e;
   };
 
-  const sameSite = (tabUrl, url) => {
-    try {
-      const a = new URL(tabUrl), b = new URL(url);
-      if (a.origin !== b.origin) return false;
-      return b.pathname.length > 1 ? a.pathname.startsWith(b.pathname) : a.pathname === "/";
-    } catch (_) { return false; }
-  };
+  const pinLinks = window.__vm.pins;
+  const { sameSite } = pinLinks;
 
   const originOf = (url) => {
     try { return new URL(url).origin; } catch (_) { return ""; }
@@ -79,12 +74,64 @@
   };
   const spaceLabel = (space) => space.title.startsWith(ARC_PREFIX) ? space.title.slice(ARC_PREFIX.length) : space.title;
 
-  const tabFor = (url) => state.tabs.find((t) => sameSite(t.url, url));
+  // The tab that belongs to a pin or favorite stays bound to it wherever it navigates (see 08-pins.js).
+  const boundTab = (node) => state.bound.get(node.id);
+  const isAway = (tab, node) => !!tab && pinLinks.away(tab, node.url);
 
-  const focusOrOpen = (url) => {
-    const hit = tabFor(url);
-    if (hit) chrome.tabs.update(hit.id, { active: true });
-    else chrome.tabs.create({ url });
+  // Re-read the tab right before writing: Vivaldi keeps its own keys in the same field.
+  const writeExt = async (tabId, patch) => {
+    const local = state.tabs.find((t) => t.id === tabId);
+    if (local) local.vivExtData = pinLinks.patched(local, patch);
+    try {
+      const fresh = await chrome.tabs.get(tabId);
+      if (pinLinks.needsWrite(fresh, patch)) await chrome.tabs.update(tabId, { vivExtData: pinLinks.patched(fresh, patch) });
+    } catch (_) {}
+  };
+
+  // A pin opened from the sidebar remembers where it landed after the site's redirects.
+  const recordHome = (tabId, pinId) => {
+    const done = () => chrome.tabs.onUpdated.removeListener(onUpdated);
+    const onUpdated = async (id, change) => {
+      if (id !== tabId || change.status !== "complete") return;
+      done();
+      try {
+        const fresh = await chrome.tabs.get(tabId);
+        if (pinLinks.pinOf(fresh) === pinId && pinLinks.homeOf(fresh) === undefined) {
+          writeExt(tabId, { [pinLinks.HOME]: pinLinks.norm(fresh.url) });
+        }
+      } catch (_) {}
+    };
+    chrome.tabs.onUpdated.addListener(onUpdated);
+    setTimeout(done, 60000);
+  };
+
+  const openPin = async (node) => {
+    const tab = await chrome.tabs.create({ url: node.url });
+    await writeExt(tab.id, { [pinLinks.PIN]: node.id });
+    recordHome(tab.id, node.id);
+  };
+
+  const focusOrOpen = (node) => {
+    const tab = boundTab(node);
+    if (tab) chrome.tabs.update(tab.id, { active: true });
+    else openPin(node);
+  };
+
+  const backToPin = (tab, node) => chrome.tabs.update(tab.id, { url: node.url });
+
+  // The page you are on moves to a regular tab and the pinned tab goes back to its pinned page.
+  const separate = async (tab, node) => {
+    await chrome.tabs.create({ url: tab.url, index: tab.index + 1 });
+    await chrome.tabs.update(tab.id, { url: node.url });
+  };
+
+  const bindTabs = () => {
+    if (!state.space) { state.bound = new Map(); return; }
+    const pins = [...(state.favs ? leaves(state.favs) : []), ...(state.pinned ? leaves(state.pinned) : [])]
+      .map((n) => ({ id: n.id, url: n.url }));
+    const { bound, writes } = pinLinks.plan(state.tabs, pins);
+    state.bound = bound;
+    for (const { tabId, patch } of writes) writeExt(tabId, patch);
   };
 
   const ensureFolder = async (name) => {
@@ -223,8 +270,9 @@
   const unpin = async (data) => {
     if (data.type !== "bm" || data.node.children) return;
     const { url } = data.node;
+    const hadTab = boundTab(data.node);
     discard(data.node);
-    if (!tabFor(url)) await chrome.tabs.create({ url, active: false });
+    if (!hadTab) await chrome.tabs.create({ url, active: false });
   };
 
   // ---- rows ----
@@ -259,10 +307,14 @@
   };
 
   const bookmarkMenu = (node, isFav) => (e) => {
-    const tab = tabFor(node.url);
+    const tab = boundTab(node);
     showMenu(e, [
       ["Open in New Tab", () => chrome.tabs.create({ url: node.url })],
       ["Copy Link", () => copy(node.url)],
+      ...(isAway(tab, node) ? [
+        [isFav ? "Back to Favorite Page" : "Back to Pinned Page", () => backToPin(tab, node)],
+        ["Separate From Pinned Tab", () => separate(tab, node)],
+      ] : []),
       [isFav ? "Move to Pinned" : "Move to Favorites", async () => {
         const target = isFav ? state.pinned : await ensureFolder("Favorites");
         if (target) chrome.bookmarks.move(node.id, { parentId: target.id });
@@ -276,14 +328,19 @@
   const pinnedLink = (node, depth) => {
     const row = el("div", "vm-row vm-link");
     row.style.paddingLeft = `${8 + depth * 20}px`;
-    row.title = node.url;
-    const tab = tabFor(node.url);
+    const tab = boundTab(node);
+    const away = isAway(tab, node);
+    row.title = away ? `${tab.title || ""}\n${tab.url}`.trim() : node.url;
     if (tab?.active) row.classList.add("active");
-    row.append(iconEl(node.url, tab?.favIconUrl), el("span", "vm-title", node.title || node.url));
-    row.append(tab
-      ? actionButton("–", "Close tab", () => chrome.tabs.remove(tab.id))
-      : actionButton("×", "Remove from Pinned", () => discard(node)));
-    row.addEventListener("click", () => focusOrOpen(node.url));
+    if (away) row.classList.add("away");
+    row.append(iconEl(node.url, away ? undefined : tab?.favIconUrl));
+    if (away) row.append(el("span", "vm-away-mark", "/"));
+    row.append(el("span", "vm-title", node.title || node.url));
+    if (away) row.append(actionButton("↩", "Back to pinned page", () => backToPin(tab, node)));
+    if (!tab) row.append(actionButton("×", "Remove from Pinned", () => discard(node)));
+    else if (away) row.append(actionButton("–", "Separate From Pinned Tab", () => separate(tab, node)));
+    else row.append(actionButton("–", "Close tab", () => chrome.tabs.remove(tab.id)));
+    row.addEventListener("click", () => focusOrOpen(node));
     row.addEventListener("contextmenu", bookmarkMenu(node, false));
     wireDrag(row, { type: "bm", node, url: node.url });
     wireDrop(row, {
@@ -353,10 +410,12 @@
   const favTile = (node) => {
     const tile = el("div", "vm-fav");
     tile.title = node.title || node.url;
-    const tab = tabFor(node.url);
+    const tab = boundTab(node);
+    const away = isAway(tab, node);
     if (tab?.active) tile.classList.add("active");
-    tile.append(iconEl(node.url, tab?.favIconUrl));
-    tile.addEventListener("click", () => focusOrOpen(node.url));
+    if (away) tile.classList.add("away");
+    tile.append(iconEl(node.url, away ? undefined : tab?.favIconUrl));
+    tile.addEventListener("click", () => focusOrOpen(node));
     tile.addEventListener("contextmenu", bookmarkMenu(node, true));
     wireDrag(tile, { type: "bm", node, url: node.url });
     wireDrop(tile, {
@@ -445,9 +504,9 @@
     }
     if (state.pinned) state.pinned.children.forEach((c) => body.append(pinnedNode(c, 0)));
 
-    const covered = [...favLeaves, ...(state.pinned ? leaves(state.pinned) : [])].map((n) => n.url);
+    const taken = new Set([...state.bound.values()].map((t) => t.id));
     const blank = state.tabs.filter((t) => BLANK.test(t.url || ""));
-    const open = state.tabs.filter((t) => !BLANK.test(t.url || "") && !covered.some((u) => sameSite(t.url, u)));
+    const open = state.tabs.filter((t) => !BLANK.test(t.url || "") && !taken.has(t.id));
     const divider = el("div", "vm-divider");
     const clear = el("span", "vm-clear", "Clear");
     clear.addEventListener("click", async () => {
@@ -542,6 +601,7 @@
   };
   const loadTabs = async () => {
     state.tabs = await chrome.tabs.query({ currentWindow: true });
+    bindTabs();
     cacheIcons();
   };
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Like Arc, a pinned tab stays on its pin when you navigate inside it, instead of turning into a separate open tab and leaving the pin looking closed. The row shows a `/`; hover it for "Back to pinned page" and "Separate From Pinned Tab" (also in the right-click menu, and for favorites). The link is stored in the tab's session data, so it survives a restart.
+- Behaviour change: only the tab bound to a pin is hidden from the open tabs list. A second tab on the same site now shows up as a regular tab.
+
 ## 0.1.6 - 2026-10-23
 - Update Vivarc is now a real app (`~/Applications/Update Vivarc.app`) that you can drag to the Dock; it opens the update script in Terminal. The plain script moved to `~/.vivarc/` and the old one in `~/Applications` is removed on the next install.
 
