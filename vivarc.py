@@ -273,9 +273,9 @@ SETTINGS_PANE = "x-apple.systempreferences:com.apple.preference.security?Privacy
 def ask(prompt):
     """Read an answer from the terminal even when stdin is a pipe; None when there is no terminal."""
     try:
-        with open("/dev/tty", "r+") as tty:
-            tty.write(prompt)
-            tty.flush()
+        with open("/dev/tty", "w") as out, open("/dev/tty") as tty:
+            out.write(prompt)
+            out.flush()
             return tty.readline().strip()
     except OSError:
         return None
@@ -455,7 +455,10 @@ def write_update_command(path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     script = ("#!/bin/bash\n"
               f"{UPDATE_MARK}: updates Vivarc and brings it back after a Vivaldi update.\n"
-              f"/usr/bin/python3 {shlex.quote(os.path.join(HERE, 'vivarc.py'))} update && open -a Vivaldi\n")
+              f"/usr/bin/python3 {shlex.quote(os.path.join(HERE, 'vivarc.py'))} update\n"
+              "status=$?\n"
+              "open -a Vivaldi\n"
+              "exit $status\n")
     write_atomic(path, script)
     os.chmod(path, 0o755)
 
@@ -591,6 +594,11 @@ def cmd_apply(args):
 
 
 def cmd_update(args):
+    if vivaldi_running():
+        say("Closing Vivaldi...")
+        quit_vivaldi()
+        if vivaldi_running():
+            die("Vivaldi did not close. Quit it yourself (Cmd+Q), then run this again. Nothing was changed.")
     extra = ["--no-peek"] if args.no_peek else []
     if os.path.isdir(os.path.join(HERE, ".git")):
         pulled = subprocess.run(["git", "-C", HERE, "pull", "--ff-only"], capture_output=True, text=True)
@@ -620,7 +628,7 @@ def cmd_remind(args):
         return
     os.makedirs(HOME_DIR, exist_ok=True)
     write_atomic(stamp, str(time.time()))
-    if prompt_update("Vivaldi was updated and Vivarc is no longer active. Bring it back now?"):
+    if prompt_update("Vivaldi was updated and Vivarc is no longer active. Bring it back now? Vivaldi will close and reopen."):
         if not os.path.exists(UPDATE_COMMAND):
             write_update_command(UPDATE_COMMAND)
         open_in_terminal(UPDATE_COMMAND)

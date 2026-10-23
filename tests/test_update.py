@@ -2,6 +2,7 @@ import io
 import os
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -46,6 +47,24 @@ class UpdateCommandFile(unittest.TestCase):
         with open(self.path) as f:
             self.assertIn("'/Users/some one/vivarc/vivarc.py'", f.read())
 
+    def test_reopens_vivaldi_and_keeps_the_exit_code_even_when_the_update_fails(self):
+        fake = os.path.join(self.tmp, "app")
+        os.makedirs(fake)
+        with open(os.path.join(fake, "vivarc.py"), "w") as f:
+            f.write("import sys; sys.exit(3)\n")
+        bin_dir = os.path.join(self.tmp, "bin")
+        os.makedirs(bin_dir)
+        log = os.path.join(self.tmp, "open.log")
+        with open(os.path.join(bin_dir, "open"), "w") as f:
+            f.write(f'#!/bin/sh\necho "$@" >> "{log}"\n')
+        os.chmod(os.path.join(bin_dir, "open"), 0o755)
+        with mock.patch.object(vivarc, "HERE", fake):
+            vivarc.write_update_command(self.path)
+        result = subprocess.run(["/bin/bash", self.path], env={**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"})
+        self.assertEqual(result.returncode, 3)
+        with open(log) as f:
+            self.assertEqual(f.read().strip(), "-a Vivaldi")
+
     def test_removal_only_touches_a_file_made_by_vivarc(self):
         vivarc.write_update_command(self.path)
         vivarc.remove_update_command(self.path)
@@ -69,9 +88,14 @@ class Update(unittest.TestCase):
         os.makedirs(self.copy)
         self.args = mock.Mock(app="/Apps/Vivaldi.app", data_dir="/data", no_peek=False, dry_run=False)
 
-    def run_update(self, here, latest, git_ok=True):
+    def run_update(self, here, latest, git_ok=True, running=False):
         out = io.StringIO()
-        calls = {"install": [], "execve": [], "git": []}
+        calls = {"install": [], "execve": [], "git": [], "quit": []}
+        state = {"open": running}
+
+        def fake_quit():
+            calls["quit"].append(len(calls["install"]) + len(calls["execve"]))
+            state["open"] = False
 
         def fake_execve(*a):
             calls["execve"].append(a)
@@ -83,6 +107,8 @@ class Update(unittest.TestCase):
 
         with mock.patch.object(vivarc, "HERE", here), \
                 mock.patch.object(vivarc, "HOME_DIR", os.path.join(self.tmp, ".vivarc")), \
+                mock.patch.object(vivarc, "vivaldi_running", side_effect=lambda: state["open"]), \
+                mock.patch.object(vivarc, "quit_vivaldi", side_effect=fake_quit), \
                 mock.patch.object(vivarc, "latest_release_tag", return_value=latest), \
                 mock.patch.object(vivarc, "cmd_install", side_effect=lambda a: calls["install"].append(a)), \
                 mock.patch("os.execve", side_effect=fake_execve), \
@@ -103,6 +129,23 @@ class Update(unittest.TestCase):
         self.assertEqual(env["VIVARC_APP"], "/Apps/Vivaldi.app")
         self.assertEqual(env["VIVARC_DATA_DIR"], "/data")
         self.assertIn("9.0.0", out)
+
+    def test_closes_a_running_vivaldi_by_itself_before_changing_anything(self):
+        calls, out = self.run_update(self.copy, "v" + vivarc.VERSION, running=True)
+        self.assertEqual(calls["quit"], [0])
+        self.assertEqual(calls["install"], [self.args])
+        self.assertIn("Closing Vivaldi", out)
+
+    def test_does_not_touch_vivaldi_when_it_is_not_running(self):
+        calls, _ = self.run_update(self.copy, "v" + vivarc.VERSION)
+        self.assertEqual(calls["quit"], [])
+
+    def test_stops_if_vivaldi_will_not_close(self):
+        with mock.patch.object(vivarc, "vivaldi_running", return_value=True), \
+                mock.patch.object(vivarc, "quit_vivaldi"), \
+                redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                vivarc.cmd_update(self.args)
 
     def test_no_peek_is_passed_on_to_the_installer(self):
         self.args.no_peek = True

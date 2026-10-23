@@ -1,5 +1,6 @@
 import io
 import os
+import pty
 import stat
 import sys
 import tempfile
@@ -24,6 +25,27 @@ class CanWrite(unittest.TestCase):
                 self.assertFalse(vivarc.can_write(d))
             finally:
                 os.chmod(d, stat.S_IRWXU)
+
+
+class Ask(unittest.TestCase):
+    def test_reads_the_answer_from_a_real_terminal_even_when_stdin_is_a_pipe(self):
+        code = ("import sys; sys.path.insert(0, %r); import vivarc; print('ANSWER=' + repr(vivarc.ask('q? ')))"
+                % os.path.join(os.path.dirname(__file__), ".."))
+        pid, fd = pty.fork()
+        if pid == 0:
+            os.execv("/usr/bin/python3", ["/usr/bin/python3", "-c", code])
+        os.write(fd, b"yes\n")
+        output = b""
+        while True:
+            try:
+                chunk = os.read(fd, 1024)
+            except OSError:
+                break
+            if not chunk:
+                break
+            output += chunk
+        os.waitpid(pid, 0)
+        self.assertIn(b"ANSWER='yes'", output)
 
 
 class Preflight(unittest.TestCase):
