@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.8 - 2026-10-24
 - The favorites grid shrinks its tiles (down to 72px) before dropping a column, instead of jumping straight from 3 to 2 columns.
 - The sidebar can no longer be resized below 220px.
 
