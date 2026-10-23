@@ -32,7 +32,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 HOME_DIR = os.path.join(HOME, ".vivarc")
 DEFAULT_APP = os.environ.get("VIVARC_APP", "/Applications/Vivaldi.app")
 DEFAULT_DATA = os.environ.get("VIVARC_DATA_DIR", os.path.join(HOME, "Library", "Application Support", "Vivaldi"))
-UPDATE_COMMAND = os.path.join(HOME, "Applications", "Update Vivarc.command")
+UPDATE_COMMAND = os.path.join(HOME_DIR, "Update Vivarc.command")
+UPDATE_APP = os.path.join(HOME, "Applications", "Update Vivarc.app")
+LEGACY_UPDATE_COMMAND = os.path.join(HOME, "Applications", "Update Vivarc.command")
 UPDATE_MARK = "# Created by Vivarc"
 RELEASES_LATEST = "https://github.com/KASOGIT/vivarc/releases/latest"
 REMINDER_LABEL = "com.vivarc.reminder"
@@ -463,6 +465,19 @@ def write_update_command(path):
     os.chmod(path, 0o755)
 
 
+def write_update_app(app, command):
+    shutil.rmtree(app, ignore_errors=True)
+    os.makedirs(os.path.dirname(app), exist_ok=True)
+    script = f'do shell script "open -a Terminal " & quoted form of {json.dumps(command, ensure_ascii=False)} & " {UPDATE_MARK}"'
+    subprocess.run(["osacompile", "-o", app, "-e", script], check=True, capture_output=True)
+
+
+def remove_update_app(app):
+    source = os.path.join(app, "Contents", "Resources", "Scripts", "main.scpt")
+    if os.path.exists(source) and UPDATE_MARK in subprocess.run(["osadecompile", source], capture_output=True, text=True).stdout:
+        shutil.rmtree(app)
+
+
 def remove_update_command(path):
     if os.path.exists(path) and UPDATE_MARK in read_text(path):
         os.remove(path)
@@ -572,13 +587,15 @@ def cmd_install(args):
     except PermissionError as error:
         permission_hint(error)
     write_update_command(UPDATE_COMMAND)
+    write_update_app(UPDATE_APP, UPDATE_COMMAND)
+    remove_update_command(LEGACY_UPDATE_COMMAND)
     if os.path.exists(REMINDER_PLIST):
         enable_reminder(app)
     elif (ask("Show a reminder when a Vivaldi update removes Vivarc? [y/N] ") or "").lower() in ("y", "yes"):
         enable_reminder(app)
         say("Reminder on. Turn it off any time with: python3 ~/.vivarc/app/vivarc.py reminder off")
-    say("Done. Open Vivaldi. After a Vivaldi update, double-click \"Update Vivarc\" to bring Vivarc back: "
-        "in Finder press Cmd+Shift+H, then open Applications. It is the file ~/Applications/Update Vivarc.command.")
+    say("Done. Open Vivaldi. After a Vivaldi update, open \"Update Vivarc\" to bring Vivarc back. Find it in Finder: "
+        "Cmd+Shift+H, then the Applications folder. Drag it to your Dock to keep it close.")
 
 
 def cmd_apply(args):
@@ -676,6 +693,8 @@ def cmd_uninstall(args):
     except PermissionError as error:
         permission_hint(error)
     remove_update_command(UPDATE_COMMAND)
+    remove_update_command(LEGACY_UPDATE_COMMAND)
+    remove_update_app(UPDATE_APP)
     disable_reminder()
     if args.purge:
         shutil.rmtree(HOME_DIR, ignore_errors=True)

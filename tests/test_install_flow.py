@@ -43,7 +43,9 @@ class InstallFlow(unittest.TestCase):
             mock.patch.object(vivarc, "HOME_DIR", self.home),
             mock.patch.object(vivarc, "REMINDER_PLIST", os.path.join(self.tmp, "LaunchAgents", "reminder.plist")),
             mock.patch.object(vivarc, "launchctl"),
-            mock.patch.object(vivarc, "UPDATE_COMMAND", os.path.join(self.tmp, "Applications", "Update Vivarc.command")),
+            mock.patch.object(vivarc, "UPDATE_COMMAND", os.path.join(self.tmp, "home", "Update Vivarc.command")),
+            mock.patch.object(vivarc, "UPDATE_APP", os.path.join(self.tmp, "Applications", "Update Vivarc.app")),
+            mock.patch.object(vivarc, "LEGACY_UPDATE_COMMAND", os.path.join(self.tmp, "Applications", "Update Vivarc.command")),
             mock.patch.object(vivarc, "vivaldi_running", return_value=False),
             mock.patch.object(vivarc, "app_version", return_value="9.9.9"),
             mock.patch.object(vivarc, "ask", return_value=None),
@@ -162,6 +164,17 @@ class InstallFlow(unittest.TestCase):
         self.assertTrue(os.path.exists(vivarc.UPDATE_COMMAND))
         self.run_cli("uninstall")
         self.assertFalse(os.path.exists(vivarc.UPDATE_COMMAND))
+
+    def test_install_leaves_a_dockable_app_and_uninstall_removes_it(self):
+        self.run_cli("install", "--no-peek")
+        self.assertTrue(os.path.exists(os.path.join(vivarc.UPDATE_APP, "Contents", "Info.plist")))
+        self.run_cli("uninstall")
+        self.assertFalse(os.path.exists(vivarc.UPDATE_APP))
+
+    def test_install_removes_the_script_that_older_versions_left_in_the_applications_folder(self):
+        vivarc.write_update_command(vivarc.LEGACY_UPDATE_COMMAND)
+        self.run_cli("install", "--no-peek")
+        self.assertFalse(os.path.exists(vivarc.LEGACY_UPDATE_COMMAND))
 
     def test_install_only_turns_the_reminder_on_when_the_user_says_yes(self):
         self.run_cli("install", "--no-peek")
