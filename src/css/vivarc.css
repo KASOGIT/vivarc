@@ -55,7 +55,7 @@
 }
 /* With the sidebar auto-hidden (Cmd+S), Vivaldi makes the revealed bar a window drag region, which
    swallows every click. Vivarc's own UI opts out, including the menus and popovers that float over it. */
-#vm-panel, .vm-menu, .vm-theme-pop, #vm-cmd { app-region: no-drag; }
+#vm-panel, .vm-menu, .vm-theme-pop, #vm-cmd, .vm-rename-float { app-region: no-drag; }
 #vm-panel .vm-scroll {
   flex: 1 1 auto;
   min-height: 0;
@@ -278,6 +278,21 @@
   font: inherit;
   font-weight: 600;
   box-shadow: none;
+}
+.vm-rename-float {
+  position: fixed;
+  z-index: 100002;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--vm-text) 30%, transparent);
+  border-radius: 8px;
+  outline: 0;
+  background: var(--vm-surface);
+  color: var(--vm-text);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
 /* Bottom toolbar (profile button): shorter, content centred so it sits lower */
