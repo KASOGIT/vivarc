@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Fix: with a theme on, the hidden sidebar (Cmd+S) still could not be clicked when it slid back in on hover.
+
 ## 0.1.9 - 2026-10-24
 - Fix: with the sidebar hidden (Cmd+S), nothing in it could be clicked when it slid back in on hover.
 

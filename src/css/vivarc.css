@@ -359,6 +359,7 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
+  app-region: none; /* app-region is inherited: drawn last over the whole bar, it would undo the panel's no-drag */
   background-image: var(--vm-noise);
   opacity: var(--vm-grain, 0.1);
   mix-blend-mode: overlay;
