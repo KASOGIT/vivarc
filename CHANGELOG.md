@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- One-line installer for everyone (also updates and repairs): downloads the latest release and runs it, no git needed.
+- The installer checks that macOS allows editing Vivaldi before changing anything, opens the App Management settings page and waits, offers to quit Vivaldi, refuses to run as root, and detects files left owned by root after an earlier sudo run.
+- `apply` works while Vivaldi is open; the bundle is written atomically.
+
 ## 0.1.1 - 2026-10-23
 - Fix: the sidebar could stay empty after a restart when tab events cancelled the first bookmark load.
 - Added a contributing guide, issue templates and a demo GIF in the README.

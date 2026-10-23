@@ -43,6 +43,7 @@ class InstallFlow(unittest.TestCase):
             mock.patch.object(vivarc, "HOME_DIR", self.home),
             mock.patch.object(vivarc, "vivaldi_running", return_value=False),
             mock.patch.object(vivarc, "app_version", return_value="9.9.9"),
+            mock.patch.object(vivarc, "ask", return_value=None),
         ]
         for p in patches:
             p.start()
@@ -129,6 +130,29 @@ class InstallFlow(unittest.TestCase):
     def test_apply_alone_also_puts_the_guide_page_in_place(self):
         self.run_cli("apply")
         self.assertTrue(os.path.exists(os.path.join(self.home, "start", "index.html")))
+
+    def test_install_changes_nothing_when_macos_refuses_write_access(self):
+        before = self.prefs("Default")
+        with mock.patch.object(vivarc, "can_write", return_value=False):
+            with self.assertRaises(SystemExit):
+                self.run_cli("install", "--no-peek")
+        self.assertEqual(self.prefs("Default"), before)
+        self.assertFalse(os.path.exists(os.path.join(self.home, "state.json")))
+        self.assertFalse(os.path.exists(os.path.join(self.home, "peek")))
+
+    def test_apply_works_while_vivaldi_is_open_and_says_to_restart(self):
+        with mock.patch.object(vivarc, "vivaldi_running", return_value=True):
+            self.run_cli("apply")
+        res = os.path.join(self.app, vivarc.RESOURCES)
+        self.assertTrue(os.path.exists(os.path.join(res, "vivarc.js")))
+
+    def test_apply_overwrites_a_read_only_bundle_left_by_an_earlier_run(self):
+        self.run_cli("install", "--no-peek")
+        bundle = os.path.join(self.app, vivarc.RESOURCES, "vivarc.js")
+        os.chmod(bundle, 0o444)
+        self.run_cli("apply")
+        with open(bundle) as f:
+            self.assertIn("[vivarc] core started", f.read())
 
     def test_refuses_to_run_while_vivaldi_is_open(self):
         with mock.patch.object(vivarc, "vivaldi_running", return_value=True):

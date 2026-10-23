@@ -27,8 +27,8 @@ VERSION = "0.1.1"
 HOME = os.path.expanduser("~")
 HERE = os.path.dirname(os.path.abspath(__file__))
 HOME_DIR = os.path.join(HOME, ".vivarc")
-DEFAULT_APP = "/Applications/Vivaldi.app"
-DEFAULT_DATA = os.path.join(HOME, "Library", "Application Support", "Vivaldi")
+DEFAULT_APP = os.environ.get("VIVARC_APP", "/Applications/Vivaldi.app")
+DEFAULT_DATA = os.environ.get("VIVARC_DATA_DIR", os.path.join(HOME, "Library", "Application Support", "Vivaldi"))
 RESOURCES = "Contents/Frameworks/Vivaldi Framework.framework/Resources/vivaldi"
 
 BEGIN, END = "<!-- vivarc:begin -->", "<!-- vivarc:end -->"
@@ -258,6 +258,101 @@ def say(message):
     print(message)
 
 
+SETTINGS_PANE = "x-apple.systempreferences:com.apple.preference.security?Privacy_AppBundles"
+
+
+def ask(prompt):
+    """Read an answer from the terminal even when stdin is a pipe; None when there is no terminal."""
+    try:
+        with open("/dev/tty", "r+") as tty:
+            tty.write(prompt)
+            tty.flush()
+            return tty.readline().strip()
+    except OSError:
+        return None
+
+
+def open_settings():
+    subprocess.run(["open", SETTINGS_PANE], check=False)
+
+
+def quit_vivaldi():
+    subprocess.run(["osascript", "-e", 'tell application "Vivaldi" to quit'], check=False)
+    for _ in range(40):
+        if not vivaldi_running():
+            return
+        time.sleep(0.5)
+
+
+def can_write(directory):
+    try:
+        probe = os.path.join(directory, f".vivarc-write-test-{os.getpid()}")
+        with open(probe, "w"):
+            pass
+        os.remove(probe)
+        return True
+    except OSError:
+        return False
+
+
+def check_not_root():
+    if os.geteuid() == 0:
+        die("Do not run Vivarc with sudo. It does not help (macOS asks for a separate permission, see below) "
+            "and it leaves files in your home folder that only root can change.\n"
+            "Run the same command without sudo. If macOS blocks it, allow your terminal under "
+            "System Settings > Privacy & Security > App Management.")
+
+
+def check_owner(path):
+    if os.path.exists(path) and os.stat(path).st_uid != os.getuid():
+        die(f"{path} belongs to another user, probably from an earlier run with sudo. Fix it with:\n"
+            f"  sudo chown -R \"$(whoami)\" \"{path}\"\nthen run the command again (without sudo).")
+
+
+def ensure_vivaldi_closed(ask=ask, quit_app=quit_vivaldi):
+    if not vivaldi_running():
+        return
+    answer = ask("Vivaldi is open and must be closed first. Quit it now? [Y/n] ")
+    if answer is None:
+        die("Quit Vivaldi (Cmd+Q) first, then run this again. Nothing was changed.")
+    if answer.lower() in ("", "y", "yes"):
+        quit_app()
+        if not vivaldi_running():
+            return
+        die("Vivaldi did not close. Quit it yourself (Cmd+Q), then run this again. Nothing was changed.")
+    die("Vivaldi has to be closed first. Nothing was changed.")
+
+
+def preflight(resources, ask=ask, open_settings=open_settings):
+    """macOS only lets an app with the 'App Management' permission edit Vivaldi.app. Check before changing anything."""
+    opened = False
+    for _ in range(5):
+        if can_write(resources):
+            return
+        if not opened:
+            say("macOS is not letting this terminal modify Vivaldi. This is a one-time permission:")
+            say("  1. System Settings is opening on Privacy & Security > App Management")
+            say("  2. Switch on the app you are typing this in (Terminal, iTerm...). Add it with + if it is missing.")
+            say("  3. Come back here. If macOS asks to quit and reopen the terminal, do it and run the command again.")
+            open_settings()
+            opened = True
+        answer = ask("Press Enter once it is switched on (or type q to stop): ")
+        if answer is None:
+            die("Cannot ask for the permission here. Nothing was changed. Allow your terminal under "
+                "System Settings > Privacy & Security > App Management, then run the command again.")
+        if answer.lower() == "q":
+            die("Stopped. Nothing was changed.")
+    die("Still no permission to modify Vivaldi. Nothing was changed. See the README troubleshooting section.")
+
+
+def write_atomic(path, text):
+    """Write next to the target and swap it in, so a reader never sees half a file and a stale owner cannot block us."""
+    temp = f"{path}.vivarc-tmp"
+    with open(temp, "w", encoding="utf8") as f:
+        f.write(text)
+    os.replace(temp, path)
+
+
 def load_state():
     path = os.path.join(HOME_DIR, "state.json")
     return read_json(path) if os.path.exists(path) else {"profiles": {}, "version": VERSION}
@@ -318,8 +413,7 @@ def write_bundle(resources, with_peek):
     start_page = pathlib.Path(HOME_DIR, "start", "index.html").as_uri()
     config = {**load_config(), "startUrl": start_page}
     bundle = build_bundle(os.path.join(HERE, "src/js"), config, extras, pre)
-    with open(os.path.join(resources, "vivarc.js"), "w", encoding="utf8") as f:
-        f.write(bundle)
+    write_atomic(os.path.join(resources, "vivarc.js"), bundle)
 
 
 def apply_js(app, resources, with_peek):
@@ -330,8 +424,7 @@ def apply_js(app, resources, with_peek):
     if BEGIN not in html and not os.path.exists(saved):
         shutil.copy2(html_path, saved)
     write_bundle(resources, with_peek)
-    with open(html_path, "w", encoding="utf8") as f:
-        f.write(inject_window_html(html))
+    write_atomic(html_path, inject_window_html(html))
 
 
 def permission_hint(error):
@@ -345,8 +438,10 @@ def cmd_install(args):
     resources = os.path.join(app, RESOURCES)
     if not os.path.isdir(resources):
         die(f"Vivaldi not found at {app} (use --app)")
-    if vivaldi_running() and not args.dry_run:
-        die("Quit Vivaldi (Cmd+Q) first, then run this again.")
+    if not args.dry_run:
+        check_owner(HOME_DIR)
+        ensure_vivaldi_closed()
+        preflight(resources)
     profiles = find_profiles(read_json(os.path.join(data, "Local State")))
     say(f"Vivaldi {app_version(app)}; profiles: {', '.join(f'{n} ({d})' for d, n in profiles)}")
     if args.dry_run:
@@ -387,25 +482,25 @@ def cmd_install(args):
         apply_js(app, resources, not args.no_peek)
     except PermissionError as error:
         permission_hint(error)
-    say("Done. Open Vivaldi. After a Vivaldi update, run: ./vivarc.py apply")
+    say("Done. Open Vivaldi. After a Vivaldi update, run the same install command again to bring Vivarc back.")
 
 
 def cmd_apply(args):
     resources = os.path.join(args.app, RESOURCES)
-    if vivaldi_running():
-        die("Quit Vivaldi (Cmd+Q) first, then run this again.")
+    check_owner(HOME_DIR)
+    preflight(resources)
     sync_guide()
     try:
         apply_js(args.app, resources, os.path.exists(os.path.join(HOME_DIR, "peek", "VividPeek.js")))
     except PermissionError as error:
         permission_hint(error)
-    say(f"Re-applied to Vivaldi {app_version(args.app)}")
+    say(f"Re-applied to Vivaldi {app_version(args.app)}" + (". Restart Vivaldi to see it." if vivaldi_running() else ""))
 
 
 def cmd_uninstall(args):
     resources = os.path.join(args.app, RESOURCES)
-    if vivaldi_running():
-        die("Quit Vivaldi (Cmd+Q) first, then run this again.")
+    ensure_vivaldi_closed()
+    preflight(resources)
     state = load_state()
     for directory, snap in state["profiles"].items():
         prefs_path = os.path.join(args.data_dir, directory, "Preferences")
@@ -475,6 +570,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if platform.system() != "Darwin":
         die("Vivarc currently supports macOS only")
+    check_not_root()
     {"install": cmd_install, "apply": cmd_apply, "uninstall": cmd_uninstall,
      "status": cmd_status, "import-arc": cmd_import_arc}[args.command](args)
 
