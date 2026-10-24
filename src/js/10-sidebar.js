@@ -2,7 +2,6 @@
 // open tabs). The data lives in a bookmarks folder that has a "Favorites" and a "Pinned" subfolder
 // (created on first run, or produced by `vivarc import-arc`). Vivaldi's own tab strip is hidden.
 (() => {
-  const ARC_PREFIX = "Arc - ";
   const cfg = window.__vm.config;
   const BLANK = /^(chrome|vivaldi):\/\/(newtab|vivaldi-webui\/startpage)/;
   const BOTTOM_TOOLBAR = cfg.compactBottomBar ? 35 : 64;
@@ -12,7 +11,9 @@
   const seedIcons = window.__vmIcons || {};
   let icons = {};
   const saveOpen = () => store.set("open", [...openFolders]);
-  const state = { space: null, favs: null, pinned: null, trash: null, tabs: [], bound: new Map(), profiles: [], renameId: null };
+  const state = { space: null, defaultSpace: null, folders: [], favs: null, pinned: null, trash: null, tabs: [], allTabs: [], bound: new Map(),
+    profiles: [], renameId: null, workspaces: [], active: 0 };
+  const spacesOf = window.__vm.workspaces;
   let panel = null;
 
   const ICON_CLOSED =
@@ -64,15 +65,7 @@
     node.children ? node.children.flatMap(leaves) : [node];
 
   const hasPinnedChild = (n) => n.children?.some((c) => c.children && c.title === "Pinned");
-  const findSpace = (nodes) => {
-    for (const n of nodes) {
-      if (hasPinnedChild(n)) return n;
-      const found = n.children && findSpace(n.children);
-      if (found) return found;
-    }
-    return null;
-  };
-  const spaceLabel = (space) => space.title.startsWith(ARC_PREFIX) ? space.title.slice(ARC_PREFIX.length) : space.title;
+  const findSpaces = (nodes) => nodes.flatMap((n) => hasPinnedChild(n) ? [n] : n.children ? findSpaces(n.children) : []);
 
   // The tab that belongs to a pin or favorite stays bound to it wherever it navigates (see 08-pins.js).
   const boundTab = (node) => state.bound.get(node.id);
@@ -129,15 +122,18 @@
     if (!state.space) { state.bound = new Map(); return; }
     const pins = [...(state.favs ? leaves(state.favs) : []), ...(state.pinned ? leaves(state.pinned) : [])]
       .map((n) => ({ id: n.id, url: n.url }));
-    const { bound, writes } = pinLinks.plan(state.tabs, pins);
+    const allIds = state.folders.flatMap((f) => leaves(f)).map((n) => n.id);
+    const { bound, writes } = pinLinks.plan(state.tabs, pins, allIds);
     state.bound = bound;
     for (const { tabId, patch } of writes) writeExt(tabId, patch);
   };
 
+  // Favorites are shared by every space (like Arc's); Pinned belongs to the space on screen.
   const ensureFolder = async (name) => {
-    const existing = state.space.children.find((c) => c.children && c.title === name);
+    const owner = name === "Favorites" ? state.defaultSpace : state.space;
+    const existing = owner.children.find((c) => c.children && c.title === name);
     if (existing) return existing;
-    return chrome.bookmarks.create({ parentId: state.space.id, title: name, index: 0 });
+    return chrome.bookmarks.create({ parentId: owner.id, title: name, index: 0 });
   };
 
   window.__vm.pinTab = async (tab, kind) => {
@@ -585,6 +581,32 @@
     }
   };
 
+  // ---- space bar: Vivaldi workspaces as Arc-style spaces ----
+  const switchSpace = async (item) => {
+    if (item.id === state.active) return;
+    const tab = spacesOf.recentTab(state.allTabs, item.id);
+    if (tab) await chrome.tabs.update(tab.id, { active: true });
+    else await chrome.tabs.create({ active: true, vivExtData: JSON.stringify({ workspaceId: item.id }) });
+  };
+
+  const spacePill = (item) => {
+    const pill = el("div", `vm-space-pill${item.id === state.active ? " active" : ""}`, item.emoji || item.name.trim().charAt(0).toUpperCase() || "?");
+    pill.title = item.name;
+    pill.addEventListener("click", () => switchSpace(item));
+    return pill;
+  };
+
+  const spaceBar = () => {
+    const items = spacesOf.items(state.workspaces, state.defaultSpace ? spacesOf.label(state.defaultSpace) : "Home");
+    if (!items.length) return null;
+    const bar = el("div", "vm-space-bar");
+    const plus = el("div", "vm-space-pill vm-space-plus", "+");
+    plus.title = "New space";
+    plus.addEventListener("click", () => window.dispatchEvent(new CustomEvent("vm-toast", { detail: "Press F2, then Create New Workspace" })));
+    bar.append(...items.map(spacePill), plus);
+    return bar;
+  };
+
   // ---- render ----
   const fitHeight = () => {
     if (!panel?.isConnected) return;
@@ -598,7 +620,7 @@
     const body = el("div", "vm-scroll");
     const favLeaves = state.favs ? state.favs.children.filter((c) => !c.children) : [];
     let grid = null;
-    if (state.space) {
+    if (state.defaultSpace) {
       grid = el("div", "vm-favs");
       favLeaves.forEach((n) => grid.append(favTile(n)));
       wireDrop(grid, {
@@ -609,7 +631,7 @@
     }
     if (state.space) {
       const label = el("div", "vm-space");
-      label.append(el("span", "vm-space-name", spaceLabel(state.space)));
+      label.append(el("span", "vm-space-name", spacesOf.label(state.space)));
       label.append(actionButton("🎨", "Edit theme", () => window.dispatchEvent(new CustomEvent("vm-open-theme"))));
       wireDrop(label, {
         onDrop: async (_zone, data) => insertPinned(data, (state.pinned || await ensureFolder("Pinned")).id, 0),
@@ -639,7 +661,8 @@
     body.append(fresh);
     open.sort((a, b) => b.index - a.index).forEach((t) => body.append(tabRow(t)));
 
-    panel.replaceChildren(...(grid ? [grid] : []), body);
+    const bar = spaceBar();
+    panel.replaceChildren(...(grid ? [grid] : []), body, ...(bar ? [bar] : []));
     body.scrollTop = scroll;
     fitHeight();
   };
@@ -660,7 +683,7 @@
     return dataUrl(await canvas.convertToBlob({ type: "image/png" }));
   };
   const cacheIcons = async () => {
-    for (const t of state.tabs) {
+    for (const t of state.allTabs) {
       const src = t.favIconUrl;
       const origin = originOf(t.url);
       if (!src || !/^https?:/.test(origin) || icons[origin] === src || icons[origin]?.startsWith("data:")) continue;
@@ -711,21 +734,44 @@
 
   const loadBookmarks = async () => {
     let tree = await chrome.bookmarks.getTree();
-    if (!findSpace(tree) && !triedFirstRun) {
+    if (!findSpaces(tree).length && !triedFirstRun) {
       triedFirstRun = true;
       await createSpace(tree);
       tree = await chrome.bookmarks.getTree();
     }
-    const space = findSpace(tree);
-    state.space = space;
-    state.favs = space?.children.find((c) => c.children && c.title === "Favorites") ?? null;
-    state.pinned = space?.children.find((c) => c.children && c.title === "Pinned") ?? null;
+    state.folders = findSpaces(tree);
     state.trash = (tree[0]?.children ?? []).find((c) => c.trash === true || /^trash$/i.test(c.title)) ?? null;
   };
+
+  // The folder of the space on screen. A workspace Vivarc meets for the first time gets its own empty Pinned folder.
+  const madeFolderFor = new Set();
+  const applySpace = async () => {
+    const pick = () => {
+      const { default: base, byId } = spacesOf.assign(state.folders, state.workspaces);
+      return { base, space: state.active ? byId[state.active] ?? null : base };
+    };
+    let picked = pick();
+    const workspace = state.workspaces.find((w) => w.id === state.active);
+    if (!picked.space && workspace && picked.base && !madeFolderFor.has(workspace.id)) {
+      madeFolderFor.add(workspace.id);
+      const folder = await chrome.bookmarks.create({ parentId: picked.base.parentId, title: workspace.name });
+      await chrome.bookmarks.create({ parentId: folder.id, title: "Pinned" });
+      await loadBookmarks();
+      picked = pick();
+    }
+    state.defaultSpace = picked.base;
+    state.space = picked.space;
+    state.favs = picked.base?.children.find((c) => c.children && c.title === "Favorites") ?? null;
+    state.pinned = picked.space?.children.find((c) => c.children && c.title === "Pinned") ?? null;
+  };
+
+  const readWorkspaces = async () => {
+    try { return (await vivaldi.prefs.get("vivaldi.workspaces.list"))?.value || []; } catch (_) { return []; }
+  };
   const loadTabs = async () => {
-    state.tabs = await chrome.tabs.query({ currentWindow: true });
-    bindTabs();
-    cacheIcons();
+    state.allTabs = await chrome.tabs.query({ currentWindow: true });
+    state.workspaces = await readWorkspaces();
+    ({ active: state.active, tabs: state.tabs } = spacesOf.scope(state.allTabs, state.workspaces));
   };
 
   // Calls inside the debounce window are merged, and a request to reload bookmarks is never lost to a later
@@ -739,11 +785,14 @@
     timer = setTimeout(async () => {
       if (drag) { refreshAfterDrag = true; return; } // re-rendering would detach the node being dragged
       refreshAfterDrag = false;
-      const bookmarks = wantBookmarks || !state.space;
+      const bookmarks = wantBookmarks || !state.defaultSpace;
       wantBookmarks = false;
       try {
-        if (bookmarks) await loadBookmarks();
         await loadTabs();
+        if (bookmarks) await loadBookmarks();
+        await applySpace();
+        bindTabs();
+        cacheIcons();
         render();
         failures = 0;
       } catch (e) {
@@ -806,6 +855,10 @@
     for (const ev of ["onCreated", "onRemoved", "onUpdated", "onMoved", "onActivated", "onAttached", "onDetached", "onReplaced"]) {
       chrome.tabs[ev]?.addListener(() => refresh(false));
     }
+    setInterval(async () => {
+      const brief = (list) => JSON.stringify(list.map((w) => [w.id, w.name, w.emoji]));
+      if (brief(await readWorkspaces()) !== brief(state.workspaces)) refresh(false);
+    }, 3000);
     try {
       vivaldi.runtimePrivate.onProfilesUpdated.addListener(loadProfiles);
       window.__vm.onShortcut((key) => {

@@ -96,6 +96,28 @@ class Binding(unittest.TestCase):
 
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class AcrossSpaces(unittest.TestCase):
+    HERE = {"id": "here", "url": "https://git.example.com/org/repo/actions"}
+    ELSEWHERE = {"id": "there", "url": "https://other.example.com/"}
+
+    def plan(self, tabs):
+        return js("(() => { const r = pins.plan(tabs, list, all); return { bound: [...r.bound].map(([p, t]) => [p, t.id]), writes: r.writes }; })()",
+                  tabs=tabs, list=[self.HERE], all=["here", "there"])
+
+    def test_a_tab_bound_to_a_pin_of_another_space_keeps_its_binding(self):
+        result = self.plan([tab(1, "https://other.example.com/", ext={"vivarcPin": "there"})])
+        self.assertEqual(result, {"bound": [], "writes": []})
+
+    def test_a_tab_is_still_cleared_when_its_pin_is_in_no_space_at_all(self):
+        result = self.plan([tab(1, "https://x.example.com/", ext={"vivarcPin": "gone"})])
+        self.assertEqual(result["writes"], [{"tabId": 1, "patch": {"vivarcPin": None, "vivarcHome": None}}])
+
+    def test_pins_of_this_space_still_bind_normally(self):
+        result = self.plan([tab(1, "https://git.example.com/org/repo/actions/runs/1")])
+        self.assertEqual(result["bound"], [["here", 1]])
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class ExtData(unittest.TestCase):
     def test_binding_keeps_the_keys_vivaldi_stores_in_the_same_field(self):
         t = tab(1, "https://x.example.com/", ext={"workspaceId": 7, "tiling": {"id": "t"}})
