@@ -87,5 +87,8 @@
     return { bound, writes };
   };
 
-  window.__vm.pins = { PIN, HOME, pinOf, homeOf, patched, needsWrite, sameSite, norm, away, plan };
+  // Every folder under a Pinned tree, at any depth (the tree's own root is not one of them).
+  const folderIds = (root) => (root?.children || []).flatMap((n) => (n.children ? [n.id, ...folderIds(n)] : []));
+
+  window.__vm.pins = { folderIds, PIN, HOME, pinOf, homeOf, patched, needsWrite, sameSite, norm, away, plan };
 })();

@@ -172,5 +172,25 @@ class AtHome(unittest.TestCase):
         self.assertTrue(self.away("https://other.example.org/", "https://docs.example.com/page", "https://docs.example.com/page"))
 
 
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class Folders(unittest.TestCase):
+    TREE = {"id": "root", "children": [
+        {"id": "a", "url": "https://a.example.com/"},
+        {"id": "f1", "children": [
+            {"id": "b", "url": "https://b.example.com/"},
+            {"id": "f2", "children": []}]},
+        {"id": "f3", "children": [{"id": "f4", "children": [{"id": "c", "url": "https://c.example.com/"}]}]}]}
+
+    def test_every_folder_at_any_depth_is_listed_and_links_are_not(self):
+        self.assertEqual(sorted(js("pins.folderIds(tree)", tree=self.TREE)), ["f1", "f2", "f3", "f4"])
+
+    def test_the_pinned_folder_itself_is_not_one_of_its_folders(self):
+        self.assertNotIn("root", js("pins.folderIds(tree)", tree=self.TREE))
+
+    def test_nothing_pinned_means_no_folders(self):
+        self.assertEqual(js("pins.folderIds(null)"), [])
+        self.assertEqual(js("pins.folderIds({ id: 'root' })"), [])
+
+
 if __name__ == "__main__":
     unittest.main()
