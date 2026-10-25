@@ -10,10 +10,11 @@
   const COPY_URL = "shift+meta+c";
 
   // Bump when the steps change: profiles already set up then run the (idempotent) steps once more.
-  const VERSION = 9;
+  const VERSION = 12;
   const TOGGLE = "meta+s";
   const PROFILE_KEYS = ["ctrl+meta+left", "ctrl+meta+right"]; // the profile switcher's previous/next, handled in 06-spaces.js
-  const SPACE_KEYS = { COMMAND_WORKSPACE_SWITCH_BACK_ORDER: "alt+meta+left", COMMAND_WORKSPACE_SWITCH_FORWARD_ORDER: "alt+meta+right" }; // like Arc's spaces
+  const SPACE_KEYS = { COMMAND_WORKSPACE_SWITCH_BACK_ORDER: "alt+meta+left", COMMAND_WORKSPACE_SWITCH_FORWARD_ORDER: "alt+meta+right",
+    COMMAND_WORKSPACE_CREATE_NEW: "ctrl+meta+n" }; // like Arc's spaces; Ctrl+Cmd+N opens Vivaldi's own Create Workspace dialog
 
   // The address bar and navigation buttons live inside the sidebar; the top bar is hidden.
   const SIDEBAR_TOOLBAR = ["TabButton", "Extensions", "FlexibleSpacer", "Back", "Reload", "Forward", "AddressField"];

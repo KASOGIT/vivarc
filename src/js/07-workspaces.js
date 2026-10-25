@@ -51,5 +51,21 @@
     return { default: folders.find((f) => !used.has(f.id)) ?? folders[0] ?? null, byId };
   };
 
-  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, recentTab, label, assign };
+  // A tab opened while a space is active joins it. Vivaldi does not do this for tabs a mod or a command bar opens,
+  // so they would land in the default space. Returns the new vivExtData, or null when nothing needs writing.
+  const stamp = (tab, activeSpace) => {
+    if (!activeSpace) return null;
+    let data;
+    try { data = JSON.parse(tab?.vivExtData || "{}") || {}; } catch (_) { data = {}; }
+    if ("workspaceId" in data) return null;
+    return JSON.stringify({ ...data, workspaceId: activeSpace });
+  };
+
+  // A mod can neither create a workspace (Vivaldi reads its list once) nor press a shortcut for the user: events a
+  // mod dispatches never reach Vivaldi's shortcut handler. So the install binds "Create New Workspace" to this chord,
+  // and the + tile and the command bar tell the user to press it.
+  const CREATE_KEY = "ctrl+meta+n";
+  const CREATE_HINT = "Press Ctrl+Cmd+N to create a space";
+
+  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, recentTab, label, assign, stamp, CREATE_KEY, CREATE_HINT };
 })();

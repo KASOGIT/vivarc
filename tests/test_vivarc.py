@@ -48,6 +48,11 @@ class PatchPreferences(unittest.TestCase):
         self.assertEqual(actions["COMMAND_WORKSPACE_SWITCH_FORWARD_ORDER"]["shortcuts"], ["alt+meta+right"])
         self.assertEqual(actions["COMMAND_WORKSPACE_SWITCH_1"]["shortcuts"], ["ctrl+shift+1"])
 
+    def test_ctrl_cmd_n_opens_vivaldis_create_workspace_dialog(self):
+        new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])
+        actions = new["vivaldi"]["actions"][0]
+        self.assertEqual(actions["COMMAND_WORKSPACE_CREATE_NEW"]["shortcuts"], ["ctrl+meta+n"])
+
     def test_cmd_ctrl_left_and_right_are_freed_for_the_profile_switcher(self):
         new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])
         self.assertEqual(new["vivaldi"]["actions"][0]["COMMAND_SOMETHING_ELSE"]["shortcuts"], ["f9"])

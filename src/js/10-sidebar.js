@@ -602,7 +602,7 @@
     const bar = el("div", "vm-space-bar");
     const plus = el("div", "vm-space-pill vm-space-plus", "+");
     plus.title = "New space";
-    plus.addEventListener("click", () => window.dispatchEvent(new CustomEvent("vm-toast", { detail: "Press F2, then Create New Workspace" })));
+    plus.addEventListener("click", () => window.dispatchEvent(new CustomEvent("vm-toast", { detail: spacesOf.CREATE_HINT })));
     bar.append(...items.map(spacePill), plus);
     return bar;
   };
@@ -852,6 +852,10 @@
     for (const ev of ["onCreated", "onRemoved", "onChanged", "onMoved", "onImportEnded"]) {
       chrome.bookmarks[ev]?.addListener(() => refresh(true));
     }
+    chrome.tabs.onCreated.addListener((tab) => {
+      const data = spacesOf.stamp(tab, state.active);
+      if (data) chrome.tabs.update(tab.id, { vivExtData: data }).catch(() => {});
+    });
     for (const ev of ["onCreated", "onRemoved", "onUpdated", "onMoved", "onActivated", "onAttached", "onDetached", "onReplaced"]) {
       chrome.tabs[ev]?.addListener(() => refresh(false));
     }
