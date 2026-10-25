@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.12 - 2026-10-26
 - Spaces: Vivaldi workspaces become Arc-style spaces. A row of emoji tiles under the sidebar switches between them; each space lists only its own tabs (Clear and Close Other Tabs stay inside it) and has its own Pinned folder, named after the workspace (an imported `Arc - Work` folder goes with a workspace called Work, and a new workspace gets an empty one). Favorites are shared by every space, and a tab you open (command bar, link, sidebar) stays in the active space. A space only groups tabs: logins are shared, profiles remain the way to separate them.
 - Cmd+Option+Left/Right now switches to the previous/next space (Vivaldi's own workspace commands). The profile switcher's previous/next moves to Cmd+Ctrl+Left/Right; Cmd+Ctrl+1..9 is unchanged.
 - **Ctrl+Cmd+N** opens Vivaldi's Create Workspace dialog (name, icon or emoji). The **+** tile under the sidebar and **Create New Space** in the Cmd+T bar remind you of it: a mod cannot press a shortcut for you.
