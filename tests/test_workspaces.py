@@ -134,30 +134,37 @@ class Folders(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class NewTabs(unittest.TestCase):
-    def stamped(self, t, active):
-        out = js("workspaces.stamp(t, active)", t=t, active=active)
+    def stamped(self, t, active, window=1):
+        out = js("workspaces.stamp(t, active, window)", t=t, active=active, window=window)
         return json.loads(out) if out else None
 
     def test_a_tab_opened_while_a_space_is_active_joins_that_space(self):
-        self.assertEqual(self.stamped(tab(1), WORK["id"]), {"workspaceId": WORK["id"]})
+        self.assertEqual(self.stamped({**tab(1), "windowId": 1}, WORK["id"]), {"workspaceId": WORK["id"]})
+
+    def test_a_tab_opened_in_another_window_is_left_to_that_window(self):
+        t = {**tab(1), "windowId": 2}
+        self.assertIsNone(self.stamped(t, WORK["id"], window=1))
+        self.assertEqual(self.stamped({**tab(1), "windowId": 1}, WORK["id"], window=1), {"workspaceId": WORK["id"]})
 
     def test_the_tabs_other_data_is_kept(self):
-        t = {"id": 1, "vivExtData": json.dumps({"tiling": {"id": "t"}})}
+        t = {"id": 1, "windowId": 1, "vivExtData": json.dumps({"tiling": {"id": "t"}})}
         self.assertEqual(self.stamped(t, WORK["id"]), {"tiling": {"id": "t"}, "workspaceId": WORK["id"]})
 
     def test_nothing_is_written_in_the_default_space(self):
-        self.assertIsNone(self.stamped(tab(1), 0))
+        self.assertIsNone(self.stamped({**tab(1), "windowId": 1}, 0))
 
     def test_a_tab_that_already_has_a_workspace_is_left_alone(self):
-        self.assertIsNone(self.stamped(tab(1, SIDE["id"]), WORK["id"]))
-        self.assertIsNone(self.stamped({"id": 1, "vivExtData": json.dumps({"workspaceId": 0})}, WORK["id"]))
+        self.assertIsNone(self.stamped({**tab(1, SIDE["id"]), "windowId": 1}, WORK["id"]))
+        self.assertIsNone(self.stamped({"id": 1, "windowId": 1, "vivExtData": json.dumps({"workspaceId": 0})}, WORK["id"]))
 
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class CreateSpace(unittest.TestCase):
-    def test_the_key_pressed_for_a_new_space_is_the_one_the_install_binds_to_create_workspace(self):
+    def test_the_hint_names_the_key_the_install_binds_to_create_workspace(self):
         import vivarc
-        self.assertEqual(js("workspaces.CREATE_KEY"), vivarc.SPACE_KEYS["COMMAND_WORKSPACE_CREATE_NEW"])
+        names = {"ctrl": "Ctrl", "meta": "Cmd", "alt": "Option", "shift": "Shift"}
+        shown = "+".join(names.get(k, k.upper()) for k in vivarc.SPACE_KEYS["COMMAND_WORKSPACE_CREATE_NEW"].split("+"))
+        self.assertEqual(js("workspaces.CREATE_HINT"), f"Press {shown} to create a space")
 
 
 if __name__ == "__main__":

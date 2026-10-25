@@ -32,7 +32,7 @@ No developer experience needed. It takes about two minutes.
 3. Follow what it says. It offers to close Vivaldi for you, and if macOS asks for a permission (**App Management**) it opens the right settings page and waits while you switch it on for Terminal.
 4. Open Vivaldi.
 
-Every profile gets the sidebar, and profiles you create later set themselves up the first time they open (no restart). Each profile starts with a few example favorites and pins so you can see how it works, and a new profile opens a short guide page.
+Every profile gets the sidebar, and profiles you create later set themselves up the first time they open (the sidebar needs no restart, but Vivaldi reads keyboard shortcuts at launch, so the space and profile shortcuts work after the profile's next restart). Each profile starts with a few example favorites and pins so you can see how it works, and a new profile opens a short guide page.
 
 Requires macOS and Vivaldi 8.x. If your Mac has never had developer tools, macOS shows an "Install" window the first time (it is Apple's free command line tools, which include Python); click Install, wait, then paste the line again.
 

@@ -53,8 +53,9 @@
 
   // A tab opened while a space is active joins it. Vivaldi does not do this for tabs a mod or a command bar opens,
   // so they would land in the default space. Returns the new vivExtData, or null when nothing needs writing.
-  const stamp = (tab, activeSpace) => {
-    if (!activeSpace) return null;
+  // Every window runs its own copy of the mod and sees the tabs of all windows, so only this window's tabs are stamped.
+  const stamp = (tab, activeSpace, windowId) => {
+    if (!activeSpace || tab?.windowId !== windowId) return null;
     let data;
     try { data = JSON.parse(tab?.vivExtData || "{}") || {}; } catch (_) { data = {}; }
     if ("workspaceId" in data) return null;
@@ -65,7 +66,8 @@
   // mod dispatches never reach Vivaldi's shortcut handler. So the install binds "Create New Workspace" to this chord,
   // and the + tile and the command bar tell the user to press it.
   const CREATE_KEY = "ctrl+meta+n";
-  const CREATE_HINT = "Press Ctrl+Cmd+N to create a space";
+  const KEY_NAMES = { ctrl: "Ctrl", meta: "Cmd", alt: "Option", shift: "Shift" };
+  const CREATE_HINT = `Press ${CREATE_KEY.split("+").map((k) => KEY_NAMES[k] || k.toUpperCase()).join("+")} to create a space`;
 
-  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, recentTab, label, assign, stamp, CREATE_KEY, CREATE_HINT };
+  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, recentTab, label, assign, stamp, CREATE_HINT };
 })();

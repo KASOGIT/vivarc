@@ -853,8 +853,11 @@
       chrome.bookmarks[ev]?.addListener(() => refresh(true));
     }
     chrome.tabs.onCreated.addListener((tab) => {
-      const data = spacesOf.stamp(tab, state.active);
-      if (data) chrome.tabs.update(tab.id, { vivExtData: data }).catch(() => {});
+      const active = state.active;
+      chrome.windows.getCurrent().then((win) => {
+        const data = spacesOf.stamp(tab, active, win.id);
+        if (data) chrome.tabs.update(tab.id, { vivExtData: data });
+      }).catch(() => {});
     });
     for (const ev of ["onCreated", "onRemoved", "onUpdated", "onMoved", "onActivated", "onAttached", "onDetached", "onReplaced"]) {
       chrome.tabs[ev]?.addListener(() => refresh(false));
