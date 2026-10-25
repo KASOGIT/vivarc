@@ -87,6 +87,29 @@
 #vm-panel .vm-fav.active { background-color: color-mix(in srgb, var(--colorFg) 24%, transparent); }
 #vm-panel .vm-fav .vm-ico { width: 24px; height: 24px; border-radius: 6px; }
 
+#vm-panel .vm-space-bar {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 0 2px;
+}
+#vm-panel .vm-space-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 28px;
+  border-radius: 9px;
+  font-size: 15px;
+  cursor: pointer;
+  opacity: 0.7;
+  background-color: color-mix(in srgb, var(--colorFg) 9%, transparent);
+  transition: background-color 120ms, opacity 120ms;
+}
+#vm-panel .vm-space-pill:hover { opacity: 1; background-color: color-mix(in srgb, var(--colorFg) 16%, transparent); }
+#vm-panel .vm-space-pill.active { opacity: 1; cursor: default; background-color: color-mix(in srgb, var(--colorFg) 26%, transparent); }
+#vm-panel .vm-space-plus { font-size: 17px; line-height: 1; opacity: 0.5; }
 #vm-panel .vm-space {
   padding: 8px 8px 6px;
   font-size: 12.5px;

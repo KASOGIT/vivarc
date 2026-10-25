@@ -17,6 +17,8 @@ DEFAULTS = {
     "COMMAND_TOGGLE_AUTO_HIDE_TAB_BAR": {"shortcuts": []},
     "COMMAND_TAB_SWITCH_BACK_SETTING": {"shortcuts": ["alt+meta+left", "ctrl+shift+tab"]},
     "COMMAND_TAB_SWITCH_FORWARD_SETTING": {"shortcuts": ["alt+meta+right"]},
+    "COMMAND_WORKSPACE_SWITCH_1": {"shortcuts": ["ctrl+shift+1"]},
+    "COMMAND_SOMETHING_ELSE": {"shortcuts": ["ctrl+meta+left", "ctrl+meta+right", "f9"]},
 }
 
 
@@ -33,11 +35,32 @@ class PatchPreferences(unittest.TestCase):
         self.assertIn("COMMAND_CLOSE_TAB", actions)
         self.assertEqual(actions["COMMAND_CLOSE_TAB"]["shortcuts"], ["meta+w"])
 
-    def test_frees_cmd_option_left_and_right_for_the_profile_switcher_and_keeps_the_other_tab_shortcuts(self):
+    def test_cmd_option_left_and_right_leave_the_tab_switch_commands_and_keep_the_other_tab_shortcuts(self):
         new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])
         actions = new["vivaldi"]["actions"][0]
         self.assertEqual(actions["COMMAND_TAB_SWITCH_BACK_SETTING"]["shortcuts"], ["ctrl+shift+tab"])
         self.assertEqual(actions["COMMAND_TAB_SWITCH_FORWARD_SETTING"]["shortcuts"], [])
+
+    def test_cmd_option_left_and_right_go_to_the_previous_and_next_workspace(self):
+        new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])
+        actions = new["vivaldi"]["actions"][0]
+        self.assertEqual(actions["COMMAND_WORKSPACE_SWITCH_BACK_ORDER"]["shortcuts"], ["alt+meta+left"])
+        self.assertEqual(actions["COMMAND_WORKSPACE_SWITCH_FORWARD_ORDER"]["shortcuts"], ["alt+meta+right"])
+        self.assertEqual(actions["COMMAND_WORKSPACE_SWITCH_1"]["shortcuts"], ["ctrl+shift+1"])
+
+    def test_ctrl_cmd_n_opens_vivaldis_create_workspace_dialog(self):
+        new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])
+        actions = new["vivaldi"]["actions"][0]
+        self.assertEqual(actions["COMMAND_WORKSPACE_CREATE_NEW"]["shortcuts"], ["ctrl+meta+n"])
+
+    def test_cmd_ctrl_left_and_right_are_freed_for_the_profile_switcher(self):
+        new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])
+        self.assertEqual(new["vivaldi"]["actions"][0]["COMMAND_SOMETHING_ELSE"]["shortcuts"], ["f9"])
+
+    def test_patching_twice_does_not_duplicate_the_workspace_shortcuts(self):
+        once, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])
+        twice, _ = vivarc.patch_preferences(once, [DEFAULTS])
+        self.assertEqual(twice["vivaldi"]["actions"][0]["COMMAND_WORKSPACE_SWITCH_BACK_ORDER"]["shortcuts"], ["alt+meta+left"])
 
     def test_frees_cmd_t_and_binds_copy_url(self):
         new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])

@@ -23,22 +23,21 @@
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
   };
 
-  // Cmd+Option+Left/Right goes to the previous/next profile (wrapping), like Arc's spaces.
+  // Cmd+Ctrl+Left/Right goes to the previous/next profile (wrapping).
   // Cmd+Ctrl+1..9 opens the nth chip, unless it is the profile already open.
   const pathForShortcut = (profiles, combo) => {
     const keys = String(combo).toLowerCase().split("+").map((s) => s.trim()).sort();
     const chips = profileChips(profiles);
-    if (keys.length === 3 && keys.includes("alt") && keys.includes("meta")) {
-      const step = keys.includes("right") ? 1 : keys.includes("left") ? -1 : 0;
-      const at = chips.findIndex((c) => c.active);
-      if (!step || chips.length < 2 || at === -1) return null;
-      return chips[(at + step + chips.length) % chips.length].path;
-    }
     if (keys.length !== 3 || !keys.includes("ctrl") || !keys.includes("meta")) return null;
     const digit = keys.find((k) => /^[1-9]$/.test(k));
-    if (!digit) return null;
-    const chip = chips[Number(digit) - 1];
-    return chip && !chip.active ? chip.path : null;
+    if (digit) {
+      const chip = chips[Number(digit) - 1];
+      return chip && !chip.active ? chip.path : null;
+    }
+    const step = keys.includes("right") ? 1 : keys.includes("left") ? -1 : 0;
+    const at = chips.findIndex((c) => c.active);
+    if (!step || chips.length < 2 || at === -1) return null;
+    return chips[(at + step + chips.length) % chips.length].path;
   };
 
   const wantsAccountButton = (profiles) => profileChips(profiles).length === 0;

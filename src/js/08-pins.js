@@ -46,17 +46,21 @@
     return here !== norm(pinUrl) && here !== home;
   };
 
-  // pins: [{ id, url }]. Returns which tab each pin owns, and the vivExtData patches that make it so.
-  const plan = (tabs, pins) => {
+  // pins: [{ id, url }] of the space being shown, tabs: that space's tabs. allIds: every pin id of every space, so a
+  // tab bound to a pin of another space is left alone instead of being cleared as an orphan.
+  // Returns which tab each pin owns, and the vivExtData patches that make it so.
+  const plan = (tabs, pins, allIds = []) => {
     const bound = new Map();
     const writes = [];
     if (!pins.length) return { bound, writes };
-    const known = new Set(pins.map((p) => p.id));
+    const here = new Set(pins.map((p) => p.id));
+    const known = new Set([...here, ...allIds]);
     const claimed = new Set();
 
     for (const tab of [...tabs].sort((a, b) => a.index - b.index)) {
       const id = pinOf(tab);
       if (id === undefined) continue;
+      if (known.has(id) && !here.has(id)) continue;
       if (known.has(id) && !bound.has(id)) {
         bound.set(id, tab);
         claimed.add(tab.id);

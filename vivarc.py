@@ -46,7 +46,9 @@ BEGIN, END = "<!-- vivarc:begin -->", "<!-- vivarc:end -->"
 BLOCK = f'{BEGIN}\n<script src="vivarc.js"></script>\n{END}'
 FREED_KEY = "meta+t"  # the command bar listens for Cmd+T itself
 COPY_URL_KEY = "shift+meta+c"
-PROFILE_KEYS = ("alt+meta+left", "alt+meta+right")  # Vivarc uses them for the previous/next profile, as Arc does for spaces
+PROFILE_KEYS = ("ctrl+meta+left", "ctrl+meta+right")  # the profile switcher's previous/next, handled by the JS
+SPACE_KEYS = {"COMMAND_WORKSPACE_SWITCH_BACK_ORDER": "alt+meta+left", "COMMAND_WORKSPACE_SWITCH_FORWARD_ORDER": "alt+meta+right",
+              "COMMAND_WORKSPACE_CREATE_NEW": "ctrl+meta+n"}  # like Arc's spaces; Ctrl+Cmd+N opens Vivaldi's own Create Workspace dialog
 TOGGLE_SIDEBAR_KEY = "meta+s"
 SIDEBAR_WIDTH = 323
 SIDEBAR_BOTTOM = ["NewTab", "FlexibleSpacer", "AccountButton", "FlexibleSpacer", "PanelDownloads", "UpdateButton"]
@@ -149,12 +151,15 @@ def patch_preferences(prefs, default_actions):
     for name, cmd in defaults.items():
         if TOGGLE_SIDEBAR_KEY in cmd.get("shortcuts", []):
             _command(actions, defaults, name)
+    taken = PROFILE_KEYS + tuple(SPACE_KEYS.values())
     for name, cmd in defaults.items():
-        if any(key in cmd.get("shortcuts", []) for key in PROFILE_KEYS):
+        if any(key in cmd.get("shortcuts", []) for key in taken):
             _command(actions, defaults, name)
     for cmd in actions.values():
         if isinstance(cmd, dict):
-            cmd["shortcuts"] = [s for s in cmd.get("shortcuts", []) if s != TOGGLE_SIDEBAR_KEY and s not in PROFILE_KEYS]
+            cmd["shortcuts"] = [s for s in cmd.get("shortcuts", []) if s != TOGGLE_SIDEBAR_KEY and s not in taken]
+    for name, key in SPACE_KEYS.items():
+        _command(actions, defaults, name)["shortcuts"].append(key)
     _command(actions, defaults, "COMMAND_TOGGLE_AUTO_HIDE_TAB_BAR")["shortcuts"] = [TOGGLE_SIDEBAR_KEY]
     _set(new, ("vivaldi", "actions"), actions_list)
 

@@ -10,9 +10,11 @@
   const COPY_URL = "shift+meta+c";
 
   // Bump when the steps change: profiles already set up then run the (idempotent) steps once more.
-  const VERSION = 8;
+  const VERSION = 12;
   const TOGGLE = "meta+s";
-  const PROFILE_KEYS = ["alt+meta+left", "alt+meta+right"]; // the profile switcher's previous/next, like Arc's spaces
+  const PROFILE_KEYS = ["ctrl+meta+left", "ctrl+meta+right"]; // the profile switcher's previous/next, handled in 06-spaces.js
+  const SPACE_KEYS = { COMMAND_WORKSPACE_SWITCH_BACK_ORDER: "alt+meta+left", COMMAND_WORKSPACE_SWITCH_FORWARD_ORDER: "alt+meta+right",
+    COMMAND_WORKSPACE_CREATE_NEW: "ctrl+meta+n" }; // like Arc's spaces; Ctrl+Cmd+N opens Vivaldi's own Create Workspace dialog
 
   // The address bar and navigation buttons live inside the sidebar; the top bar is hidden.
   const SIDEBAR_TOOLBAR = ["TabButton", "Extensions", "FlexibleSpacer", "Back", "Reload", "Forward", "AddressField"];
@@ -68,9 +70,11 @@
     if (!copy.shortcuts.includes(COPY_URL)) copy.shortcuts.push(COPY_URL);
     command("COMMAND_SAVE_PAGE").shortcuts = command("COMMAND_SAVE_PAGE").shortcuts.filter((s) => s !== TOGGLE);
     command("COMMAND_TOGGLE_AUTO_HIDE_TAB_BAR").shortcuts = [TOGGLE];
+    const taken = [...PROFILE_KEYS, ...Object.values(SPACE_KEYS)];
     for (const cmd of Object.values(table)) {
-      if (Array.isArray(cmd?.shortcuts)) cmd.shortcuts = cmd.shortcuts.filter((s) => !PROFILE_KEYS.includes(s));
+      if (Array.isArray(cmd?.shortcuts)) cmd.shortcuts = cmd.shortcuts.filter((s) => !taken.includes(s));
     }
+    for (const [name, key] of Object.entries(SPACE_KEYS)) command(name).shortcuts.push(key);
     await set("vivaldi.actions", actions);
   };
 
