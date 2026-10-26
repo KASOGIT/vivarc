@@ -2,6 +2,7 @@
 (() => {
   const { settings } = window.__vm;
   let overlay = null;
+  let unsubs = [];
 
   const el = (tag, cls, text) => {
     const e = document.createElement(tag);
@@ -10,9 +11,38 @@
     return e;
   };
 
-  const close = () => { overlay?.remove(); overlay = null; };
+  const close = () => { overlay?.remove(); overlay = null; unsubs.forEach((off) => off()); unsubs = []; };
+
+  const rangeRow = (item) => {
+    const line = el("div", "vm-set-row vm-set-range");
+    const text = el("div", "vm-set-text");
+    const value = el("span", "vm-set-value");
+    const top = el("div", "vm-set-label", item.label + " ");
+    top.append(value);
+    const slider = el("input", "vm-set-slider");
+    slider.type = "range";
+    slider.min = String(item.min);
+    slider.max = String(item.max);
+    slider.step = String(item.step);
+    const ends = el("div", "vm-set-ends");
+    ends.append(el("span", null, item.low), el("span", null, item.high));
+    const show = () => { value.textContent = `${slider.value}${item.unit || ""}`; };
+    const sync = () => {
+      slider.value = String(settings.get(item.key));
+      slider.disabled = !!item.needs && !settings.get(item.needs);
+      line.classList.toggle("dim", slider.disabled);
+      show();
+    };
+    slider.addEventListener("input", () => { settings.set(item.key, Number(slider.value)); show(); });
+    unsubs.push(settings.onChange(sync));
+    text.append(top, el("div", "vm-set-hint", item.hint), slider, ends);
+    line.append(text);
+    sync();
+    return line;
+  };
 
   const row = (item) => {
+    if (item.type === "range") return rangeRow(item);
     const line = el("label", "vm-set-row");
     const text = el("div", "vm-set-text");
     text.append(el("div", "vm-set-label", item.label), el("div", "vm-set-hint", item.hint));
