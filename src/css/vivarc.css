@@ -576,3 +576,76 @@
 .vm-set-switch:checked::after { transform: translateX(16px); }
 .vm-set-foot { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 0; }
 .vm-set-note { opacity: 0.5; font-size: 12.5px; }
+
+/* Liquid glass (setting "glass"), after Apple's Human Interface Guidelines, Materials: glass is for the layer of controls
+   and navigation (sidebar, menus, command bar, dialogs), never for the content layer, and never stacked on itself, so the
+   rows and tiles inside a glass surface keep plain fills. This is the regular variant: blurred and saturated backdrop,
+   a translucent fill that keeps text legible, a thin specular rim and a soft shadow. */
+#browser.vm-on.vm-glass {
+  --vm-glass-fill: color-mix(in srgb, var(--vm-surface) var(--vm-glass-opacity, 55%), transparent);
+  --vm-glass-blur: blur(30px) saturate(180%);
+  --vm-glass-rim: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --vm-glass-sheen: linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 45%);
+  --vm-lozenge-soft: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+  --vm-lozenge: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08));
+  --vm-lozenge-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.15));
+  --vm-lozenge-rim: inset 0 1px 0 rgba(255, 255, 255, 0.38), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --vm-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#browser.vm-on.vm-glass :is(.vm-menu, #vm-cmd .vm-cmd-box, .vm-theme-pop, .vm-set-card, #vm-copied) {
+  background: var(--vm-glass-sheen), var(--vm-glass-fill);
+  backdrop-filter: var(--vm-glass-blur);
+  border-color: transparent;
+  box-shadow: var(--vm-glass-rim), 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+#browser.vm-on.vm-glass #tabs-tabbar-container {
+  background-color: color-mix(in srgb, var(--colorBg, #1c1c20) var(--vm-glass-opacity, 55%), transparent) !important;
+  backdrop-filter: var(--vm-glass-blur);
+  /* with nothing to refract behind it, the sidebar is lit instead: a sheen from the top, a highlight in the corner
+     and a glow of the accent colour from below, plus a rim on the edge facing the page */
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 26%),
+    radial-gradient(120% 45% at 0% 0%, rgba(255, 255, 255, 0.14), transparent 70%),
+    radial-gradient(90% 40% at 100% 100%, color-mix(in srgb, var(--colorHighlightBg, #7b8cff) 28%, transparent), transparent 70%);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+#browser.vm-on.vm-glass.vm-themed #tabs-tabbar-container { background-color: color-mix(in srgb, var(--vm-tint) var(--vm-glass-opacity, 55%), transparent) !important; }
+
+/* Items inside a glass surface are luminous capsules, not more glass: a lit fill and a rim, no blur of their own. */
+#browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill) {
+  background: var(--vm-lozenge-soft);
+  box-shadow: var(--vm-lozenge-rim), 0 2px 8px rgba(0, 0, 0, 0.16);
+  transition: transform 260ms var(--vm-spring), background 160ms, box-shadow 160ms, opacity 120ms;
+}
+#browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):hover { background: var(--vm-lozenge); transform: translateY(-1px) scale(1.04); }
+#browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):active { transform: scale(0.96); }
+#browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill).active { background: var(--vm-lozenge-strong); }
+#browser.vm-on.vm-glass #vm-panel .vm-row { transition: background 160ms, box-shadow 160ms; }
+#browser.vm-on.vm-glass #vm-panel .vm-row:hover { background: var(--vm-lozenge-soft); }
+#browser.vm-on.vm-glass #vm-panel .vm-row.active { background: var(--vm-lozenge); box-shadow: var(--vm-lozenge-rim); }
+#browser.vm-on.vm-glass .vm-space-chip { box-shadow: var(--vm-lozenge-rim); }
+#browser.vm-on.vm-glass .vm-space-chip.active { box-shadow: var(--vm-lozenge-rim), 0 0 0 2px var(--colorHighlightBg, #7b8cff); }
+#browser.vm-on.vm-glass #vm-cmd .vm-cmd-row.sel { background: var(--vm-lozenge-strong), var(--vm-sel); box-shadow: var(--vm-lozenge-rim); }
+#browser.vm-on.vm-glass :is(.vm-menu-item:hover, .vm-set-row:not(.vm-set-range):hover, .vm-theme-mode) { background: var(--vm-lozenge); box-shadow: var(--vm-lozenge-rim); }
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  #browser.vm-on.vm-glass #tabs-tabbar-container { background-image: none; }
+  #browser.vm-on.vm-glass :is(.vm-menu, #vm-cmd .vm-cmd-box, .vm-theme-pop, .vm-set-card, #vm-copied) {
+    background: var(--vm-surface);
+    backdrop-filter: none;
+  }
+  #browser.vm-on.vm-glass #tabs-tabbar-container { background-color: var(--colorBg, #1c1c20) !important; backdrop-filter: none; }
+  #browser.vm-on.vm-glass.vm-themed #tabs-tabbar-container { background-color: var(--vm-tint) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #browser.vm-on.vm-glass :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied),
+  #browser.vm-on.vm-glass :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied) * { transition: none !important; }
+  #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):hover { transform: none; }
+}
+
+.vm-set-range { display: block; cursor: default; }
+.vm-set-range:hover { background: none; }
+.vm-set-range.dim { opacity: 0.4; }
+.vm-set-value { margin-left: 4px; font-weight: 500; opacity: 0.6; font-variant-numeric: tabular-nums; }
+.vm-set-slider { width: 100%; margin: 8px 0 0; accent-color: var(--colorHighlightBg, #6b63a0); }
+.vm-set-ends { display: flex; justify-content: space-between; margin-top: 2px; opacity: 0.5; font-size: 12px; }

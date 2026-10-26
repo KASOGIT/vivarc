@@ -15,7 +15,7 @@ def resolve(config=None, saved=None):
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class Resolve(unittest.TestCase):
     def test_without_anything_saved_the_defaults_apply(self):
-        self.assertEqual(resolve(), {"spaceBar": True, "compactBottomBar": True, "searchSuggestions": True})
+        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True})
 
     def test_the_install_config_sets_the_starting_point(self):
         values = resolve(config={"compactBottomBar": False, "suggestions": "off"})
@@ -34,6 +34,24 @@ class Resolve(unittest.TestCase):
 
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class GlassOpacity(unittest.TestCase):
+    def test_a_saved_opacity_is_used(self):
+        self.assertEqual(resolve(saved={"glassOpacity": 80})["glassOpacity"], 80)
+
+    def test_an_opacity_outside_the_range_is_pulled_back_in(self):
+        self.assertEqual(resolve(saved={"glassOpacity": 5})["glassOpacity"], 15)
+        self.assertEqual(resolve(saved={"glassOpacity": 400})["glassOpacity"], 95)
+
+    def test_something_that_is_not_a_number_is_ignored(self):
+        self.assertEqual(resolve(saved={"glassOpacity": "high"})["glassOpacity"], 55)
+        self.assertEqual(resolve(saved={"glassOpacity": True})["glassOpacity"], 55)
+
+    def test_the_opacity_becomes_a_css_variable_in_percent(self):
+        out = js("settings.vars(settings.SCHEMA, values)", values={"glassOpacity": 72})
+        self.assertEqual(out, {"--vm-glass-opacity": "72%"})
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class MarkerClasses(unittest.TestCase):
     def classes(self, values):
         return js("settings.classes(settings.SCHEMA, values)", values=values)
@@ -41,6 +59,11 @@ class MarkerClasses(unittest.TestCase):
     def test_compact_bottom_bar_is_a_class_while_on(self):
         self.assertTrue(self.classes({"compactBottomBar": True})["vm-compact-bottom"])
         self.assertFalse(self.classes({"compactBottomBar": False})["vm-compact-bottom"])
+
+    def test_liquid_glass_is_a_class_while_on_and_off_by_default(self):
+        self.assertTrue(self.classes({"glass": True})["vm-glass"])
+        self.assertFalse(self.classes({"glass": False})["vm-glass"])
+        self.assertFalse(resolve()["glass"])
 
     def test_hiding_the_space_bar_is_a_class_while_it_is_off(self):
         self.assertTrue(self.classes({"spaceBar": False})["vm-no-space-bar"])
