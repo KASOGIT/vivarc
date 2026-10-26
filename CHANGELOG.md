@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Fix: sites could not ask for the camera or microphone (Google Meet's "Allow" did nothing). Vivaldi shows these requests under the address bar, which Vivarc keeps collapsed, so they were invisible. The address bar now floats over the sidebar, as with Cmd+L, while such a popup is open, and is no longer cut off by the page when a theme is on.
 - Cmd+T quick actions **Collapse All Folders** and **Expand All Folders** fold or unfold every pinned folder in the sidebar at once (type `collapse`, `expand` or `folders`).
 
 ## 0.1.12 - 2026-10-26
