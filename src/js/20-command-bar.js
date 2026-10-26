@@ -149,6 +149,14 @@
       const url = window.__vm.config.startUrl;
       if (url) openPage(url);
     } },
+    { label: "Collapse All Folders", words: "close fold folders pinned sidebar", run: () => {
+      window.dispatchEvent(new CustomEvent("vm-folders", { detail: "collapse" }));
+      toast("Collapsed all folders");
+    } },
+    { label: "Expand All Folders", words: "open unfold folders pinned sidebar", run: () => {
+      window.dispatchEvent(new CustomEvent("vm-folders", { detail: "expand" }));
+      toast("Expanded all folders");
+    } },
     { label: "Edit Theme", words: "color appearance sidebar", run: () => window.dispatchEvent(new CustomEvent("vm-open-theme")) },
   ];
   const ACTION_SVG =

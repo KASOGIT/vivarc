@@ -835,6 +835,11 @@
   };
 
   // Like Arc, opening the command bar scrolls the sidebar down to the new-tab area.
+  window.addEventListener("vm-folders", (e) => {
+    for (const id of pinLinks.folderIds(state.pinned)) e.detail === "expand" ? openFolders.add(id) : openFolders.delete(id);
+    saveOpen();
+    render();
+  });
   window.addEventListener("vm-command-bar-opened", () => {
     const scroller = panel?.querySelector(".vm-scroll");
     scroller?.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" });
