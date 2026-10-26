@@ -572,3 +572,39 @@
 .vm-set-switch:checked::after { transform: translateX(16px); }
 .vm-set-foot { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 0; }
 .vm-set-note { opacity: 0.5; font-size: 12.5px; }
+
+/* Liquid glass (setting "glass"), after Apple's Human Interface Guidelines, Materials: glass is for the layer of controls
+   and navigation (sidebar, menus, command bar, dialogs), never for the content layer, and never stacked on itself, so the
+   rows and tiles inside a glass surface keep plain fills. This is the regular variant: blurred and saturated backdrop,
+   a translucent fill that keeps text legible, a thin specular rim and a soft shadow. */
+#browser.vm-on.vm-glass {
+  --vm-glass-fill: color-mix(in srgb, var(--vm-surface) 58%, transparent);
+  --vm-glass-blur: blur(30px) saturate(180%);
+  --vm-glass-rim: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --vm-glass-sheen: linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 45%);
+}
+#browser.vm-on.vm-glass :is(.vm-menu, #vm-cmd .vm-cmd-box, .vm-theme-pop, .vm-set-card, #vm-copied) {
+  background: var(--vm-glass-sheen), var(--vm-glass-fill);
+  backdrop-filter: var(--vm-glass-blur);
+  border-color: transparent;
+  box-shadow: var(--vm-glass-rim), 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+#browser.vm-on.vm-glass #tabs-tabbar-container {
+  background-color: color-mix(in srgb, var(--colorBg, #1c1c20) 50%, transparent) !important;
+  backdrop-filter: var(--vm-glass-blur);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08);
+}
+#browser.vm-on.vm-glass.vm-themed #tabs-tabbar-container { background-color: color-mix(in srgb, var(--vm-tint) 55%, transparent) !important; }
+
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  #browser.vm-on.vm-glass :is(.vm-menu, #vm-cmd .vm-cmd-box, .vm-theme-pop, .vm-set-card, #vm-copied) {
+    background: var(--vm-surface);
+    backdrop-filter: none;
+  }
+  #browser.vm-on.vm-glass #tabs-tabbar-container { background-color: var(--colorBg, #1c1c20) !important; backdrop-filter: none; }
+  #browser.vm-on.vm-glass.vm-themed #tabs-tabbar-container { background-color: var(--vm-tint) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #browser.vm-on.vm-glass :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied),
+  #browser.vm-on.vm-glass :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied) * { transition: none !important; }
+}
