@@ -20,8 +20,9 @@
   overflow: hidden;
 }
 
-/* URL bar: collapsed until focused (Cmd+L), then floats over the sidebar */
-#browser.vm-on #tabs-tabbar-container .UrlBar-AddressField:not(:focus-within) {
+/* URL bar: collapsed until focused (Cmd+L), then floats over the sidebar. It also floats while one of its
+   popups is open: Vivaldi puts site permission requests (camera, microphone...) there, and they would be invisible. */
+#browser.vm-on #tabs-tabbar-container .UrlBar-AddressField:not(:focus-within, :has(.addressfield-popup-container)) {
   height: 0 !important;
   min-height: 0 !important;
   margin: 0 !important;
@@ -31,7 +32,7 @@
   opacity: 0;
   pointer-events: none;
 }
-#browser.vm-on #tabs-tabbar-container .UrlBar-AddressField:focus-within {
+#browser.vm-on #tabs-tabbar-container .UrlBar-AddressField:is(:focus-within, :has(.addressfield-popup-container)) {
   position: absolute;
   z-index: 100;
   top: 8px;
