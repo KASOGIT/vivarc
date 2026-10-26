@@ -392,6 +392,9 @@
   position: relative;
   isolation: isolate;
 }
+/* isolation makes the bar its own stacking context, painted under the page: lift it while the address bar or
+   one of its popups (site permission requests) is open, or they are cut off at the sidebar's edge */
+#browser.vm-themed #tabs-tabbar-container:is(:focus-within, :has(.addressfield-popup-container)) { z-index: 1; }
 #browser.vm-themed #tabs-tabbar-container::after {
   content: "";
   position: absolute;
