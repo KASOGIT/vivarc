@@ -15,7 +15,7 @@ def resolve(config=None, saved=None):
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class Resolve(unittest.TestCase):
     def test_without_anything_saved_the_defaults_apply(self):
-        self.assertEqual(resolve(), {"glass": False, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True})
+        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True})
 
     def test_the_install_config_sets_the_starting_point(self):
         values = resolve(config={"compactBottomBar": False, "suggestions": "off"})
@@ -31,6 +31,24 @@ class Resolve(unittest.TestCase):
         values = resolve(saved={"spaceBar": "no", "nonsense": True})
         self.assertTrue(values["spaceBar"])
         self.assertNotIn("nonsense", values)
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class GlassOpacity(unittest.TestCase):
+    def test_a_saved_opacity_is_used(self):
+        self.assertEqual(resolve(saved={"glassOpacity": 80})["glassOpacity"], 80)
+
+    def test_an_opacity_outside_the_range_is_pulled_back_in(self):
+        self.assertEqual(resolve(saved={"glassOpacity": 5})["glassOpacity"], 15)
+        self.assertEqual(resolve(saved={"glassOpacity": 400})["glassOpacity"], 95)
+
+    def test_something_that_is_not_a_number_is_ignored(self):
+        self.assertEqual(resolve(saved={"glassOpacity": "high"})["glassOpacity"], 55)
+        self.assertEqual(resolve(saved={"glassOpacity": True})["glassOpacity"], 55)
+
+    def test_the_opacity_becomes_a_css_variable_in_percent(self):
+        out = js("settings.vars(settings.SCHEMA, values)", values={"glassOpacity": 72})
+        self.assertEqual(out, {"--vm-glass-opacity": "72%"})
 
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")

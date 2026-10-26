@@ -578,7 +578,7 @@
    rows and tiles inside a glass surface keep plain fills. This is the regular variant: blurred and saturated backdrop,
    a translucent fill that keeps text legible, a thin specular rim and a soft shadow. */
 #browser.vm-on.vm-glass {
-  --vm-glass-fill: color-mix(in srgb, var(--vm-surface) 58%, transparent);
+  --vm-glass-fill: color-mix(in srgb, var(--vm-surface) var(--vm-glass-opacity, 55%), transparent);
   --vm-glass-blur: blur(30px) saturate(180%);
   --vm-glass-rim: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
   --vm-glass-sheen: linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 45%);
@@ -595,7 +595,7 @@
   box-shadow: var(--vm-glass-rim), 0 18px 50px rgba(0, 0, 0, 0.35);
 }
 #browser.vm-on.vm-glass #tabs-tabbar-container {
-  background-color: color-mix(in srgb, var(--colorBg, #1c1c20) 50%, transparent) !important;
+  background-color: color-mix(in srgb, var(--colorBg, #1c1c20) var(--vm-glass-opacity, 55%), transparent) !important;
   backdrop-filter: var(--vm-glass-blur);
   /* with nothing to refract behind it, the sidebar is lit instead: a sheen from the top, a highlight in the corner
      and a glow of the accent colour from below, plus a rim on the edge facing the page */
@@ -605,7 +605,7 @@
     radial-gradient(90% 40% at 100% 100%, color-mix(in srgb, var(--colorHighlightBg, #7b8cff) 28%, transparent), transparent 70%);
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
-#browser.vm-on.vm-glass.vm-themed #tabs-tabbar-container { background-color: color-mix(in srgb, var(--vm-tint) 55%, transparent) !important; }
+#browser.vm-on.vm-glass.vm-themed #tabs-tabbar-container { background-color: color-mix(in srgb, var(--vm-tint) var(--vm-glass-opacity, 55%), transparent) !important; }
 
 /* Items inside a glass surface are luminous capsules, not more glass: a lit fill and a rim, no blur of their own. */
 #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill) {
@@ -622,7 +622,7 @@
 #browser.vm-on.vm-glass .vm-space-chip { box-shadow: var(--vm-lozenge-rim); }
 #browser.vm-on.vm-glass .vm-space-chip.active { box-shadow: var(--vm-lozenge-rim), 0 0 0 2px var(--colorHighlightBg, #7b8cff); }
 #browser.vm-on.vm-glass #vm-cmd .vm-cmd-row.sel { background: var(--vm-lozenge-strong), var(--vm-sel); box-shadow: var(--vm-lozenge-rim); }
-#browser.vm-on.vm-glass :is(.vm-menu-item:hover, .vm-set-row:hover, .vm-theme-mode) { background: var(--vm-lozenge); box-shadow: var(--vm-lozenge-rim); }
+#browser.vm-on.vm-glass :is(.vm-menu-item:hover, .vm-set-row:not(.vm-set-range):hover, .vm-theme-mode) { background: var(--vm-lozenge); box-shadow: var(--vm-lozenge-rim); }
 
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   #browser.vm-on.vm-glass #tabs-tabbar-container { background-image: none; }
@@ -638,3 +638,10 @@
   #browser.vm-on.vm-glass :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied) * { transition: none !important; }
   #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):hover { transform: none; }
 }
+
+.vm-set-range { display: block; cursor: default; }
+.vm-set-range:hover { background: none; }
+.vm-set-range.dim { opacity: 0.4; }
+.vm-set-value { margin-left: 4px; font-weight: 500; opacity: 0.6; font-variant-numeric: tabular-nums; }
+.vm-set-slider { width: 100%; margin: 8px 0 0; accent-color: var(--colorHighlightBg, #6b63a0); }
+.vm-set-ends { display: flex; justify-content: space-between; margin-top: 2px; opacity: 0.5; font-size: 12px; }

@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- **Liquid glass** (off by default; turn it on in Vivarc Settings): a translucent, blurred sidebar, menus, command bar and dialogs, following Apple's Liquid Glass guidance (glass only for navigation and controls, never stacked, legible text) and falling back to solid surfaces when macOS has Reduce Transparency or Increase Contrast on.
+- **Liquid glass** (off by default; turn it on in Vivarc Settings): a translucent, blurred sidebar, menus, command bar and dialogs, following Apple's Liquid Glass guidance (glass only for navigation and controls, never stacked, legible text) and falling back to solid surfaces when macOS has Reduce Transparency or Increase Contrast on. A **Glass opacity** slider in the settings goes from clear to frosted.
 - **Vivarc Settings**: Cmd+T, type `settings`, or right-click the sidebar and pick Vivarc Settings… to switch features on and off live: the space bar, the compact bottom bar and search suggestions. Saved per profile and applied in all of the profile's windows; `~/.vivarc/config.json` still sets the starting values.
 - Cmd+T quick actions **Collapse All Folders** and **Expand All Folders** fold or unfold every pinned folder in the sidebar at once (type `collapse`, `expand` or `folders`).
 

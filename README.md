@@ -70,7 +70,7 @@ git clone https://github.com/KASOGIT/vivarc.git && cd vivarc
 - **Search shortcuts.** Type `yt` then Tab to search YouTube. 18 are built in (`g`, `gm` Gmail, `gd` Drive, `gc` Calendar, `gh`, `so`, `npm`, `mdn`, `li`, `x`, `w`, `r`, `m`, `az`, `tr`, `d`, `b`). The search engine keywords you already set in Vivaldi work too.
 - **Quick actions.** Type `history`, `downloads`, `pin`, `theme`, `private`, `guide`... and run it: View History, View Downloads, Pin This Tab, Add to Favorites, Collapse / Expand All Folders, Copy Current URL, **Split View** (side by side or top and bottom, like Arc), Duplicate, Mute, New Private Window and more.
 
-**Settings.** Cmd+T, type `settings` (or right-click the sidebar, *Vivarc Settings…*) to switch features on and off live, per profile, including an optional **Liquid Glass** look (translucent sidebar, menus and command bar, following Apple's guidance; it falls back to solid surfaces with Reduce Transparency or Increase Contrast).
+**Settings.** Cmd+T, type `settings` (or right-click the sidebar, *Vivarc Settings…*) to switch features on and off live, per profile, including an optional **Liquid Glass** look (translucent sidebar, menus and command bar with an opacity slider from clear to frosted, following Apple's guidance; it falls back to solid surfaces with Reduce Transparency or Increase Contrast).
 
 **A theme editor.** Hover the space name and click the palette: pick a colour, intensity and grain. Saved per profile, so each one gets its own look.
 
