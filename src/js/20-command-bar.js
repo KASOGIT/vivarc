@@ -157,6 +157,7 @@
       window.dispatchEvent(new CustomEvent("vm-folders", { detail: "expand" }));
       toast("Expanded all folders");
     } },
+    { label: "Vivarc Settings", words: "preferences options configure features toggle glass", run: () => window.dispatchEvent(new CustomEvent("vm-open-settings")) },
     { label: "Edit Theme", words: "color appearance sidebar", run: () => window.dispatchEvent(new CustomEvent("vm-open-theme")) },
   ];
   const ACTION_SVG =
@@ -338,7 +339,7 @@
       const keyword = !/\s/.test(text) && engines.find((en) => en.keyword.toLowerCase() === needle);
       if (keyword) out.unshift({ type: "engine", engine: keyword, label: `Search ${keyword.name}` });
       out.push(...matches.filter((m) => m !== prefix));
-      if (window.__vm.config.suggestions === "ddg" && !looksLikeUrl(text) && text.length > 1) {
+      if (window.__vm.settings.get("searchSuggestions") && !looksLikeUrl(text) && text.length > 1) {
         try {
           const reply = await fetch(DEFAULT.suggest.replace("{searchTerms}", encodeURIComponent(text)));
           const data = await reply.json();

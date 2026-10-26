@@ -8,7 +8,7 @@ HARNESS = """
 const fs = require("fs"), vm = require("vm");
 globalThis.window = { __vm: {} };
 vm.runInThisContext(fs.readFileSync(process.argv[1], "utf8"));
-const pins = window.__vm.pins, spaces = window.__vm.spaces, workspaces = window.__vm.workspaces;
+const pins = window.__vm.pins, spaces = window.__vm.spaces, workspaces = window.__vm.workspaces, settings = window.__vm.settings;
 const input = JSON.parse(process.argv[2]);
 const out = (function () { return eval(input.expr); })();
 console.log(JSON.stringify(out === undefined ? null : out, (k, v) => (v === undefined ? null : v)));

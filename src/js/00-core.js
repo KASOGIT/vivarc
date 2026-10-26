@@ -61,7 +61,6 @@
     const browser = document.querySelector("#browser");
     if (!browser) return false;
     browser.classList.add("vm-on");
-    browser.classList.toggle("vm-compact-bottom", !!config.compactBottomBar);
     browser.classList.toggle("vm-hide-workspaces", !!config.hideWorkspaceButton);
     markListeners.forEach((fn) => fn(browser));
     if (watched !== browser) {

@@ -4,7 +4,7 @@
 (() => {
   const cfg = window.__vm.config;
   const BLANK = /^(chrome|vivaldi):\/\/(newtab|vivaldi-webui\/startpage)/;
-  const BOTTOM_TOOLBAR = cfg.compactBottomBar ? 35 : 64;
+  const bottomToolbar = () => (window.__vm.settings.get("compactBottomBar") ? 35 : 64);
 
   const store = window.__vm.store;
   const openFolders = new Set();
@@ -611,7 +611,7 @@
   const fitHeight = () => {
     if (!panel?.isConnected) return;
     const top = panel.getBoundingClientRect().top;
-    panel.style.maxHeight = `${Math.max(120, window.innerHeight - top - BOTTOM_TOOLBAR)}px`;
+    panel.style.maxHeight = `${Math.max(120, window.innerHeight - top - bottomToolbar())}px`;
   };
 
   const render = () => {
@@ -815,6 +815,7 @@
       panel.addEventListener("contextmenu", (e) => showMenu(e, [
         ["New Folder", async () => { await newFolder(null); }],
         ["Edit Theme…", () => window.dispatchEvent(new CustomEvent("vm-open-theme"))],
+        ["Vivarc Settings…", () => window.dispatchEvent(new CustomEvent("vm-open-settings"))],
         ["New Tab", () => window.dispatchEvent(new CustomEvent("vm-open-command-bar"))],
         ["Reopen Closed Tab", () => chrome.sessions.restore()],
       ]));
@@ -854,6 +855,7 @@
     }).observe(document.body, { childList: true, subtree: true });
     place();
     window.addEventListener("resize", fitHeight);
+    window.__vm.settings.onChange(fitHeight);
     for (const ev of ["onCreated", "onRemoved", "onChanged", "onMoved", "onImportEnded"]) {
       chrome.bookmarks[ev]?.addListener(() => refresh(true));
     }
