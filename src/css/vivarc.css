@@ -7,6 +7,7 @@
 }
 
 #browser.vm-hide-workspaces #tabs-tabbar-container .button-toolbar.workspace-popup { display: none; }
+#browser.vm-no-space-bar #vm-panel .vm-space-bar { display: none; }
 #browser.vm-on #tabs-container > .vm-strip-hidden { display: none !important; }
 #browser.vm-on #tabs-tabbar-container .button-toolbar.newtab { display: none !important; }
 /* Vivaldi lets the side tab bar shrink to a few pixels; the sidebar is unusable below this width */
@@ -511,3 +512,63 @@
   font: inherit;
   font-size: 12px;
 }
+
+/* Settings page (45-settings.js) */
+.vm-set-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100003;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 12vh;
+  background: rgba(0, 0, 0, 0.35);
+  app-region: no-drag;
+}
+.vm-set-card {
+  width: min(480px, 92vw);
+  padding: 8px 10px 12px;
+  border-radius: 18px;
+  color: var(--vm-text);
+  background: var(--vm-surface);
+  border: 1px solid color-mix(in srgb, var(--vm-text) 12%, transparent);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+  font-size: 13.5px;
+}
+.vm-set-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 8px 6px; }
+.vm-set-title { font-size: 16px; font-weight: 650; }
+.vm-set-close, .vm-set-reset { font: inherit; color: inherit; cursor: pointer; border: 0; background: transparent; opacity: 0.6; border-radius: 8px; padding: 4px 8px; }
+.vm-set-close:hover, .vm-set-reset:hover { opacity: 1; background: color-mix(in srgb, var(--vm-text) 10%, transparent); }
+.vm-set-row { display: flex; align-items: center; gap: 16px; padding: 10px 8px; border-radius: 12px; cursor: pointer; }
+.vm-set-row:hover { background: color-mix(in srgb, var(--vm-text) 7%, transparent); }
+.vm-set-text { flex: 1; min-width: 0; }
+.vm-set-label { font-weight: 600; }
+.vm-set-hint { margin-top: 2px; opacity: 0.6; font-size: 12.5px; }
+.vm-set-switch {
+  appearance: none;
+  flex: none;
+  position: relative;
+  width: 38px;
+  height: 22px;
+  margin: 0;
+  border-radius: 11px;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--vm-text) 22%, transparent);
+  transition: background 150ms;
+}
+.vm-set-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: transform 150ms;
+}
+.vm-set-switch:checked { background: var(--colorHighlightBg, #6b63a0); }
+.vm-set-switch:checked::after { transform: translateX(16px); }
+.vm-set-foot { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 0; }
+.vm-set-note { opacity: 0.5; font-size: 12.5px; }

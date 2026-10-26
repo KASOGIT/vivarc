@@ -35,6 +35,8 @@ An update replaces `Vivaldi.app`, including `window.html`. Run `./vivarc.py upda
 - `suggestions`: `"ddg"` sends what you type in the command bar to DuckDuckGo's autocomplete endpoint; `"off"` sends nothing.
 - `spaceFolderTitle`: name of the folder created on first run.
 
+`compactBottomBar` and `suggestions` are only the starting values: **Vivarc Settings** (Cmd+T, `settings`) overrides them per profile, live. `01-settings.js` holds the schema (one entry per switch, with the marker class it toggles on `#browser`) and the precedence (saved, then config, then default); `45-settings.js` is the overlay. Windows of a profile stay in step through a `BroadcastChannel`. Only switches that apply live belong there: anything that writes Vivaldi's Preferences (shortcuts, toolbars) is read at launch, so it stays out.
+
 ## What the installer changes
 
 Per Vivaldi profile (`Preferences`): the tab bar goes left; `Cmd+T` is freed from "New Tab" and "Quick Commands" (the command bar listens for it itself);

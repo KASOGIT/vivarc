@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Vivarc Settings**: Cmd+T, type `settings`, or right-click the sidebar and pick Vivarc Settings… to switch features on and off live: the space bar, the compact bottom bar and search suggestions. Saved per profile and applied in all of the profile's windows; `~/.vivarc/config.json` still sets the starting values.
 - Cmd+T quick actions **Collapse All Folders** and **Expand All Folders** fold or unfold every pinned folder in the sidebar at once (type `collapse`, `expand` or `folders`).
 
 ## 0.1.12 - 2026-10-26
