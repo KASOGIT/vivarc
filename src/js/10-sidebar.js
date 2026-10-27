@@ -604,7 +604,7 @@
   };
 
   const deleteSpace = async (item) => {
-    const remove = spacesOf.findRemover(window.webpackChunkgapp_browser_react);
+    const remove = spacesOf.findRemover(chrome.extension.getBackgroundPage?.()?.webpackChunkgapp_browser_react);
     if (!remove) {
       window.dispatchEvent(new CustomEvent("vm-toast", { detail: "Could not delete the space. Use Vivaldi's Workspaces button." }));
       return;

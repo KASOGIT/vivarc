@@ -69,8 +69,9 @@
   const KEY_NAMES = { ctrl: "Ctrl", meta: "Cmd", alt: "Option", shift: "Shift" };
   const CREATE_HINT = `Press ${CREATE_KEY.split("+").map((k) => KEY_NAMES[k] || k.toUpperCase()).join("+")} to create a space`;
 
-  // Vivaldi has no extension API to delete a workspace, only its own store. Its webpack runtime hands out the module
-  // list through the chunk array's push; the module that defines removeWorkspace is found by its source and loaded
+  // Vivaldi has no extension API to delete a workspace, only its own store. Its webpack chunk array lives on the
+  // background page (chrome.extension.getBackgroundPage), not on the window the mod runs in, and its push hands out the module
+  // list; the module that defines removeWorkspace is found by its source and loaded
   // only if it already ran. Returns (windowId, id) => Promise, or null when Vivaldi no longer looks like this.
   const findRemover = (chunks) => {
     try {
