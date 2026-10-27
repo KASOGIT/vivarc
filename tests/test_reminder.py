@@ -60,9 +60,10 @@ class NeedsReapply(ReminderCase):
 
 
 class Remind(ReminderCase):
-    def remind(self, accept):
+    def remind(self, accept, latest=None):
         asked, opened = [], []
         with mock.patch.object(vivarc, "prompt_update", side_effect=lambda m: asked.append(m) or accept), \
+                mock.patch.object(vivarc, "latest_release_tag", return_value=latest), \
                 mock.patch.object(vivarc, "open_in_terminal", side_effect=opened.append), \
                 redirect_stdout(io.StringIO()):
             vivarc.cmd_remind(mock.Mock(app=self.app))
@@ -96,6 +97,46 @@ class Remind(ReminderCase):
         with mock.patch("time.time", return_value=asked_at + 24 * 3600):
             asked, _ = self.remind(False)
         self.assertEqual(len(asked), 1)
+
+
+class NewRelease(ReminderCase):
+    NEWER = "v" + ".".join(str(int(n) + (1 if k == 2 else 0)) for k, n in enumerate(vivarc.VERSION.split(".")))
+
+    def setUp(self):
+        super().setUp()
+        self.inject()
+
+    def remind(self, accept, latest):
+        return Remind.remind(self, accept, latest)
+
+    def test_asks_to_update_when_a_newer_release_is_out(self):
+        asked, opened = self.remind(True, self.NEWER)
+        self.assertEqual(len(asked), 1)
+        self.assertIn(self.NEWER.lstrip("v"), asked[0])
+        self.assertEqual(opened, [self.command])
+
+    def test_stays_quiet_when_up_to_date_or_offline(self):
+        self.assertEqual(self.remind(True, "v" + vivarc.VERSION), ([], []))
+        self.assertEqual(self.remind(True, None), ([], []))
+
+    def test_does_not_open_the_update_when_the_user_says_later(self):
+        self.assertEqual(self.remind(False, self.NEWER)[1], [])
+
+    def test_asks_only_once_per_release(self):
+        self.remind(False, self.NEWER)
+        self.assertEqual(self.remind(True, self.NEWER), ([], []))
+
+    def test_asks_again_for_an_even_newer_release(self):
+        self.remind(False, self.NEWER)
+        major, minor, patch = self.NEWER.lstrip("v").split(".")
+        asked, _ = self.remind(False, f"v{major}.{minor}.{int(patch) + 1}")
+        self.assertEqual(len(asked), 1)
+
+    def test_a_vivaldi_update_gets_one_question_not_two(self):
+        self.inject(html=False)
+        asked, _ = self.remind(False, self.NEWER)
+        self.assertEqual(len(asked), 1)
+        self.assertIn("Vivaldi was updated", asked[0])
 
 
 class ReminderAgent(ReminderCase):

@@ -647,14 +647,22 @@ def cmd_update(args):
 
 def cmd_remind(args):
     resources = os.path.join(args.app, RESOURCES)
-    if not needs_reapply(resources):
-        return
-    stamp = os.path.join(HOME_DIR, "reminded")
-    if os.path.exists(stamp) and time.time() - float(read_text(stamp)) < REMIND_EVERY:
-        return
+    if needs_reapply(resources):
+        stamp = os.path.join(HOME_DIR, "reminded")
+        if os.path.exists(stamp) and time.time() - float(read_text(stamp)) < REMIND_EVERY:
+            return
+        value = str(time.time())
+        message = "Vivaldi was updated and Vivarc is no longer active. Bring it back now? Vivaldi will close and reopen."
+    else:
+        latest = latest_release_tag()
+        offered = os.path.join(HOME_DIR, "offered")
+        if not is_newer(latest, VERSION) or (os.path.exists(offered) and read_text(offered) == latest):
+            return
+        stamp, value = offered, latest
+        message = f"Vivarc {latest.lstrip('v')} is available. Update now? Vivaldi will close and reopen."
     os.makedirs(HOME_DIR, exist_ok=True)
-    write_atomic(stamp, str(time.time()))
-    if prompt_update("Vivaldi was updated and Vivarc is no longer active. Bring it back now? Vivaldi will close and reopen."):
+    write_atomic(stamp, value)
+    if prompt_update(message):
         if not os.path.exists(UPDATE_COMMAND):
             write_update_command(UPDATE_COMMAND)
         open_in_terminal(UPDATE_COMMAND)
