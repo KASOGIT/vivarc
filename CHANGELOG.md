@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.14 - 2026-10-27
 - The update reminder also tells you when a new Vivarc release is out: one dialog per release, and on yes it runs Update Vivarc. It needs the reminder to be on (`reminder on`).
 
 ## 0.1.13 - 2026-10-27
