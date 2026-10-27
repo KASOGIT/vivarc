@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.15 - 2026-10-27
 - Right-click a space tile and pick **Delete Space…** to remove it; a second step asks first and says how many tabs will close. The space's Pinned folder stays in your bookmarks and comes back if you create a space with the same name. The default space cannot be deleted.
 
 ## 0.1.14 - 2026-10-27
