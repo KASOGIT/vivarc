@@ -598,9 +598,9 @@
   };
 
   const confirmDeleteSpace = (item, event) => {
-    const question = spacesOf.removalQuestion(item.name, spacesOf.tabsIn(state.allTabs, item.id).length);
+    const label = spacesOf.removalLabel(item.name, spacesOf.tabsIn(state.allTabs, item.id).length);
     const at = { clientX: event.clientX, clientY: event.clientY, preventDefault() {}, stopPropagation() {} };
-    showMenu(at, [[question, () => {}], ["Delete", () => deleteSpace(item), true], ["Cancel", () => {}]]);
+    showMenu(at, [[label, () => deleteSpace(item), true], ["Cancel", () => {}]]);
   };
 
   const deleteSpace = async (item) => {

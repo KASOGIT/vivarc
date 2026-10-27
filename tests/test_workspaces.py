@@ -200,10 +200,10 @@ class DeleteSpace(unittest.TestCase):
         self.assertIsNone(js("workspaces.findRemover(undefined)"))
         self.assertIsNone(js("workspaces.findRemover({ push: () => { throw new Error('boom'); } })"))
 
-    def test_the_question_names_the_space_and_counts_its_tabs(self):
-        self.assertEqual(js("workspaces.removalQuestion('Work', 5)"), "Delete \u201cWork\u201d and close its 5 tabs?")
-        self.assertEqual(js("workspaces.removalQuestion('Work', 1)"), "Delete \u201cWork\u201d and close its 1 tab?")
-        self.assertEqual(js("workspaces.removalQuestion('Work', 0)"), "Delete \u201cWork\u201d?")
+    def test_the_delete_button_names_the_space_and_counts_its_tabs(self):
+        self.assertEqual(js("workspaces.removalLabel('Work', 5)"), "Delete \u201cWork\u201d and close its 5 tabs")
+        self.assertEqual(js("workspaces.removalLabel('Work', 1)"), "Delete \u201cWork\u201d and close its 1 tab")
+        self.assertEqual(js("workspaces.removalLabel('Work', 0)"), "Delete \u201cWork\u201d")
 
 
 if __name__ == "__main__":
