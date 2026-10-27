@@ -69,5 +69,28 @@
   const KEY_NAMES = { ctrl: "Ctrl", meta: "Cmd", alt: "Option", shift: "Shift" };
   const CREATE_HINT = `Press ${CREATE_KEY.split("+").map((k) => KEY_NAMES[k] || k.toUpperCase()).join("+")} to create a space`;
 
-  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, recentTab, label, assign, stamp, CREATE_HINT };
+  // Vivaldi has no extension API to delete a workspace, only its own store. Its webpack runtime hands out the module
+  // list through the chunk array's push; the module that defines removeWorkspace is found by its source and loaded
+  // only if it already ran. Returns (windowId, id) => Promise, or null when Vivaldi no longer looks like this.
+  const findRemover = (chunks) => {
+    try {
+      let load;
+      chunks.push([[Symbol("vivarc")], {}, (require) => { load = require; }]);
+      for (const [id, factory] of Object.entries(load?.m || {})) {
+        if (!String(factory).includes("removeWorkspace(")) continue;
+        let exported;
+        try { exported = load(id); } catch (_) { continue; }
+        for (const key of Object.keys(exported || {})) {
+          const manager = exported[key];
+          if (typeof manager?.removeWorkspace === "function") return (windowId, workspaceId) => manager.removeWorkspace(windowId, workspaceId);
+        }
+      }
+    } catch (_) {}
+    return null;
+  };
+
+  const removalQuestion = (name, tabCount) =>
+    `Delete \u201c${name}\u201d${tabCount ? ` and close its ${tabCount} ${tabCount === 1 ? "tab" : "tabs"}` : ""}?`;
+
+  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, recentTab, label, assign, stamp, findRemover, removalQuestion, CREATE_HINT };
 })();

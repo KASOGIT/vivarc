@@ -167,5 +167,44 @@ class CreateSpace(unittest.TestCase):
         self.assertEqual(js("workspaces.CREATE_HINT"), f"Press {shown} to create a space")
 
 
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class DeleteSpace(unittest.TestCase):
+    FAKE = """
+      const calls = [];
+      const manager = new (class { removeWorkspace(windowId, id) { calls.push([windowId, id]); return "done"; } })();
+      const modules = {
+        1: function () { return "nothing to see"; },
+        2: function () { return "workspaces.removeWorkspace(e,t)"; },
+        3: function () { throw new Error("module 3 must not be loaded"); },
+      };
+      const exportsOf = { 2: Object.defineProperty({}, "Z", { enumerable: true, get: () => manager }) };
+      const require = (id) => { if (!(id in exportsOf)) throw new Error("not loaded: " + id); return exportsOf[id]; };
+      require.m = modules;
+      const chunks = { push: ([ids, extra, run]) => run(require) };
+    """
+
+    def fake(self, body):
+        return js("(() => {" + self.FAKE + body + "})()")
+
+    def test_the_remover_is_found_in_vivaldis_own_modules_and_removes_the_workspace(self):
+        out = self.fake("const remove = workspaces.findRemover(chunks); return [typeof remove, remove(7, 42), calls];")
+        self.assertEqual(out, ["function", "done", [[7, 42]]])
+
+    def test_modules_that_do_not_mention_the_remover_are_never_loaded(self):
+        self.assertEqual(self.fake("workspaces.findRemover(chunks); return calls;"), [])
+
+    def test_no_remover_when_vivaldi_has_no_such_module(self):
+        self.assertIsNone(js("workspaces.findRemover({ push: ([a, b, run]) => run(Object.assign(() => ({}), { m: { 1: function () {} } })) })"))
+
+    def test_no_remover_when_the_chunk_list_is_missing_or_broken(self):
+        self.assertIsNone(js("workspaces.findRemover(undefined)"))
+        self.assertIsNone(js("workspaces.findRemover({ push: () => { throw new Error('boom'); } })"))
+
+    def test_the_question_names_the_space_and_counts_its_tabs(self):
+        self.assertEqual(js("workspaces.removalQuestion('Work', 5)"), "Delete \u201cWork\u201d and close its 5 tabs?")
+        self.assertEqual(js("workspaces.removalQuestion('Work', 1)"), "Delete \u201cWork\u201d and close its 1 tab?")
+        self.assertEqual(js("workspaces.removalQuestion('Work', 0)"), "Delete \u201cWork\u201d?")
+
+
 if __name__ == "__main__":
     unittest.main()

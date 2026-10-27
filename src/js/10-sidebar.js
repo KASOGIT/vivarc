@@ -593,7 +593,24 @@
     const pill = el("div", `vm-space-pill${item.id === state.active ? " active" : ""}`, item.emoji || item.name.trim().charAt(0).toUpperCase() || "?");
     pill.title = item.name;
     pill.addEventListener("click", () => switchSpace(item));
+    if (item.id) pill.addEventListener("contextmenu", (e) => showMenu(e, [["Delete Space…", () => confirmDeleteSpace(item, e), true]]));
     return pill;
+  };
+
+  const confirmDeleteSpace = (item, event) => {
+    const question = spacesOf.removalQuestion(item.name, spacesOf.tabsIn(state.allTabs, item.id).length);
+    const at = { clientX: event.clientX, clientY: event.clientY, preventDefault() {}, stopPropagation() {} };
+    showMenu(at, [[question, () => {}], ["Delete", () => deleteSpace(item), true], ["Cancel", () => {}]]);
+  };
+
+  const deleteSpace = async (item) => {
+    const remove = spacesOf.findRemover(window.webpackChunkgapp_browser_react);
+    if (!remove) {
+      window.dispatchEvent(new CustomEvent("vm-toast", { detail: "Could not delete the space. Use Vivaldi's Workspaces button." }));
+      return;
+    }
+    await remove(window.vivaldiWindowId, item.id);
+    refresh(false);
   };
 
   const spaceBar = () => {
