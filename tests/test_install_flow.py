@@ -46,6 +46,8 @@ class InstallFlow(unittest.TestCase):
             mock.patch.object(vivarc, "UPDATE_COMMAND", os.path.join(self.tmp, "home", "Update Vivarc.command")),
             mock.patch.object(vivarc, "UPDATE_APP", os.path.join(self.tmp, "Applications", "Update Vivarc.app")),
             mock.patch.object(vivarc, "LEGACY_UPDATE_COMMAND", os.path.join(self.tmp, "Applications", "Update Vivarc.command")),
+            mock.patch.object(vivarc, "UNINSTALL_COMMAND", os.path.join(self.tmp, "home", "Uninstall Vivarc.command")),
+            mock.patch.object(vivarc, "UNINSTALL_APP", os.path.join(self.tmp, "Applications", "Uninstall Vivarc.app")),
             mock.patch.object(vivarc, "vivaldi_running", return_value=False),
             mock.patch.object(vivarc, "app_version", return_value="9.9.9"),
             mock.patch.object(vivarc, "ask", return_value=None),
@@ -170,6 +172,18 @@ class InstallFlow(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(vivarc.UPDATE_APP, "Contents", "Info.plist")))
         self.run_cli("uninstall")
         self.assertFalse(os.path.exists(vivarc.UPDATE_APP))
+
+    def test_install_leaves_an_uninstall_app_that_runs_uninstall_and_uninstall_removes_it(self):
+        self.run_cli("install", "--no-peek")
+        self.assertTrue(os.path.exists(os.path.join(vivarc.UNINSTALL_APP, "Contents", "Info.plist")))
+        with open(vivarc.UNINSTALL_COMMAND) as f:
+            script = f.read()
+        self.assertIn("vivarc.py", script)
+        self.assertIn(" uninstall\n", script)
+        self.assertTrue(os.access(vivarc.UNINSTALL_COMMAND, os.X_OK))
+        self.run_cli("uninstall")
+        self.assertFalse(os.path.exists(vivarc.UNINSTALL_APP))
+        self.assertFalse(os.path.exists(vivarc.UNINSTALL_COMMAND))
 
     def test_install_removes_the_script_that_older_versions_left_in_the_applications_folder(self):
         vivarc.write_update_command(vivarc.LEGACY_UPDATE_COMMAND)
