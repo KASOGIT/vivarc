@@ -36,10 +36,6 @@ Every profile gets the sidebar, and profiles you create later set themselves up 
 
 Requires macOS and Vivaldi 8.x. If your Mac has never had developer tools, macOS shows an "Install" window the first time (it is Apple's free command line tools, which include Python); click Install, wait, then paste the line again.
 
-**Updating, and after a Vivaldi update:** Vivaldi updates replace the app and remove Vivarc. Open **Update Vivarc**. It is an app in the `Applications` folder inside your home folder: in Finder press Cmd+Shift+H, then open `Applications` (not the one in the sidebar), and drag it to your Dock to keep it close. It quits Vivaldi, fetches the latest Vivarc, puts it back into Vivaldi and reopens it. It runs in Terminal, so Terminal needs the App Management permission (the same one as at install). The same thing from Terminal: `python3 ~/.vivarc/app/vivarc.py update`, or paste the install line again. If macOS asks for the App Management permission again, allow it the same way as at install. The installer also offers an optional reminder: when a Vivaldi update removes Vivarc, or a new Vivarc release is out, a small dialog asks whether to update. Switch it on or off with `python3 ~/.vivarc/app/vivarc.py reminder on` (or `off`).
-
-**Uninstall or start fresh:** open **Uninstall Vivarc**, next to Update Vivarc in the `Applications` folder inside your home folder. It quits Vivaldi, restores your settings and reopens it. Your bookmarks are never deleted. The same thing from Terminal: `python3 ~/.vivarc/app/vivarc.py uninstall` (add `--purge` to also delete `~/.vivarc`). To reinstall from scratch, uninstall, then paste the install line again.
-
 ### Troubleshooting
 
 - **"Operation not permitted" or "macOS blocked writing into Vivaldi.app":** switch on Terminal under System Settings > Privacy & Security > App Management, then paste the line again. **Do not use `sudo`**: it does not help and can leave files only root can change.
@@ -52,6 +48,30 @@ Requires macOS and Vivaldi 8.x. If your Mac has never had developer tools, macOS
 git clone https://github.com/KASOGIT/vivarc.git && cd vivarc
 ./vivarc.py install       # also: apply, status, uninstall, import-arc
 ```
+
+## Update, uninstall or start fresh
+
+Both tools are small apps that the installer leaves in the `Applications` folder inside your home folder. To find them: in Finder press Cmd+Shift+H, then open `Applications` (not the one in the sidebar). Drag them to your Dock to keep them close. They open Terminal, so Terminal needs the **App Management** permission, the same one as at install (macOS asks, and the installer's steps apply again).
+
+**Update, or bring Vivarc back after a Vivaldi update.** Vivaldi updates replace the app and remove Vivarc.
+1. Double-click **Update Vivarc**.
+2. It quits Vivaldi, fetches the latest Vivarc, puts it back and reopens Vivaldi.
+
+**Uninstall.**
+1. Double-click **Uninstall Vivarc**.
+2. It quits Vivaldi, restores your settings, removes Vivarc and reopens Vivaldi. Your bookmarks, including the `Vivarc` folder, are never deleted, and you do not need to reinstall Vivaldi.
+
+**Start fresh.** Run **Uninstall Vivarc**, then paste the install line from [Install](#install) again.
+
+**From Terminal instead:**
+
+```sh
+python3 ~/.vivarc/app/vivarc.py update      # same as Update Vivarc
+python3 ~/.vivarc/app/vivarc.py uninstall   # same as Uninstall Vivarc (add --purge to also delete ~/.vivarc)
+python3 ~/.vivarc/app/vivarc.py status      # what is installed
+```
+
+**Update reminder (optional).** The installer offers it. When a Vivaldi update removes Vivarc, or a new Vivarc release is out, a small dialog asks whether to update. Switch it on or off with `python3 ~/.vivarc/app/vivarc.py reminder on` (or `off`).
 
 ## What you get
 
@@ -109,10 +129,6 @@ In each Vivaldi profile: **File > Import Bookmarks and Settings… > HTML file**
   1. `brew install --cask finicky`, then set Finicky as the default browser in System Settings.
   2. Copy [templates/finicky.js](templates/finicky.js) to `~/.finicky.js` and edit it: one `handlers` entry per space, with the domains you want in it and the profile name as shown in Vivaldi's profile menu.
 - **Not built yet:** Boosts, automatic archiving of old tabs, and Arc's share links.
-
-## Keeping it working
-
-After a Vivaldi update, double-click **Update Vivarc** (see [Install](#install)); it also updates Vivarc itself. To check what is installed: `python3 ~/.vivarc/app/vivarc.py status`. To remove everything: open **Uninstall Vivarc**, or run `python3 ~/.vivarc/app/vivarc.py uninstall`; it restores your preferences and `window.html`. Your bookmarks, including the `Vivarc` folder, are left alone.
 
 ## Safety
 
