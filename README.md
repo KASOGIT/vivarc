@@ -83,7 +83,7 @@ git clone https://github.com/KASOGIT/vivarc.git && cd vivarc
 | Keys | Does |
 |---|---|
 | Cmd+T | Command bar |
-| Cmd+S | Show or hide the sidebar |
+| Cmd+S | Hide the sidebar, or show it again. While it is hidden, move the pointer to the left edge of the window and it slides back in. |
 | Cmd+Shift+C | Copy the page URL (with a toast) |
 | Cmd+L | Edit the address |
 | Cmd+E | Vivaldi's own Quick Commands |
