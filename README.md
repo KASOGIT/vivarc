@@ -38,7 +38,7 @@ Requires macOS and Vivaldi 8.x. If your Mac has never had developer tools, macOS
 
 **Updating, and after a Vivaldi update:** Vivaldi updates replace the app and remove Vivarc. Open **Update Vivarc**. It is an app in the `Applications` folder inside your home folder: in Finder press Cmd+Shift+H, then open `Applications` (not the one in the sidebar), and drag it to your Dock to keep it close. It quits Vivaldi, fetches the latest Vivarc, puts it back into Vivaldi and reopens it. It runs in Terminal, so Terminal needs the App Management permission (the same one as at install). The same thing from Terminal: `python3 ~/.vivarc/app/vivarc.py update`, or paste the install line again. If macOS asks for the App Management permission again, allow it the same way as at install. The installer also offers an optional reminder: when a Vivaldi update removes Vivarc, or a new Vivarc release is out, a small dialog asks whether to update. Switch it on or off with `python3 ~/.vivarc/app/vivarc.py reminder on` (or `off`).
 
-**Uninstall:** `python3 ~/.vivarc/app/vivarc.py uninstall` restores your settings. Your bookmarks are never deleted.
+**Uninstall or start fresh:** open **Uninstall Vivarc**, next to Update Vivarc in the `Applications` folder inside your home folder. It quits Vivaldi, restores your settings and reopens it. Your bookmarks are never deleted. The same thing from Terminal: `python3 ~/.vivarc/app/vivarc.py uninstall` (add `--purge` to also delete `~/.vivarc`). To reinstall from scratch, uninstall, then paste the install line again.
 
 ### Troubleshooting
 
@@ -112,7 +112,7 @@ In each Vivaldi profile: **File > Import Bookmarks and Settings… > HTML file**
 
 ## Keeping it working
 
-After a Vivaldi update, double-click **Update Vivarc** (see [Install](#install)); it also updates Vivarc itself. To check what is installed: `python3 ~/.vivarc/app/vivarc.py status`. To remove everything: `python3 ~/.vivarc/app/vivarc.py uninstall` restores your preferences and `window.html`. Your bookmarks, including the `Vivarc` folder, are left alone.
+After a Vivaldi update, double-click **Update Vivarc** (see [Install](#install)); it also updates Vivarc itself. To check what is installed: `python3 ~/.vivarc/app/vivarc.py status`. To remove everything: open **Uninstall Vivarc**, or run `python3 ~/.vivarc/app/vivarc.py uninstall`; it restores your preferences and `window.html`. Your bookmarks, including the `Vivarc` folder, are left alone.
 
 ## Safety
 

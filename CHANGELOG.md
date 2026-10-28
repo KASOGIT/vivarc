@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Uninstall Vivarc**: the installer now also leaves `~/Applications/Uninstall Vivarc.app` next to Update Vivarc. It quits Vivaldi, restores your settings, removes Vivarc and reopens Vivaldi, so removing or reinstalling no longer needs Terminal.
+
 ## 0.1.15 - 2026-10-27
 - Right-click a space tile and pick **Delete Space…** to remove it; a second step asks first and says how many tabs will close. The space's Pinned folder stays in your bookmarks and comes back if you create a space with the same name. The default space cannot be deleted.
 

@@ -35,6 +35,8 @@ DEFAULT_DATA = os.environ.get("VIVARC_DATA_DIR", os.path.join(HOME, "Library", "
 UPDATE_COMMAND = os.path.join(HOME_DIR, "Update Vivarc.command")
 UPDATE_APP = os.path.join(HOME, "Applications", "Update Vivarc.app")
 LEGACY_UPDATE_COMMAND = os.path.join(HOME, "Applications", "Update Vivarc.command")
+UNINSTALL_COMMAND = os.path.join(HOME_DIR, "Uninstall Vivarc.command")
+UNINSTALL_APP = os.path.join(HOME, "Applications", "Uninstall Vivarc.app")
 UPDATE_MARK = "# Created by Vivarc"
 RELEASES_LATEST = "https://github.com/KASOGIT/vivarc/releases/latest"
 REMINDER_LABEL = "com.vivarc.reminder"
@@ -462,16 +464,24 @@ def latest_release_tag():
         return None
 
 
-def write_update_command(path):
+def write_command(path, purpose, subcommand):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     script = ("#!/bin/bash\n"
-              f"{UPDATE_MARK}: updates Vivarc and brings it back after a Vivaldi update.\n"
-              f"/usr/bin/python3 {shlex.quote(os.path.join(HERE, 'vivarc.py'))} update\n"
+              f"{UPDATE_MARK}: {purpose}.\n"
+              f"/usr/bin/python3 {shlex.quote(os.path.join(HERE, 'vivarc.py'))} {subcommand}\n"
               "status=$?\n"
               "open -a Vivaldi\n"
               "exit $status\n")
     write_atomic(path, script)
     os.chmod(path, 0o755)
+
+
+def write_update_command(path):
+    write_command(path, "updates Vivarc and brings it back after a Vivaldi update", "update")
+
+
+def write_uninstall_command(path):
+    write_command(path, "removes Vivarc and puts Vivaldi back as it was", "uninstall")
 
 
 def write_update_app(app, command):
@@ -597,6 +607,8 @@ def cmd_install(args):
         permission_hint(error)
     write_update_command(UPDATE_COMMAND)
     write_update_app(UPDATE_APP, UPDATE_COMMAND)
+    write_uninstall_command(UNINSTALL_COMMAND)
+    write_update_app(UNINSTALL_APP, UNINSTALL_COMMAND)
     remove_update_command(LEGACY_UPDATE_COMMAND)
     if os.path.exists(REMINDER_PLIST):
         enable_reminder(app)
@@ -712,6 +724,8 @@ def cmd_uninstall(args):
     remove_update_command(UPDATE_COMMAND)
     remove_update_command(LEGACY_UPDATE_COMMAND)
     remove_update_app(UPDATE_APP)
+    remove_update_command(UNINSTALL_COMMAND)
+    remove_update_app(UNINSTALL_APP)
     disable_reminder()
     if args.purge:
         shutil.rmtree(HOME_DIR, ignore_errors=True)
