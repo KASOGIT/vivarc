@@ -42,8 +42,29 @@
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
+/* Allocate the sidebar height once: tabs scroll, footer controls never move. */
+#browser.vm-on #tabs-tabbar-container:is(.left, .right) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+#browser.vm-on #tabs-container:is(.left, .right) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  height: auto !important;
+  overflow: hidden;
+}
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-before,
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after {
+  flex: 0 0 auto;
+}
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after {
+  margin-top: auto;
+}
 #vm-panel {
-  flex: 0 1 auto;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -66,6 +87,7 @@
   scrollbar-width: none;
 }
 #vm-panel .vm-favs {
+  flex-shrink: 0;
   flex: none;
   display: grid;
   /* Tiles shrink down to 72px before the grid drops a column */
@@ -90,13 +112,17 @@
 #vm-panel .vm-fav .vm-ico { width: 24px; height: 24px; border-radius: 6px; }
 
 #vm-panel .vm-space-bar {
-  flex: none;
+  flex: 0 0 auto;
   display: flex;
-  justify-content: center;
+  justify-content: safe center;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
   gap: 6px;
   padding: 8px 0 2px;
 }
 #vm-panel .vm-space-pill {
+  flex: 0 0 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -320,11 +346,11 @@
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
-/* Bottom toolbar (profile button): shorter, content centred so it sits lower */
+/* Reserve the actual footer height: native icons are taller than 21px. */
 #browser.vm-on.vm-compact-bottom #tabs-tabbar-container .toolbar-tabbar-after {
-  height: 21px !important;
-  min-height: 0 !important;
-  padding-bottom: 0 !important;
+  height: auto !important;
+  min-height: 40px !important;
+  padding-block: 4px !important;
   align-items: center !important;
 }
 #browser.vm-on.vm-compact-bottom #tabs-tabbar-container .toolbar-tabbar-after .button-toolbar { padding-bottom: 0 !important; }
@@ -478,15 +504,15 @@
 #browser.vm-on .vm-spaces { flex: none; display: flex; align-items: center; gap: 7px; margin-right: 8px; }
 #browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after:has(> .vm-spaces) {
   flex-wrap: nowrap !important;
-  align-items: flex-end !important;
-  justify-content: flex-start !important;
+  align-items: center !important;
+  justify-content: space-between !important;
 }
 #browser.vm-on .toolbar-tabbar-after:has(> .vm-spaces) > .toolbar-spacer-flexible {
   flex: 1 1 0 !important;
   width: auto !important;
   min-width: 0 !important;
 }
-#browser.vm-on .toolbar-tabbar-after > .vm-spaces { margin-bottom: 6px; }
+#browser.vm-on .toolbar-tabbar-after > .vm-spaces { margin-block: 0; }
 #browser.vm-on .vm-space-chip {
   display: flex;
   align-items: center;
@@ -649,3 +675,114 @@
 .vm-set-value { margin-left: 4px; font-weight: 500; opacity: 0.6; font-variant-numeric: tabular-nums; }
 .vm-set-slider { width: 100%; margin: 8px 0 0; accent-color: var(--colorHighlightBg, #6b63a0); }
 .vm-set-ends { display: flex; justify-content: space-between; margin-top: 2px; opacity: 0.5; font-size: 12px; }
+
+/* Persistent toast above the favorites; settings hide it without rebuilding it. */
+#browser.vm-no-url #vm-panel .vm-current-url { display: none; }
+#vm-panel .vm-current-url {
+  display: block;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  margin: 6px 0 12px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--colorFg) 15%, transparent);
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 15%);
+  background: var(--vm-surface);
+  color: var(--colorFg);
+  font: inherit;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  cursor: text;
+  user-select: text;
+  app-region: no-drag;
+}
+#vm-panel .vm-current-url:focus {
+  outline: 1px solid var(--colorHighlightBg, #7b8cff);
+  text-overflow: clip;
+}
+
+/* Vivaldi's size container and full-width flexible spacers otherwise collapse
+   the footer or push its children onto rows outside its allocated height. */
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after {
+  container-type: normal !important;
+  justify-content: space-between !important;
+  display: flex;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  height: auto;
+  min-height: 40px;
+  min-width: 0;
+  padding-block: 4px;
+  flex-shrink: 0;
+  align-items: center !important;
+}
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after > .vm-spaces {
+  margin-block: 0;
+}
+/* Native flexible spacers center the account button even in a full-width footer. */
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after > .toolbar-spacer-flexible {
+  display: none !important;
+}
+
+/* Keep the space-creation icon plain, including with Liquid Glass enabled. */
+#browser.vm-on #vm-panel .vm-space-bar .vm-space-plus {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+/* Workspace glyphs stay visible without the letter tiles. */
+#browser.vm-on #vm-panel .vm-space-bar .vm-space-pill {
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  font-size: 20px;
+}
+#vm-panel .vm-workspace-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  background: currentColor;
+  mask-size: contain;
+  mask-position: center;
+  mask-repeat: no-repeat;
+}
+#vm-panel .vm-space-pill.active { border-bottom: 2px solid var(--colorHighlightBg, #7b8cff) !important; }
+#vm-panel .vm-space-pill:focus-visible { outline: 2px solid var(--colorHighlightBg, #7b8cff); }
+.vm-space-tooltip {
+  position: fixed;
+  z-index: 100002;
+  max-width: min(220px, calc(100vw - 16px));
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: var(--colorBg, #25252b);
+  color: var(--colorFg, #f2f2f5);
+  box-shadow: 0 3px 12px rgb(0 0 0 / 25%);
+  font: 12px system-ui, sans-serif;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+/* Native toolbar buttons and profile chips share the same vertical center. */
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after > .button-toolbar,
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after > .vm-spaces {
+  align-self: center;
+  margin-block: 0 !important;
+}
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after > .button-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: 0 !important;
+}

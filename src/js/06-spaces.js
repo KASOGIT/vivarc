@@ -28,7 +28,7 @@
   const pathForShortcut = (profiles, combo) => {
     const keys = String(combo).toLowerCase().split("+").map((s) => s.trim()).sort();
     const chips = profileChips(profiles);
-    if (keys.length !== 3 || !keys.includes("ctrl") || !keys.includes("meta")) return null;
+    if (keys.length !== 3 || !keys.includes("ctrl") || !keys.includes(window.__vm.windows ? "shift" : "meta")) return null;
     const digit = keys.find((k) => /^[1-9]$/.test(k));
     if (digit) {
       const chip = chips[Number(digit) - 1];

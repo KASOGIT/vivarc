@@ -27,5 +27,5 @@
   };
 
   window.addEventListener("vm-toast", (e) => show(e.detail || undefined));
-  window.__vm.onShortcut((key) => { if (key === window.__vm.normalise("meta+shift+c")) show(); });
+  window.__vm.onShortcut((key) => { if (key === window.__vm.normalise(window.__vm.shortcut("meta+shift+c"))) show(); });
 })();

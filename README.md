@@ -2,12 +2,12 @@
 
 <p align="center">
   <b>Arc's sidebar and command bar, inside Vivaldi.</b><br>
-  Favorites, pinned folders and open tabs in one panel. A Cmd+T command bar with quick actions. A theme editor. One command to install, one to remove.
+  Favorites, pinned folders and open tabs in one panel. A Cmd+T / Ctrl+T command bar with quick actions. A theme editor. One command to install, one to remove.
 </p>
 
 <p align="center">
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue"></a>
-  <img alt="macOS" src="https://img.shields.io/badge/platform-macOS-lightgrey">
+  <img alt="macOS and Windows" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey">
   <img alt="Vivaldi 8" src="https://img.shields.io/badge/Vivaldi-8.x-ef3939">
   <img alt="No dependencies" src="https://img.shields.io/badge/dependencies-none-brightgreen">
 </p>
@@ -18,7 +18,11 @@
 
 > **Arc is being discontinued on December 22, 2026**, according to the announcement email The Browser Company sent. If you want to keep the sidebar and command bar workflow somewhere else, Vivarc gives you most of it in Vivaldi, free and open source.
 
-## Install
+Vivarc supports **macOS and Windows** with Vivaldi 8.x. Choose your platform: [macOS](#macos) or [Windows](#windows).
+
+## Installation
+
+### macOS
 
 No developer experience needed. It takes about two minutes.
 
@@ -36,32 +40,105 @@ Every profile gets the sidebar, and profiles you create later set themselves up 
 
 Requires macOS and Vivaldi 8.x. If your Mac has never had developer tools, macOS shows an "Install" window the first time (it is Apple's free command line tools, which include Python); click Install, wait, then paste the line again.
 
-### Troubleshooting
+#### Troubleshooting
 
 - **"Operation not permitted" or "macOS blocked writing into Vivaldi.app":** switch on Terminal under System Settings > Privacy & Security > App Management, then paste the line again. **Do not use `sudo`**: it does not help and can leave files only root can change.
 - **Already used `sudo`?** Run `sudo chown -R "$(whoami)" ~/.vivarc` once, then paste the install line again (without `sudo`).
 - **"Vivaldi not found":** Vivarc looks in `/Applications/Vivaldi.app`. If yours is elsewhere, use the developer install below with `--app`.
 
-### For developers
+### Windows
+
+Requires **Vivaldi 8.x** and **Python 3**. Install Python from
+[python.org](https://www.python.org/downloads/windows/) if needed.
+Requires an up-to-date Windows 10 or Windows 11 with `curl.exe` and `tar.exe`.
+
+1. Open **Command Prompt** (`cmd`) from the Start menu.
+2. Paste this line and press Enter:
+
+   ```bat
+   curl.exe -fSL https://raw.githubusercontent.com/KASOGIT/vivarc/main/install.bat -o "%TEMP%\vivarc-install.bat" && call "%TEMP%\vivarc-install.bat"
+   ```
+
+3. Follow the prompts to close Vivaldi and install Vivarc.
+4. Open Vivaldi. Use **Ctrl+T** to open the command bar.
+
+The command downloads and runs `install.bat`, which uses Windows `curl.exe` and `tar.exe` to download and extract the latest Vivarc
+release into `%USERPROFILE%\.vivarc\app`.
+
+#### For developers
 
 ```sh
 git clone https://github.com/KASOGIT/vivarc.git && cd vivarc
 ./vivarc.py install       # also: apply, status, uninstall, import-arc
 ```
 
-## Update, uninstall or start fresh
+#### Update, reapply or uninstall
+
+Double-click **Update Vivarc.bat** or **Uninstall Vivarc.bat** in
+`%USERPROFILE%\.vivarc`. You can also use Command Prompt:
+
+```bat
+python "%USERPROFILE%\.vivarc\app\vivarc.py" update
+python "%USERPROFILE%\.vivarc\app\vivarc.py" apply
+python "%USERPROFILE%\.vivarc\app\vivarc.py" status
+python "%USERPROFILE%\.vivarc\app\vivarc.py" uninstall
+```
+
+Close Vivaldi before running `apply`. After a Vivaldi update, run `update` or
+`apply` to restore Vivarc.
+
+#### Custom installation path
+
+Vivarc detects user and system installations. For a custom or standalone
+installation, set these paths before running the install line:
+
+```bat
+set "VIVARC_APP=D:\Vivaldi\Application"
+set "VIVARC_DATA_DIR=D:\Vivaldi\User Data"
+curl.exe -fSL https://raw.githubusercontent.com/KASOGIT/vivarc/main/install.bat -o "%TEMP%\vivarc-install.bat" && call "%TEMP%\vivarc-install.bat"
+```
+
+`VIVARC_APP` accepts the Application directory or `vivaldi.exe`. If a system
+installation under Program Files is not writable, use an administrator terminal,
+keeping `VIVARC_DATA_DIR` pointed at your own profile. Backups and launchers are
+stored under `%USERPROFILE%\.vivarc`.
+
+#### For developers
+
+To install your local code instead of the latest release:
+
+```bat
+git clone https://github.com/KASOGIT/vivarc.git
+cd vivarc
+python vivarc.py install
+```
+
+#### Shortcuts and limitations
+
+Ctrl+T opens the command bar, Ctrl+S toggles the sidebar, Ctrl+Shift+C copies the
+URL, Alt+Left/Right switches spaces, and Ctrl+Alt+N creates a space.
+Ctrl+Shift+Left/Right or Ctrl+Shift+1..9 switches profiles. F2 opens Vivaldi's
+Quick Commands. Conflicting Vivaldi shortcuts are replaced; uninstall restores
+the saved preferences.
+
+Automatic reminders are disabled on Windows. Native Arc Windows import is not
+supported; `import-arc --arc-dir` can read a compatible exported macOS Arc folder.
+
+## Update, uninstall or start fresh (macOS)
 
 Both tools are small apps that the installer leaves in the `Applications` folder inside your home folder. To find them: in Finder press Cmd+Shift+H, then open `Applications` (not the one in the sidebar). Drag them to your Dock to keep them close. They open Terminal, so Terminal needs the **App Management** permission, the same one as at install (macOS asks, and the installer's steps apply again).
 
 **Update, or bring Vivarc back after a Vivaldi update.** Vivaldi updates replace the app and remove Vivarc.
+
 1. Double-click **Update Vivarc**.
 2. It quits Vivaldi, fetches the latest Vivarc, puts it back and reopens Vivaldi.
 
 **Uninstall.**
+
 1. Double-click **Uninstall Vivarc**.
 2. It quits Vivaldi, restores your settings, removes Vivarc and reopens Vivaldi. Your bookmarks, including the `Vivarc` folder, are never deleted, and you do not need to reinstall Vivaldi.
 
-**Start fresh.** Run **Uninstall Vivarc**, then paste the install line from [Install](#install) again.
+**Start fresh.** Run **Uninstall Vivarc**, then paste the install line from [Installation](#installation) again.
 
 **From Terminal instead:**
 
@@ -75,7 +152,7 @@ python3 ~/.vivarc/app/vivarc.py status      # what is installed
 
 ## What you get
 
-**One sidebar.** A favorites grid on top, your pinned folders below, a divider with *Clear*, then your open tabs. Drag and drop between all of them, nest folders, rename in place, right-click for everything. Removed items go to Vivaldi's bookmark trash. Like Arc, a pinned tab stays on its pin when you navigate inside it: the row shows a `/` and the title of the page you are on, and on hover you can jump back to the pinned page or separate the page you are on into its own tab.
+**One sidebar.** A favorites grid on top, your pinned folders below, a divider with _Clear_, then your open tabs. Drag and drop between all of them, nest folders, rename in place, right-click for everything. Removed items go to Vivaldi's bookmark trash. Like Arc, a pinned tab stays on its pin when you navigate inside it: the row shows a `/` and the title of the page you are on, and on hover you can jump back to the pinned page or separate the page you are on into its own tab.
 
 <p align="center">
   <img src="docs/screenshots/sidebar.png" alt="Vivarc sidebar: favorites grid, pinned folders, open tabs" width="760">
@@ -90,7 +167,7 @@ python3 ~/.vivarc/app/vivarc.py status      # what is installed
 - **Search shortcuts.** Type `yt` then Tab to search YouTube. 18 are built in (`g`, `gm` Gmail, `gd` Drive, `gc` Calendar, `gh`, `so`, `npm`, `mdn`, `li`, `x`, `w`, `r`, `m`, `az`, `tr`, `d`, `b`). The search engine keywords you already set in Vivaldi work too.
 - **Quick actions.** Type `history`, `downloads`, `pin`, `theme`, `private`, `guide`... and run it: View History, View Downloads, Pin This Tab, Add to Favorites, Collapse / Expand All Folders, Copy Current URL, **Split View** (side by side or top and bottom, like Arc), Duplicate, Mute, New Private Window and more.
 
-**Settings.** Cmd+T, type `settings` (or right-click the sidebar, *Vivarc Settings…*) to switch features on and off live, per profile, including an optional **Liquid Glass** look (translucent sidebar, menus and command bar with an opacity slider from clear to frosted, following Apple's guidance; it falls back to solid surfaces with Reduce Transparency or Increase Contrast).
+**Settings.** Cmd+T, type `settings` (or right-click the sidebar, _Vivarc Settings…_) to switch features on and off live, per profile, including an optional **Liquid Glass** look (translucent sidebar, menus and command bar with an opacity slider from clear to frosted, following Apple's guidance; it falls back to solid surfaces with Reduce Transparency or Increase Contrast).
 
 **A theme editor.** Hover the space name and click the palette: pick a colour, intensity and grain. Saved per profile, so each one gets its own look.
 
@@ -100,13 +177,13 @@ python3 ~/.vivarc/app/vivarc.py status      # what is installed
 
 **Shortcuts**
 
-| Keys | Does |
-|---|---|
-| Cmd+T | Command bar |
-| Cmd+S | Hide the sidebar, or show it again. While it is hidden, move the pointer to the left edge of the window and it slides back in. |
-| Cmd+Shift+C | Copy the page URL (with a toast) |
-| Cmd+L | Edit the address |
-| Cmd+E | Vivaldi's own Quick Commands |
+| Keys        | Does                                                                                                                           |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Cmd+T       | Command bar                                                                                                                    |
+| Cmd+S       | Hide the sidebar, or show it again. While it is hidden, move the pointer to the left edge of the window and it slides back in. |
+| Cmd+Shift+C | Copy the page URL (with a toast)                                                                                               |
+| Cmd+L       | Edit the address                                                                                                               |
+| Cmd+E       | Vivaldi's own Quick Commands                                                                                                   |
 
 **Also:** an optional link preview (Peek, by [PaRr0tBoY](https://github.com/PaRr0tBoY/Awesome-Vivaldi), downloaded from upstream and verified at install), and an importer for your Arc spaces and site icons.
 
@@ -134,7 +211,7 @@ In each Vivaldi profile: **File > Import Bookmarks and Settings… > HTML file**
 
 Every file Vivarc edits is backed up in `~/.vivarc/backup/`, existing shortcuts are kept, and `uninstall` restores the original values. The styles ship inside the script, so a Vivaldi update can never leave you with half a UI. No Vivaldi flags are changed. See [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) for exactly what changes and how it works.
 
-The command bar sends what you type to DuckDuckGo's autocomplete for suggestions; set `"suggestions": "off"` in `~/.vivarc/config.json` to turn that off.
+The command bar sends what you type to your default search engine's configured Suggest URL for suggestions (when available); set `"suggestions": "off"` in `~/.vivarc/config.json` to turn that off.
 
 ## Contributing
 

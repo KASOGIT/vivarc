@@ -6,15 +6,15 @@
 
   const get = async (path) => (await vivaldi.prefs.get(path))?.value;
   const set = (path, value) => vivaldi.prefs.set({ path, value });
-  const FREED = "meta+t";
-  const COPY_URL = "shift+meta+c";
+  const FREED = window.__vm.shortcut("meta+t");
+  const COPY_URL = window.__vm.shortcut("shift+meta+c");
 
   // Bump when the steps change: profiles already set up then run the (idempotent) steps once more.
-  const VERSION = 12;
-  const TOGGLE = "meta+s";
-  const PROFILE_KEYS = ["ctrl+meta+left", "ctrl+meta+right"]; // the profile switcher's previous/next, handled in 06-spaces.js
-  const SPACE_KEYS = { COMMAND_WORKSPACE_SWITCH_BACK_ORDER: "alt+meta+left", COMMAND_WORKSPACE_SWITCH_FORWARD_ORDER: "alt+meta+right",
-    COMMAND_WORKSPACE_CREATE_NEW: "ctrl+meta+n" }; // like Arc's spaces; Ctrl+Cmd+N opens Vivaldi's own Create Workspace dialog
+  const VERSION = 15;
+  const TOGGLE = window.__vm.shortcut("meta+s");
+  const PROFILE_KEYS = [window.__vm.shortcut("ctrl+meta+left"), window.__vm.shortcut("ctrl+meta+right")]; // the profile switcher's previous/next, handled in 06-spaces.js
+  const SPACE_KEYS = { COMMAND_WORKSPACE_SWITCH_BACK_ORDER: window.__vm.shortcut("alt+meta+left"), COMMAND_WORKSPACE_SWITCH_FORWARD_ORDER: window.__vm.shortcut("alt+meta+right"),
+    COMMAND_WORKSPACE_CREATE_NEW: window.__vm.shortcut("ctrl+meta+n") }; // like Arc's spaces; Ctrl+Cmd+N opens Vivaldi's own Create Workspace dialog
 
   // The address bar and navigation buttons live inside the sidebar; the top bar is hidden.
   const SIDEBAR_TOOLBAR = ["TabButton", "Extensions", "FlexibleSpacer", "Back", "Reload", "Forward", "AddressField"];
@@ -74,7 +74,11 @@
     for (const cmd of Object.values(table)) {
       if (Array.isArray(cmd?.shortcuts)) cmd.shortcuts = cmd.shortcuts.filter((s) => !taken.includes(s));
     }
-    for (const [name, key] of Object.entries(SPACE_KEYS)) command(name).shortcuts.push(key);
+    for (const [name, key] of Object.entries(SPACE_KEYS)) {
+      const cmd = command(name);
+      cmd.shortcuts = cmd.shortcuts.filter((s) => !["meta+left", "meta+right", "alt+meta+left", "alt+meta+right", "alt+ctrl+left", "alt+ctrl+right"].includes(s));
+      cmd.shortcuts.push(key);
+    }
     await set("vivaldi.actions", actions);
   };
 
