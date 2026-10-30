@@ -22,10 +22,9 @@
     return { active, tabs: tabsIn(tabs, active) };
   };
 
-  // Without any workspace there is only one space, so no bar.
+  // Always include Home so the sidebar offers space switching and creation on a fresh profile.
   const items = (list, defaultName) => {
-    if (!list?.length) return [];
-    return [{ id: 0, name: defaultName, emoji: "" }, ...list.map((w) => ({ id: w.id, name: w.name, emoji: w.emoji || "" }))];
+    return [{ id: 0, name: defaultName, emoji: "" }, ...(list || []).map((w) => ({ id: w.id, name: w.name, emoji: w.emoji || "", icon: w.icon || "" }))];
   };
 
   // Where switching to a space lands: its most recently used tab (Vivaldi then switches the workspace by itself).
@@ -65,8 +64,8 @@
   // A mod can neither create a workspace (Vivaldi reads its list once) nor press a shortcut for the user: events a
   // mod dispatches never reach Vivaldi's shortcut handler. So the install binds "Create New Workspace" to this chord,
   // and the + tile and the command bar tell the user to press it.
-  const CREATE_KEY = "ctrl+meta+n";
-  const KEY_NAMES = { ctrl: "Ctrl", meta: "Cmd", alt: "Option", shift: "Shift" };
+  const CREATE_KEY = window.__vm.shortcut?.("ctrl+meta+n") || "ctrl+meta+n";
+  const KEY_NAMES = { ctrl: "Ctrl", meta: "Cmd", alt: window.__vm.windows ? "Alt" : "Option", shift: "Shift" };
   const CREATE_HINT = `Press ${CREATE_KEY.split("+").map((k) => KEY_NAMES[k] || k.toUpperCase()).join("+")} to create a space`;
 
   // Vivaldi has no extension API to delete a workspace, only its own store. Its webpack chunk array lives on the
@@ -90,8 +89,45 @@
     return null;
   };
 
+  // Reuse Vivaldi's own dialog so naming, icons and workspace creation remain native.
+  const findCreator = (chunks) => {
+    try {
+      let load;
+      chunks.push([[Symbol("vivarc-create-space")], {}, (require) => { load = require; }]);
+      for (const [id, factory] of Object.entries(load?.m || {})) {
+        if (!String(factory).includes("showWorkspaceDialog(")) continue;
+        let exported;
+        try { exported = load(id); } catch (_) { continue; }
+        for (const manager of Object.values(exported || {})) {
+          if (typeof manager?.showWorkspaceDialog === "function") {
+            return (windowId) => manager.showWorkspaceDialog(windowId, { createInBackground: false });
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  };
+
+  const findSwitcher = (chunks) => {
+    try {
+      let load;
+      chunks.push([[Symbol("vivarc-switch-space")], {}, (require) => { load = require; }]);
+      for (const [id, factory] of Object.entries(load?.m || {})) {
+        if (!String(factory).includes("setActiveWorkspace")) continue;
+        let exported;
+        try { exported = load(id); } catch (_) { continue; }
+        for (const manager of Object.values(exported || {})) {
+          if (typeof manager?.setActiveWorkspace === "function") {
+            return (windowId, workspaceId) => manager.setActiveWorkspace(windowId, workspaceId || undefined);
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  };
+
   const removalLabel = (name, tabCount) =>
     `Delete \u201c${name}\u201d${tabCount ? ` and close its ${tabCount} ${tabCount === 1 ? "tab" : "tabs"}` : ""}`;
 
-  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, recentTab, label, assign, stamp, findRemover, removalLabel, CREATE_HINT };
+  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, recentTab, label, assign, stamp, findRemover, findCreator, findSwitcher, removalLabel, CREATE_HINT };
 })();

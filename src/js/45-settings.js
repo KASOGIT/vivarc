@@ -2,6 +2,7 @@
 (() => {
   const { settings } = window.__vm;
   let overlay = null;
+  settings.isOpen = () => !!overlay;
   let unsubs = [];
 
   const el = (tag, cls, text) => {
@@ -49,6 +50,7 @@
     const box = el("input", "vm-set-switch");
     box.type = "checkbox";
     box.checked = !!settings.get(item.key);
+    unsubs.push(settings.onChange(() => { box.checked = !!settings.get(item.key); }));
     box.addEventListener("change", () => settings.set(item.key, box.checked));
     line.append(text, box);
     return line;
@@ -64,7 +66,7 @@
     x.addEventListener("click", close);
     head.append(el("div", "vm-set-title", "Vivarc Settings"), x);
     const reset = el("button", "vm-set-reset", "Reset to defaults");
-    reset.addEventListener("click", () => { settings.reset(); card.replaceChildren(head, ...settings.SCHEMA.map(row), foot); });
+    reset.addEventListener("click", () => { unsubs.forEach((off) => off()); unsubs = []; settings.reset(); card.replaceChildren(head, ...settings.SCHEMA.map(row), foot); });
     const foot = el("div", "vm-set-foot");
     foot.append(el("div", "vm-set-note", "Saved for this profile."), reset);
     card.append(head, ...settings.SCHEMA.map(row), foot);

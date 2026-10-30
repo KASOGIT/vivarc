@@ -4,11 +4,20 @@
   const defaults = {
     hideWorkspaceButton: true,
     compactBottomBar: true,
-    suggestions: "ddg",
+    suggestions: "default",
     spaceFolderTitle: "Vivarc",
   };
   const config = { ...defaults, ...(window.__vmConfig || {}) };
 
+  const windows = config.platform === "Windows";
+  const shortcut = (combo) => {
+    if (combo === "alt+meta+left" || combo === "alt+meta+right") {
+      return windows ? combo.replace("alt+meta", "alt") : combo;
+    }
+    if (!windows) return combo;
+    if (combo === "ctrl+meta+n") return "alt+ctrl+n";
+    return combo.replace("ctrl+meta+", "ctrl+shift+").replace("meta", "ctrl");
+  };
   const subscribers = new Set();
   const dbReady = new Promise((resolve, reject) => {
     const req = indexedDB.open("vivarc", 1);
@@ -52,7 +61,7 @@
     try { return JSON.parse(tab?.vivExtData || "{}").tiling; } catch (_) { return undefined; }
   };
 
-  window.__vm = { config, store, normalise, tilingOf, onShortcut: (fn) => subscribers.add(fn) };
+  window.__vm = { config, store, shortcut, windows, normalise, tilingOf, onShortcut: (fn) => subscribers.add(fn) };
 
   // Vivaldi re-renders #browser's class list, so the marker classes are re-applied whenever they go missing.
   const markListeners = new Set();

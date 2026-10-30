@@ -4,7 +4,6 @@
 (() => {
   const cfg = window.__vm.config;
   const BLANK = /^(chrome|vivaldi):\/\/(newtab|vivaldi-webui\/startpage)/;
-  const bottomToolbar = () => (window.__vm.settings.get("compactBottomBar") ? 35 : 64);
 
   const store = window.__vm.store;
   const openFolders = new Set();
@@ -500,7 +499,7 @@
 
   const profileChip = (chip, index) => {
     const node = el("div", `vm-space-chip${chip.active ? " active" : ""}`);
-    node.title = chip.active ? chip.name : `${chip.name}${index < 9 ? ` (⌃⌘${index + 1})` : ""}`;
+    node.title = chip.active ? chip.name : `${chip.name}${index < 9 ? ` (${window.__vm.windows ? "Ctrl+Shift+" : "⌃⌘"}${index + 1})` : ""}`;
     const letter = () => {
       const span = el("span", "vm-space-letter", chip.letter);
       span.style.backgroundColor = `hsl(${chip.hue} 38% 40%)`;
@@ -583,56 +582,113 @@
 
   // ---- space bar: Vivaldi workspaces as Arc-style spaces ----
   const switchSpace = async (item) => {
-    if (item.id === state.active) return;
-    const tab = spacesOf.recentTab(state.allTabs, item.id);
-    if (tab) await chrome.tabs.update(tab.id, { active: true });
-    else await chrome.tabs.create({ active: true, vivExtData: JSON.stringify({ workspaceId: item.id }) });
+    try {
+      const activate = spacesOf.findSwitcher(window.webpackChunkgapp_browser_react) ||
+        spacesOf.findSwitcher(chrome.extension.getBackgroundPage?.()?.webpackChunkgapp_browser_react);
+      if (!activate) throw new Error("Native workspace switching is unavailable");
+      const win = await chrome.windows.getCurrent();
+      await activate(win.id, item.id);
+      refresh(false);
+    } catch (error) {
+      console.warn("[vivarc] switch space:", error);
+      window.dispatchEvent(new CustomEvent("vm-toast", { detail: "Could not switch space. Use Vivaldi's workspace shortcut." }));
+    }
   };
 
+  let spaceTooltip = null;
+  const hideSpaceTooltip = () => { spaceTooltip?.remove(); spaceTooltip = null; };
   const spacePill = (item) => {
-    const pill = el("div", `vm-space-pill${item.id === state.active ? " active" : ""}`, item.emoji || item.name.trim().charAt(0).toUpperCase() || "?");
-    pill.title = item.name;
-    pill.addEventListener("click", () => switchSpace(item));
-    if (item.id) pill.addEventListener("contextmenu", (e) => showMenu(e, [["Delete Space…", () => confirmDeleteSpace(item, e), true]]));
+    const pill = el("button", `vm-space-pill${item.id === state.active ? " active" : ""}`);
+    pill.type = "button";
+    pill.setAttribute("aria-label", item.name);
+    pill.setAttribute("aria-pressed", String(item.id === state.active));
+    if (item.emoji) pill.textContent = item.emoji;
+    else if (typeof item.icon === "string" && item.icon.trim().startsWith("<svg")) {
+      // Render the native SVG as a mask: no HTML injection, and it follows the theme.
+      const icon = el("span", "vm-workspace-icon");
+      icon.style.maskImage = `url("data:image/svg+xml,${encodeURIComponent(item.icon)}")`;
+      pill.append(icon);
+    } else pill.textContent = Array.from((item.name || "").trim())[0]?.toLocaleUpperCase() || "?";
+    const showName = () => {
+      hideSpaceTooltip();
+      spaceTooltip = el("div", "vm-space-tooltip", item.name);
+      spaceTooltip.setAttribute("role", "tooltip");
+      document.body.append(spaceTooltip);
+      const rect = pill.getBoundingClientRect();
+      const width = spaceTooltip.getBoundingClientRect().width;
+      spaceTooltip.style.left = `${Math.max(8, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 8))}px`;
+      spaceTooltip.style.bottom = `${window.innerHeight - rect.top + 8}px`;
+    };
+    pill.addEventListener("mouseenter", showName);
+    pill.addEventListener("focus", showName);
+    pill.addEventListener("mouseleave", hideSpaceTooltip);
+    pill.addEventListener("blur", hideSpaceTooltip);
+    pill.addEventListener("click", () => { hideSpaceTooltip(); switchSpace(item); });
+    if (item.id) pill.addEventListener("contextmenu", (e) => { hideSpaceTooltip(); confirmDeleteSpace(item, e); });
     return pill;
   };
 
   const confirmDeleteSpace = (item, event) => {
     const label = spacesOf.removalLabel(item.name, spacesOf.tabsIn(state.allTabs, item.id).length);
-    const at = { clientX: event.clientX, clientY: event.clientY, preventDefault() {}, stopPropagation() {} };
-    showMenu(at, [[label, () => deleteSpace(item), true], ["Cancel", () => {}]]);
+    showMenu(event, [[label, () => deleteSpace(item), true], ["Cancel", () => {}]]);
   };
 
   const deleteSpace = async (item) => {
-    const remove = spacesOf.findRemover(chrome.extension.getBackgroundPage?.()?.webpackChunkgapp_browser_react);
+    const remove = spacesOf.findRemover(window.webpackChunkgapp_browser_react) ||
+      spacesOf.findRemover(chrome.extension.getBackgroundPage?.()?.webpackChunkgapp_browser_react);
     if (!remove) {
       window.dispatchEvent(new CustomEvent("vm-toast", { detail: "Could not delete the space. Use Vivaldi's Workspaces button." }));
       return;
     }
-    await remove(window.vivaldiWindowId, item.id);
+    const win = await chrome.windows.getCurrent();
+    await remove(win.id, item.id);
     refresh(false);
+  };
+
+  const openCreateSpaceDialog = async () => {
+    try {
+      const create = spacesOf.findCreator(window.webpackChunkgapp_browser_react) ||
+        spacesOf.findCreator(chrome.extension.getBackgroundPage?.()?.webpackChunkgapp_browser_react);
+      if (!create) throw new Error("Workspace dialog unavailable");
+      const win = await chrome.windows.getCurrent();
+      await create(win.id);
+    } catch (error) {
+      console.warn("[vivarc] create space:", error);
+      window.dispatchEvent(new CustomEvent("vm-toast", { detail: spacesOf.CREATE_HINT }));
+    }
   };
 
   const spaceBar = () => {
     const items = spacesOf.items(state.workspaces, state.defaultSpace ? spacesOf.label(state.defaultSpace) : "Home");
-    if (!items.length) return null;
     const bar = el("div", "vm-space-bar");
     const plus = el("div", "vm-space-pill vm-space-plus", "+");
-    plus.title = "New space";
-    plus.addEventListener("click", () => window.dispatchEvent(new CustomEvent("vm-toast", { detail: spacesOf.CREATE_HINT })));
+    plus.title = "Create a new space";
+    plus.addEventListener("click", openCreateSpaceDialog);
     bar.append(...items.map(spacePill), plus);
     return bar;
   };
 
   // ---- render ----
-  const fitHeight = () => {
-    if (!panel?.isConnected) return;
-    const top = panel.getBoundingClientRect().top;
-    panel.style.maxHeight = `${Math.max(120, window.innerHeight - top - bottomToolbar())}px`;
+  const currentUrlField = () => {
+    const active = state.allTabs.find((tab) => tab.active);
+    const url = active?.pendingUrl || active?.url || "";
+    const field = el("input", "vm-current-url");
+    field.type = "text";
+    field.readOnly = true;
+    field.value = url;
+    field.title = url;
+    field.placeholder = "No active page";
+    field.setAttribute("aria-label", "Current page URL");
+    field.spellcheck = false;
+    field.addEventListener("click", () => field.select());
+    // Let the field's native copy/select context menu work.
+    field.addEventListener("contextmenu", (event) => event.stopPropagation());
+    return field;
   };
 
   const render = () => {
     if (!panel) return;
+    hideSpaceTooltip();
     const scroll = panel.querySelector(".vm-scroll")?.scrollTop ?? 0;
     const body = el("div", "vm-scroll");
     const favLeaves = state.favs ? state.favs.children.filter((c) => !c.children) : [];
@@ -679,9 +735,8 @@
     open.sort((a, b) => b.index - a.index).forEach((t) => body.append(tabRow(t)));
 
     const bar = spaceBar();
-    panel.replaceChildren(...(grid ? [grid] : []), body, ...(bar ? [bar] : []));
+    panel.replaceChildren(currentUrlField(), ...(grid ? [grid] : []), body, ...(bar ? [bar] : []));
     body.scrollTop = scroll;
-    fitHeight();
   };
 
   const ICON_MAX = 20000;
@@ -820,10 +875,19 @@
   }
 
   // ---- placement ----
+  const guardedSidebars = new WeakSet();
   const place = () => {
     const container = document.querySelector("#tabs-container.left, #tabs-container.right");
     const strip = container?.querySelector(".tab-strip");
     if (!strip) return;
+    const sidebar = container.closest("#tabs-tabbar-container");
+    if (sidebar && !guardedSidebars.has(sidebar)) {
+      // Vivaldi delegates double-clicks to its native tab-bar handler, which
+      // creates a blank tab even when a Vivarc control was clicked. Stop only
+      // propagation, preserving text selection and the controls' click events.
+      sidebar.addEventListener("dblclick", (event) => event.stopPropagation());
+      guardedSidebars.add(sidebar);
+    }
     let anchor = strip;
     while (anchor.parentElement !== container) anchor = anchor.parentElement;
     if (!panel) {
@@ -846,7 +910,6 @@
       row.classList.toggle("vm-collapsed", bare && !!row.querySelector(".UrlBar-AddressField"));
     }
     placeProfileBar();
-    fitHeight();
     if (panel.parentElement !== container || panel.nextElementSibling !== anchor) {
       container.insertBefore(panel, anchor);
     }
@@ -871,8 +934,6 @@
       requestAnimationFrame(() => { queued = false; place(); });
     }).observe(document.body, { childList: true, subtree: true });
     place();
-    window.addEventListener("resize", fitHeight);
-    window.__vm.settings.onChange(fitHeight);
     for (const ev of ["onCreated", "onRemoved", "onChanged", "onMoved", "onImportEnded"]) {
       chrome.bookmarks[ev]?.addListener(() => refresh(true));
     }
@@ -887,7 +948,7 @@
       chrome.tabs[ev]?.addListener(() => refresh(false));
     }
     setInterval(async () => {
-      const brief = (list) => JSON.stringify(list.map((w) => [w.id, w.name, w.emoji]));
+      const brief = (list) => JSON.stringify(list.map((w) => [w.id, w.name, w.emoji, w.icon]));
       if (brief(await readWorkspaces()) !== brief(state.workspaces)) refresh(false);
     }, 3000);
     try {

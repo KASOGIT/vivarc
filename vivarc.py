@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vivarc: an Arc-style sidebar, command bar and theme editor for Vivaldi (macOS).
+"""Vivarc: an Arc-style sidebar, command bar and theme editor for Vivaldi (macOS and Windows).
 
     ./vivarc.py install        set everything up (Vivaldi must be closed)
     ./vivarc.py update         fetch the latest Vivarc and re-apply it (also after a Vivaldi update)
@@ -30,6 +30,7 @@ VERSION = "0.1.16"
 HOME = os.path.expanduser("~")
 HERE = os.path.dirname(os.path.abspath(__file__))
 HOME_DIR = os.path.join(HOME, ".vivarc")
+IS_WINDOWS = platform.system() == "Windows"
 DEFAULT_APP = os.environ.get("VIVARC_APP", "/Applications/Vivaldi.app")
 DEFAULT_DATA = os.environ.get("VIVARC_DATA_DIR", os.path.join(HOME, "Library", "Application Support", "Vivaldi"))
 UPDATE_COMMAND = os.path.join(HOME_DIR, "Update Vivarc.command")
@@ -43,6 +44,21 @@ REMINDER_LABEL = "com.vivarc.reminder"
 REMINDER_PLIST = os.path.join(HOME, "Library", "LaunchAgents", f"{REMINDER_LABEL}.plist")
 REMIND_EVERY = 12 * 3600
 RESOURCES = "Contents/Frameworks/Vivaldi Framework.framework/Resources/vivaldi"
+
+
+def resource_dir(app):
+    if IS_WINDOWS:
+        from windows_support import find_resources
+        return find_resources(app)
+    return os.path.join(app, RESOURCES)
+
+
+if IS_WINDOWS:
+    from windows_support import detect_app
+    DEFAULT_APP = os.environ.get("VIVARC_APP", detect_app())
+    DEFAULT_DATA = os.environ.get("VIVARC_DATA_DIR", os.path.join(os.environ.get("LOCALAPPDATA", HOME), "Vivaldi", "User Data"))
+    UPDATE_COMMAND = os.path.join(HOME_DIR, "Update Vivarc.bat")
+    UNINSTALL_COMMAND = os.path.join(HOME_DIR, "Uninstall Vivarc.bat")
 
 BEGIN, END = "<!-- vivarc:begin -->", "<!-- vivarc:end -->"
 BLOCK = f'{BEGIN}\n<script src="vivarc.js"></script>\n{END}'
@@ -161,7 +177,9 @@ def patch_preferences(prefs, default_actions):
         if isinstance(cmd, dict):
             cmd["shortcuts"] = [s for s in cmd.get("shortcuts", []) if s != TOGGLE_SIDEBAR_KEY and s not in taken]
     for name, key in SPACE_KEYS.items():
-        _command(actions, defaults, name)["shortcuts"].append(key)
+        cmd = _command(actions, defaults, name)
+        cmd["shortcuts"] = [s for s in cmd["shortcuts"] if s not in ("meta+left", "meta+right", "alt+meta+left", "alt+meta+right", "alt+ctrl+left", "alt+ctrl+right")]
+        cmd["shortcuts"].append(key)
     _command(actions, defaults, "COMMAND_TOGGLE_AUTO_HIDE_TAB_BAR")["shortcuts"] = [TOGGLE_SIDEBAR_KEY]
     _set(new, ("vivaldi", "actions"), actions_list)
 
@@ -433,7 +451,7 @@ def write_bundle(resources, with_peek):
         extras.append(("VividPeek.js", read_text(os.path.join(peek_dir, "VividPeek.js"))))
         extras.append(("VividPeek.css", style_script("vivarc-peek-css", read_text(os.path.join(peek_dir, "VividPeek.css")))))
     start_page = pathlib.Path(HOME_DIR, "start", "index.html").as_uri()
-    config = {**load_config(), "startUrl": start_page}
+    config = {**load_config(), "startUrl": start_page, "platform": platform.system()}
     bundle = build_bundle(os.path.join(HERE, "src/js"), config, extras, pre)
     write_atomic(os.path.join(resources, "vivarc.js"), bundle)
 
@@ -558,7 +576,7 @@ def permission_hint(error):
 # ---------------------------------------------------------------- commands
 def cmd_install(args):
     app, data = args.app, args.data_dir
-    resources = os.path.join(app, RESOURCES)
+    resources = resource_dir(app)
     if not os.path.isdir(resources):
         die(f"Vivaldi not found at {app} (use --app)")
     if not args.dry_run:
@@ -606,21 +624,28 @@ def cmd_install(args):
     except PermissionError as error:
         permission_hint(error)
     write_update_command(UPDATE_COMMAND)
-    write_update_app(UPDATE_APP, UPDATE_COMMAND)
+    if not IS_WINDOWS:
+        write_update_app(UPDATE_APP, UPDATE_COMMAND)
     write_uninstall_command(UNINSTALL_COMMAND)
-    write_update_app(UNINSTALL_APP, UNINSTALL_COMMAND)
+    if not IS_WINDOWS:
+        write_update_app(UNINSTALL_APP, UNINSTALL_COMMAND)
     remove_update_command(LEGACY_UPDATE_COMMAND)
-    if os.path.exists(REMINDER_PLIST):
+    if IS_WINDOWS:
+        say("Automatic reminders are not available on Windows.")
+    elif os.path.exists(REMINDER_PLIST):
         enable_reminder(app)
     elif (ask("Show a reminder when a Vivaldi update removes Vivarc? [y/N] ") or "").lower() in ("y", "yes"):
         enable_reminder(app)
         say("Reminder on. Turn it off any time with: python3 ~/.vivarc/app/vivarc.py reminder off")
+    if IS_WINDOWS:
+        say(f"Done. Open Vivaldi. Update and uninstall launchers: {HOME_DIR}")
+        return
     say("Done. Open Vivaldi. After a Vivaldi update, open \"Update Vivarc\" to bring Vivarc back. Find it in Finder: "
         "Cmd+Shift+H, then the Applications folder. Drag it to your Dock to keep it close.")
 
 
 def cmd_apply(args):
-    resources = os.path.join(args.app, RESOURCES)
+    resources = resource_dir(args.app)
     check_owner(HOME_DIR)
     preflight(resources)
     sync_guide()
@@ -649,6 +674,10 @@ def cmd_update(args):
         if is_newer(latest, VERSION):
             say(f"Updating Vivarc {VERSION} to {latest.lstrip('v')}...")
             env = {**os.environ, "VIVARC_APP": args.app, "VIVARC_DATA_DIR": args.data_dir}
+            if IS_WINDOWS:
+                import windows_support
+                windows_support.update_release(args, extra)
+                return
             os.execve("/bin/bash", ["/bin/bash", os.path.join(HERE, "install.sh"), *extra], env)
         elif latest is None:
             say("Could not check for a new version (offline?). Re-applying the one you have.")
@@ -658,7 +687,7 @@ def cmd_update(args):
 
 
 def cmd_remind(args):
-    resources = os.path.join(args.app, RESOURCES)
+    resources = resource_dir(args.app)
     if needs_reapply(resources):
         stamp = os.path.join(HOME_DIR, "reminded")
         if os.path.exists(stamp) and time.time() - float(read_text(stamp)) < REMIND_EVERY:
@@ -690,7 +719,7 @@ def cmd_reminder(args):
 
 
 def cmd_uninstall(args):
-    resources = os.path.join(args.app, RESOURCES)
+    resources = resource_dir(args.app)
     ensure_vivaldi_closed()
     preflight(resources)
     state = load_state()
@@ -723,9 +752,11 @@ def cmd_uninstall(args):
         permission_hint(error)
     remove_update_command(UPDATE_COMMAND)
     remove_update_command(LEGACY_UPDATE_COMMAND)
-    remove_update_app(UPDATE_APP)
+    if not IS_WINDOWS:
+        remove_update_app(UPDATE_APP)
     remove_update_command(UNINSTALL_COMMAND)
-    remove_update_app(UNINSTALL_APP)
+    if not IS_WINDOWS:
+        remove_update_app(UNINSTALL_APP)
     disable_reminder()
     if args.purge:
         shutil.rmtree(HOME_DIR, ignore_errors=True)
@@ -733,12 +764,12 @@ def cmd_uninstall(args):
 
 
 def cmd_status(args):
-    resources = os.path.join(args.app, RESOURCES)
+    resources = resource_dir(args.app)
     html_path = os.path.join(resources, "window.html")
     injected = os.path.exists(html_path) and BEGIN in read_text(html_path)
     say(f"Vivarc {VERSION}; Vivaldi {app_version(args.app)} (running: {vivaldi_running()})")
     say(f"JS injected: {injected}" + ("" if injected else "  -> run ./vivarc.py apply"))
-    say(f"Update reminder: {'on' if os.path.exists(REMINDER_PLIST) else 'off'}")
+    say("Update reminder: unavailable on Windows" if IS_WINDOWS else f"Update reminder: {'on' if os.path.exists(REMINDER_PLIST) else 'off'}")
     state = load_state()
     for directory, name in find_profiles(read_json(os.path.join(args.data_dir, "Local State"))):
         path = os.path.join(args.data_dir, directory, "Preferences")
@@ -747,6 +778,8 @@ def cmd_status(args):
 
 
 def cmd_import_arc(args):
+    if IS_WINDOWS and not os.path.isfile(os.path.join(args.arc_dir, "StorableSidebar.json")):
+        die("Arc Windows import is not supported yet. Use --arc-dir with an exported macOS Arc folder containing StorableSidebar.json.")
     sys.path.insert(0, os.path.join(HERE, "tools"))
     import arc_import
     arc_import.run(args.arc_dir, os.path.join(HOME_DIR, "import"), HOME_DIR)
@@ -773,8 +806,11 @@ def main(argv=None):
     imp = sub.add_parser("import-arc")
     imp.add_argument("--arc-dir", default=os.path.join(HOME, "Library", "Application Support", "Arc"))
     args = parser.parse_args(argv)
-    if platform.system() != "Darwin":
-        die("Vivarc currently supports macOS only")
+    if platform.system() not in ("Darwin", "Windows"):
+        die("Vivarc supports macOS and Windows")
+    if IS_WINDOWS:
+        import windows_support
+        windows_support.configure(sys.modules[__name__], args)
     check_not_root()
     {"install": cmd_install, "apply": cmd_apply, "update": cmd_update, "remind": cmd_remind, "reminder": cmd_reminder, "uninstall": cmd_uninstall,
      "status": cmd_status, "import-arc": cmd_import_arc}[args.command](args)

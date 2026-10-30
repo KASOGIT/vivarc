@@ -5,11 +5,8 @@
   const isBlank = (tab) => BLANK.test(tab.pendingUrl || tab.url || "");
   const startedAt = Date.now();
 
-  const DEFAULT = {
-    name: "DuckDuckGo",
-    url: "https://duckduckgo.com/?q={searchTerms}",
-    suggest: "https://duckduckgo.com/ac/?q={searchTerms}&type=list",
-  };
+  const DEFAULT = {}; // Marks rows that resolve Vivaldi's current default at execution time.
+  const search = window.__vm.search;
   // Built-in search shortcuts (keyword + Tab). Engines from the user's Vivaldi settings win on a clash.
   const SEED = [
     ["az", "Amazon", "https://www.amazon.com/s?k={searchTerms}"],
@@ -39,10 +36,10 @@
   let engines = SEED;
   (async () => {
     try {
-      const reply = await vivaldi.searchEngines.getTemplateUrls();
-      const list = (reply.templateUrls || reply)
+      const { engines: templates } = await search.templates();
+      const list = templates
         .filter((t) => t.keyword && t.url && !t.keyword.startsWith("@"))
-        .map((t) => ({ keyword: t.keyword, name: t.name, url: t.url.replace(/\{(?!searchTerms\})[^}]*\}/g, "") }));
+        .map((t) => ({ ...t }));
       const taken = new Set(list.map((t) => t.keyword.toLowerCase()));
       engines = [...list, ...SEED.filter((e) => !taken.has(e.keyword))];
     } catch (_) {}
@@ -65,7 +62,6 @@
   const looksLikeUrl = (text) =>
     /^(https?:\/\/|chrome:\/\/|vivaldi:\/\/)/i.test(text) || (/^[^\s]+\.[a-z]{2,}(\/\S*)?$/i.test(text) && !text.includes(" "));
   const toUrl = (text) => (/^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `https://${text}`);
-  const engineUrl = (engine, query) => engine.url.replace(/\{searchTerms\}|%s/, encodeURIComponent(query));
 
   const toast = (message) => window.dispatchEvent(new CustomEvent("vm-toast", { detail: message }));
   const openPage = (url) => chrome.tabs.create({ url });
@@ -211,16 +207,34 @@
     else chrome.tabs.create({ url });
   };
 
-  // Plain searches use the engine chosen in Vivaldi; DuckDuckGo is only the fallback.
-  const defaultSearch = async (query) => {
+  const runSearch = async (engine, query) => {
     const id = targetTab;
-    close(false);
+    const currentInput = input;
     try {
-      await chrome.search.query(id != null ? { text: query, tabId: id } : { text: query, disposition: "NEW_TAB" });
-    } catch (_) {
-      const url = engineUrl(DEFAULT, query);
-      if (id != null) chrome.tabs.update(id, { url, active: true });
-      else chrome.tabs.create({ url });
+      const chosen = engine === DEFAULT ? await search.defaultEngine() : engine;
+      const request = await search.request(chosen, query);
+      if (request.postParams) {
+        throw new Error('This engine uses POST searches, which the command bar cannot navigate yet. Use Vivaldi?s address bar.');
+      }
+      if (!/^https?:\/\//i.test(request.url)) throw new Error('Invalid search URL returned by Vivaldi.');
+      // Do not navigate a stale command bar after it was closed or replaced.
+      if (input !== currentInput) return;
+      if (id != null) await chrome.tabs.update(id, { url: request.url, active: true });
+      else await chrome.tabs.create({ url: request.url });
+      close(false);
+    } catch (error) {
+      console.warn('[vivarc] search failed; trying DuckDuckGo:', error);
+      if (input !== currentInput || !input) return;
+      try {
+        const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+        if (id != null) await chrome.tabs.update(id, { url, active: true });
+        else await chrome.tabs.create({ url });
+        close(false);
+        toast('Search engine unavailable. Using DuckDuckGo.');
+      } catch (fallbackError) {
+        console.warn('[vivarc] DuckDuckGo fallback failed:', fallbackError);
+        toast('Search unavailable. Use the address bar (Ctrl+L / Cmd+L).');
+      }
     }
   };
 
@@ -230,8 +244,7 @@
       chrome.tabs.update(row.tab.id, { active: true });
       close(true);
     } else if (row.type === "search") {
-      if (row.engine === DEFAULT) defaultSearch(row.query);
-      else go(engineUrl(row.engine, row.query));
+      runSearch(row.engine, row.query);
     } else if (row.type === "engine") {
       input.value = "";
       setMode(row.engine);
@@ -341,9 +354,8 @@
       out.push(...matches.filter((m) => m !== prefix));
       if (window.__vm.settings.get("searchSuggestions") && !looksLikeUrl(text) && text.length > 1) {
         try {
-          const reply = await fetch(DEFAULT.suggest.replace("{searchTerms}", encodeURIComponent(text)));
-          const data = await reply.json();
-          const phrases = Array.isArray(data[1]) ? data[1] : data.map((d) => d.phrase);
+          const engine = await search.defaultEngine();
+          const phrases = await search.suggestions(engine, text);
           if (id !== seq) return;
           phrases.filter((p) => p && p.toLowerCase() !== needle).slice(0, 4)
             .forEach((p) => out.push({ type: "suggest", engine: DEFAULT, query: p, label: p }));
@@ -405,9 +417,19 @@
     autoCompleted = e.key.length === 1 && !e.metaKey && !e.ctrlKey;
   };
 
-  const open = (tabId) => {
-    if (!window.__vm.cssLoaded) return;
-    if (bar) { targetTab = tabId; return; }
+  const open = async (tabId, tabWindowId) => {
+    if (!window.__vm.cssLoaded || window.__vm.settings.isOpen?.()) return false;
+    try {
+      const win = await chrome.windows.getCurrent();
+      const kind = win.vivExtData ? JSON.parse(win.vivExtData).windowType : null;
+      if (win.type !== "normal" || (kind && kind !== "normal") || win.focused === false ||
+          (tabWindowId != null && tabWindowId !== win.id)) return false;
+    } catch (error) {
+      console.warn('[vivarc] cannot determine command bar window:', error);
+      return false;
+    }
+    if (!window.__vm.cssLoaded || window.__vm.settings.isOpen?.()) return false;
+    if (bar) { targetTab = tabId; return true; }
     targetTab = tabId;
     mode = null;
     bar = el("div");
@@ -435,10 +457,11 @@
     setTimeout(focus, 250);
     compute();
     window.dispatchEvent(new CustomEvent("vm-command-bar-opened"));
+    return true;
   };
 
   window.addEventListener("vm-open-command-bar", () => open(null));
-  window.__vm.onShortcut((key) => { if (key === window.__vm.normalise("meta+t")) open(null); });
+  window.__vm.onShortcut((key) => { if (key === window.__vm.normalise(window.__vm.shortcut("meta+t"))) open(null); });
 
   const activeHistory = [];
   chrome.tabs.onActivated.addListener(({ tabId }) => {
@@ -446,10 +469,20 @@
     if (activeHistory.length > 6) activeHistory.shift();
   });
 
-  chrome.tabs.onCreated.addListener((tab) => {
+  chrome.tabs.onCreated.addListener(async (tab) => {
     if (Date.now() - startedAt < 5000 || !isBlank(tab) || tab.active === false) return;
     const previous = activeHistory.filter((id) => id !== tab.id).pop();
-    open(tab.id);
+    // Creating/switching to an empty workspace creates its first blank tab.
+    // Re-activating the previous tab here would switch straight back out of it.
+    const workspaceOf = (value) => {
+      try { return Number(JSON.parse(value.vivExtData || "{}").workspaceId) || 0; }
+      catch (_) { return 0; }
+    };
+    if (previous != null) {
+      const prior = await chrome.tabs.get(previous).catch(() => null);
+      if (!prior || workspaceOf(prior) !== workspaceOf(tab)) return;
+    } else if (workspaceOf(tab)) return;
+    if (!(await open(tab.id, tab.windowId))) return;
     if (previous != null) {
       setTimeout(() => {
         if (bar && targetTab === tab.id) {

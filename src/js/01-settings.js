@@ -3,6 +3,8 @@
 (() => {
   // onClass / offClass: a marker class on #browser while the setting is on / off (the stylesheet reacts to it).
   const SCHEMA = [
+    { key: "showUrl", label: "Show URL", hint: "Show the current page URL above favorites. Click it to select and copy it.",
+      default: true, fromConfig: (c) => c.showUrl, offClass: "vm-no-url" },
     { key: "glass", label: "Liquid glass", hint: "Translucent, blurred sidebar, menus, command bar and dialogs, after Apple's Liquid Glass. Follows Reduce Transparency and Increase Contrast.",
       default: false, onClass: "vm-glass" },
     { key: "glassOpacity", type: "range", min: 15, max: 95, step: 1, default: 55, unit: "%", needs: "glass", cssVar: "--vm-glass-opacity",
@@ -10,8 +12,8 @@
     { key: "spaceBar", label: "Space bar", hint: "The row of space tiles under the sidebar.", default: true, offClass: "vm-no-space-bar" },
     { key: "compactBottomBar", label: "Compact bottom bar", hint: "A tighter row for the profile avatars and downloads.", default: true,
       fromConfig: (c) => c.compactBottomBar, onClass: "vm-compact-bottom" },
-    { key: "searchSuggestions", label: "Search suggestions", hint: "Show DuckDuckGo suggestions in the command bar while you type.", default: true,
-      fromConfig: (c) => (c.suggestions === undefined ? undefined : c.suggestions === "ddg") },
+    { key: "searchSuggestions", label: "Search suggestions", hint: "Show suggestions from your default search engine, when its Suggest URL is configured.", default: true,
+      fromConfig: (c) => (c.suggestions === undefined ? undefined : ["default", "ddg"].includes(c.suggestions)) },
   ];
 
   const resolve = (schema, config, saved) => Object.fromEntries(schema.map((s) => {
