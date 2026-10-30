@@ -223,11 +223,17 @@
       else await chrome.tabs.create({ url: request.url });
       close(false);
     } catch (error) {
-      console.warn('[vivarc] search failed:', error);
-      toast(error.message || 'Search unavailable');
-      if (input === currentInput && input) {
-        input.placeholder = 'Search unavailable ? use Vivaldi?s address bar (Ctrl+L / Cmd+L)';
-        input.title = error.message;
+      console.warn('[vivarc] search failed; trying DuckDuckGo:', error);
+      if (input !== currentInput || !input) return;
+      try {
+        const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+        if (id != null) await chrome.tabs.update(id, { url, active: true });
+        else await chrome.tabs.create({ url });
+        close(false);
+        toast('Search engine unavailable. Using DuckDuckGo.');
+      } catch (fallbackError) {
+        console.warn('[vivarc] DuckDuckGo fallback failed:', fallbackError);
+        toast('Search unavailable. Use the address bar (Ctrl+L / Cmd+L).');
       }
     }
   };

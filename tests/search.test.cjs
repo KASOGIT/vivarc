@@ -127,3 +127,18 @@ test('first blank tab of a new workspace never reactivates the previous workspac
   assert.equal(scheduled.length, 0, 'must not schedule reactivation of the old tab');
   assert.equal(calls.navigation.length, 0);
 });
+
+for (const failure of ['missing default', 'native request error', 'POST search']) {
+  test(`DuckDuckGo fallback when ${failure}`, async () => {
+    const { context, calls } = setup({ missing: failure === 'missing default' });
+    if (failure === 'native request error') context.vivaldi.searchEngines.getSearchRequest = async () => { throw new Error('unavailable'); };
+    if (failure === 'POST search') context.vivaldi.searchEngines.getSearchRequest = async () => ({ url: 'https://chosen.test/', postParams: 'q=test' });
+    const input = await loadBar(context);
+    await new Promise(resolve => setImmediate(resolve));
+    input.value = 'test & caf\u00e9';
+    await input.events.input();
+    input.events.keydown({ key: 'Enter', preventDefault() {} });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(calls.navigation[0].url, 'https://duckduckgo.com/?q=test%20%26%20caf%C3%A9');
+  });
+}
