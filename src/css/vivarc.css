@@ -137,8 +137,17 @@
 #vm-panel .vm-glyph { display: flex; flex: none; opacity: 0.8; }
 #vm-panel .vm-glyph svg { width: 20px; height: 20px; }
 #vm-panel .vm-title { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
-#vm-panel .vm-folder-body { display: none; }
-#vm-panel .vm-folder.open > .vm-folder-body { display: block; }
+/* Folders slide open and shut: the body's single grid row grows from 0fr to 1fr, the inner content clips. */
+#vm-panel .vm-folder-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+#vm-panel .vm-folder.open > .vm-folder-body { grid-template-rows: 1fr; }
+#vm-panel .vm-folder-content { min-height: 0; overflow: hidden; }
+@media (prefers-reduced-motion: reduce) {
+  #vm-panel .vm-folder-body { transition: none; }
+}
 
 #vm-panel .vm-ico {
   display: flex;

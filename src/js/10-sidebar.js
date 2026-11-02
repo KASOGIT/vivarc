@@ -401,10 +401,13 @@
     const title = el("span", "vm-title", node.title || "Untitled");
     head.append(glyph, title);
     const body = el("div", "vm-folder-body");
-    node.children.forEach((c) => body.append(pinnedNode(c, depth + 1)));
+    const content = el("div", "vm-folder-content");
+    node.children.forEach((c) => content.append(pinnedNode(c, depth + 1)));
+    body.append(content);
     const sync = () => {
       const open = openFolders.has(node.id);
       wrap.classList.toggle("open", open);
+      content.inert = !open; // a shut folder's rows stay in the page for the animation; keep them out of reach
       glyph.innerHTML = open ? ICON_OPEN : ICON_CLOSED;
     };
     head.addEventListener("click", () => {
