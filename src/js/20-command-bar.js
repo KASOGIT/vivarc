@@ -5,11 +5,10 @@
   const isBlank = (tab) => BLANK.test(tab.pendingUrl || tab.url || "");
   const startedAt = Date.now();
 
-  const DEFAULT = {
-    name: "DuckDuckGo",
-    url: "https://duckduckgo.com/?q={searchTerms}",
-    suggest: "https://duckduckgo.com/ac/?q={searchTerms}&type=list",
-  };
+  // Plain searches and suggestions use the default engine picked in Vivaldi (15-search.js); rows marked with
+  // DEFAULT resolve it when they run, so a change in Vivaldi's settings applies at once.
+  const search = window.__vm.search;
+  const DEFAULT = { name: "Default search" };
   // Built-in search shortcuts (keyword + Tab). Engines from the user's Vivaldi settings win on a clash.
   const SEED = [
     ["az", "Amazon", "https://www.amazon.com/s?k={searchTerms}"],
@@ -42,7 +41,7 @@
       const reply = await vivaldi.searchEngines.getTemplateUrls();
       const list = (reply.templateUrls || reply)
         .filter((t) => t.keyword && t.url && !t.keyword.startsWith("@"))
-        .map((t) => ({ keyword: t.keyword, name: t.name, url: t.url.replace(/\{(?!searchTerms\})[^}]*\}/g, "") }));
+        .map((t) => ({ guid: t.guid, keyword: t.keyword, name: t.name, url: t.url }));
       const taken = new Set(list.map((t) => t.keyword.toLowerCase()));
       engines = [...list, ...SEED.filter((e) => !taken.has(e.keyword))];
     } catch (_) {}
@@ -211,17 +210,13 @@
     else chrome.tabs.create({ url });
   };
 
-  // Plain searches use the engine chosen in Vivaldi; DuckDuckGo is only the fallback.
+  // Plain searches go to the default engine picked in Vivaldi's settings.
   const defaultSearch = async (query) => {
     const id = targetTab;
     close(false);
-    try {
-      await chrome.search.query(id != null ? { text: query, tabId: id } : { text: query, disposition: "NEW_TAB" });
-    } catch (_) {
-      const url = engineUrl(DEFAULT, query);
-      if (id != null) chrome.tabs.update(id, { url, active: true });
-      else chrome.tabs.create({ url });
-    }
+    const url = await search.searchUrl(query);
+    if (id != null) chrome.tabs.update(id, { url, active: true });
+    else chrome.tabs.create({ url });
   };
 
   const run = (row) => {
@@ -231,6 +226,7 @@
       close(true);
     } else if (row.type === "search") {
       if (row.engine === DEFAULT) defaultSearch(row.query);
+      else if (row.engine.guid) search.searchUrl(row.query, row.engine).then(go);
       else go(engineUrl(row.engine, row.query));
     } else if (row.type === "engine") {
       input.value = "";
@@ -339,11 +335,11 @@
       const keyword = !/\s/.test(text) && engines.find((en) => en.keyword.toLowerCase() === needle);
       if (keyword) out.unshift({ type: "engine", engine: keyword, label: `Search ${keyword.name}` });
       out.push(...matches.filter((m) => m !== prefix));
-      if (window.__vm.settings.get("searchSuggestions") && !looksLikeUrl(text) && text.length > 1) {
+      const suggest = window.__vm.settings.get("searchSuggestions") && !looksLikeUrl(text) && text.length > 1
+        && search.suggestUrl(search.current(), text);
+      if (suggest) {
         try {
-          const reply = await fetch(DEFAULT.suggest.replace("{searchTerms}", encodeURIComponent(text)));
-          const data = await reply.json();
-          const phrases = Array.isArray(data[1]) ? data[1] : data.map((d) => d.phrase);
+          const phrases = search.parseSuggestions(await (await fetch(suggest)).text());
           if (id !== seq) return;
           phrases.filter((p) => p && p.toLowerCase() !== needle).slice(0, 4)
             .forEach((p) => out.push({ type: "suggest", engine: DEFAULT, query: p, label: p }));
