@@ -9,6 +9,26 @@
   };
   const config = { ...defaults, ...(window.__vmConfig || {}) };
 
+  // The installer passes its platform's shortcut table (vivarc.py KEYS). These copies only cover a bundle built
+  // before the table existed. On Windows Ctrl stands in for Cmd: the OS keeps most Win-key chords for itself.
+  const KEYMAPS = {
+    mac: { commandBar: "meta+t", copyUrl: "shift+meta+c", toggleSidebar: "meta+s", profilePrev: "ctrl+meta+left",
+      profileNext: "ctrl+meta+right", profileMods: "ctrl+meta", spacePrev: "alt+meta+left", spaceNext: "alt+meta+right",
+      spaceNew: "ctrl+meta+n" },
+    win: { commandBar: "ctrl+t", copyUrl: "ctrl+shift+c", toggleSidebar: "ctrl+s", profilePrev: "ctrl+alt+shift+left",
+      profileNext: "ctrl+alt+shift+right", profileMods: "ctrl+alt+shift", spacePrev: "ctrl+alt+left",
+      spaceNext: "ctrl+alt+right", spaceNew: "ctrl+alt+n" },
+  };
+  const LABELS = { mac: { meta: "Cmd", alt: "Option", ctrl: "Ctrl", shift: "Shift" },
+    win: { meta: "Win", alt: "Alt", ctrl: "Ctrl", shift: "Shift" } };
+  const detected = /win/i.test(navigator.userAgentData?.platform || navigator.platform || "") ? "win" : "mac";
+  const platform = KEYMAPS[config.platform] ? config.platform : detected;
+  const keys = { ...KEYMAPS[platform], ...(config.keys || {}) };
+  const labels = { ...LABELS[platform], ...(config.keyLabels || {}) };
+  // "ctrl+alt+n" -> "Ctrl+Alt+N" (macOS: "ctrl+meta+n" -> "Ctrl+Cmd+N")
+  const keyLabel = (combo) => String(combo).split("+")
+    .map((k) => labels[k] || (k.length === 1 ? k.toUpperCase() : k.charAt(0).toUpperCase() + k.slice(1))).join("+");
+
   const subscribers = new Set();
   const dbReady = new Promise((resolve, reject) => {
     const req = indexedDB.open("vivarc", 1);
@@ -52,7 +72,8 @@
     try { return JSON.parse(tab?.vivExtData || "{}").tiling; } catch (_) { return undefined; }
   };
 
-  window.__vm = { config, store, normalise, tilingOf, onShortcut: (fn) => subscribers.add(fn) };
+  window.__vm = { config, store, normalise, tilingOf, platform, keys, keyLabel, onShortcut: (fn) => subscribers.add(fn) };
+  document.documentElement.classList.add(`vm-platform-${platform}`);
 
   // Vivaldi re-renders #browser's class list, so the marker classes are re-applied whenever they go missing.
   const markListeners = new Set();

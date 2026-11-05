@@ -1,0 +1,7 @@
+# Keep LF in the repository and in every checkout, so install.sh and the generated bundle work wherever the repo
+# was cloned (a Windows checkout with CRLF breaks bash). Windows-only scripts keep CRLF.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.png binary
+*.ico binary

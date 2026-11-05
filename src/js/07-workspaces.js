@@ -65,9 +65,12 @@
   // A mod can neither create a workspace (Vivaldi reads its list once) nor press a shortcut for the user: events a
   // mod dispatches never reach Vivaldi's shortcut handler. So the install binds "Create New Workspace" to this chord,
   // and the + tile and the command bar tell the user to press it.
-  const CREATE_KEY = "ctrl+meta+n";
-  const KEY_NAMES = { ctrl: "Ctrl", meta: "Cmd", alt: "Option", shift: "Shift" };
-  const CREATE_HINT = `Press ${CREATE_KEY.split("+").map((k) => KEY_NAMES[k] || k.toUpperCase()).join("+")} to create a space`;
+  const CREATE_KEY = window.__vm.keys?.spaceNew || "ctrl+meta+n";
+  const KEY_NAMES = window.__vm.platform === "win" ? { ctrl: "Ctrl", meta: "Win", alt: "Alt", shift: "Shift" }
+    : { ctrl: "Ctrl", meta: "Cmd", alt: "Option", shift: "Shift" };
+  const chordLabel = (combo) => window.__vm.keyLabel?.(combo) || combo.split("+").map((k) => KEY_NAMES[k] || k.toUpperCase()).join("+");
+  const CREATE_LABEL = chordLabel(CREATE_KEY);
+  const CREATE_HINT = `Press ${CREATE_LABEL} to create a space`;
 
   // Vivaldi has no extension API to delete a workspace, only its own store. Its webpack chunk array lives on the
   // background page (chrome.extension.getBackgroundPage), not on the window the mod runs in, and its push hands out the module
@@ -93,5 +96,5 @@
   const removalLabel = (name, tabCount) =>
     `Delete \u201c${name}\u201d${tabCount ? ` and close its ${tabCount} ${tabCount === 1 ? "tab" : "tabs"}` : ""}`;
 
-  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, recentTab, label, assign, stamp, findRemover, removalLabel, CREATE_HINT };
+  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, recentTab, label, assign, stamp, findRemover, removalLabel, CREATE_HINT, CREATE_LABEL };
 })();

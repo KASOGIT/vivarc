@@ -1,6 +1,5 @@
 import io
 import os
-import pty
 import stat
 import sys
 import tempfile
@@ -10,6 +9,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import vivarc  # noqa: E402
+from platforms import mac_only, posix_only  # noqa: E402
 
 
 class CanWrite(unittest.TestCase):
@@ -18,6 +18,7 @@ class CanWrite(unittest.TestCase):
             self.assertTrue(vivarc.can_write(d))
             self.assertEqual(os.listdir(d), [])
 
+    @posix_only
     def test_false_for_a_folder_that_refuses_writes(self):
         with tempfile.TemporaryDirectory() as d:
             os.chmod(d, stat.S_IRUSR | stat.S_IXUSR)
@@ -27,8 +28,10 @@ class CanWrite(unittest.TestCase):
                 os.chmod(d, stat.S_IRWXU)
 
 
+@mac_only
 class Ask(unittest.TestCase):
     def test_reads_the_answer_from_a_real_terminal_even_when_stdin_is_a_pipe(self):
+        import pty
         code = ("import sys; sys.path.insert(0, %r); import vivarc; print('ANSWER=' + repr(vivarc.ask('q? ')))"
                 % os.path.join(os.path.dirname(__file__), ".."))
         pid, fd = pty.fork()
@@ -49,6 +52,13 @@ class Ask(unittest.TestCase):
 
 
 class Preflight(unittest.TestCase):
+    """The macOS App Management flow (pure logic, so it runs everywhere)."""
+
+    def setUp(self):
+        p = mock.patch.object(vivarc, "IS_WIN", False)
+        p.start()
+        self.addCleanup(p.stop)
+
     def run_preflight(self, writes, answers):
         out, err = io.StringIO(), io.StringIO()
         opened = []
@@ -83,6 +93,7 @@ class Preflight(unittest.TestCase):
         self.assertTrue(failed)
 
 
+@posix_only
 class RootAndOwnership(unittest.TestCase):
     def test_refuses_to_run_as_root(self):
         with mock.patch("os.geteuid", return_value=0), redirect_stderr(io.StringIO()) as err:
@@ -114,6 +125,13 @@ class WriteAtomic(unittest.TestCase):
             with open(path) as f:
                 self.assertEqual(f.read(), "new")
             self.assertEqual(os.listdir(d), ["vivarc.js"])
+
+    def test_keeps_unix_line_endings_on_every_platform(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "window.html")
+            vivarc.write_atomic(path, "a\nb\n")
+            with open(path, "rb") as f:
+                self.assertEqual(f.read(), b"a\nb\n")
 
 
 class EnsureVivaldiClosed(unittest.TestCase):

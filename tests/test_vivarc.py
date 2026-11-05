@@ -8,6 +8,16 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import vivarc  # noqa: E402
 
+
+# These tests spell out the macOS shortcuts; tests/test_windows.py covers the Windows table.
+def setUpModule():
+    vivarc.use_keys("mac")
+
+
+def tearDownModule():
+    vivarc.use_keys(vivarc.PLATFORM)
+
+
 DEFAULTS = {
     "COMMAND_NEW_TAB": {"shortcuts": ["meta+t"], "gestures": ["2"]},
     "COMMAND_SHOW_QUICK_COMMANDS": {"shortcuts": ["meta+t", "meta+e", "f2"]},

@@ -51,7 +51,18 @@
     const sources = [live, icons[origin], seedIcons[origin]].filter(Boolean);
     const next = () => {
       const src = sources.shift();
-      if (!src) return wrap.replaceChildren(letterIcon(url));
+      if (!src) {
+        // Nothing known yet (a pin never opened here, a tab restored without its icon): show the letter, then
+        // swap in the icon from Vivaldi's own favicon database if it has one for this site.
+        wrap.replaceChildren(letterIcon(url));
+        historyIcon(url).then((found) => {
+          if (!found) return;
+          const img = el("img");
+          img.src = found;
+          wrap.replaceChildren(img);
+        });
+        return;
+      }
       const img = el("img");
       img.addEventListener("error", next);
       img.src = src;
@@ -500,7 +511,8 @@
 
   const profileChip = (chip, index) => {
     const node = el("div", `vm-space-chip${chip.active ? " active" : ""}`);
-    node.title = chip.active ? chip.name : `${chip.name}${index < 9 ? ` (⌃⌘${index + 1})` : ""}`;
+    const chord = window.__vm.platform === "win" ? `${window.__vm.keyLabel(window.__vm.keys.profileMods)}+${index + 1}` : `⌃⌘${index + 1}`;
+    node.title = chip.active ? chip.name : `${chip.name}${index < 9 ? ` (${chord})` : ""}`;
     const letter = () => {
       const span = el("span", "vm-space-letter", chip.letter);
       span.style.backgroundColor = `hsl(${chip.hue} 38% 40%)`;
@@ -713,6 +725,54 @@
       if (value.length < ICON_MAX) icons[origin] = value;
     }
     store.set("icons", icons);
+  };
+
+  // Vivaldi's favicon database (filled by browsing and by Sync) knows icons for sites that are not open. For a
+  // site it does not know it returns a stock globe instead of an error, so that globe is fingerprinted once and
+  // treated as "no icon". Found icons join the per-profile cache like the ones learned from open tabs.
+  const FAVICON_DB = "chrome://favicon/size/32@2x/";
+  const loadImage = (src) => new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+  const pixelsOf = (img) => {
+    const canvas = new OffscreenCanvas(img.naturalWidth || 1, img.naturalHeight || 1);
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    return { canvas, data: ctx.getImageData(0, 0, canvas.width, canvas.height).data };
+  };
+  const samePixels = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+  let stockGlobe = null;
+  const globePixels = () => (stockGlobe ||= loadImage(`${FAVICON_DB}https://vivarc-no-icon.invalid/`)
+    .then((img) => (img ? pixelsOf(img).data : null)).catch(() => null));
+  const fromHistory = new Map();
+  let saveTimer = null;
+  const saveIconsSoon = () => {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => store.set("icons", icons), 2000);
+  };
+  const historyIcon = (url) => {
+    const origin = originOf(url);
+    if (!/^https?:/.test(origin)) return Promise.resolve(null);
+    if (!fromHistory.has(origin)) {
+      fromHistory.set(origin, (async () => {
+        const img = await loadImage(FAVICON_DB + url);
+        if (!img) return null;
+        const { canvas, data } = pixelsOf(img);
+        const globe = await globePixels();
+        if (!globe || samePixels(data, globe)) return null;
+        const value = await dataUrl(await canvas.convertToBlob({ type: "image/png" }));
+        if (value.length >= ICON_MAX) return null;
+        if (!icons[origin]) {
+          icons[origin] = value;
+          saveIconsSoon();
+        }
+        return value;
+      })().catch(() => null));
+    }
+    return fromHistory.get(origin);
   };
 
   const STARTER_FAVORITES = [

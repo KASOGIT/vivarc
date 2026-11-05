@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vivarc: an Arc-style sidebar, command bar and theme editor for Vivaldi (macOS).
+"""Vivarc: an Arc-style sidebar, command bar and theme editor for Vivaldi (macOS and Windows).
 
     ./vivarc.py install        set everything up (Vivaldi must be closed)
     ./vivarc.py update         fetch the latest Vivarc and re-apply it (also after a Vivaldi update)
@@ -12,6 +12,7 @@ Standard library only. Every file it changes is backed up under ~/.vivarc/backup
 """
 import argparse
 import copy
+import glob
 import hashlib
 import json
 import os
@@ -21,37 +22,100 @@ import plistlib
 import re
 import shlex
 import shutil
+import stat
 import subprocess
 import sys
 import time
 import urllib.request
 
 VERSION = "0.1.17"
+IS_WIN = os.name == "nt"
 HOME = os.path.expanduser("~")
 HERE = os.path.dirname(os.path.abspath(__file__))
 HOME_DIR = os.path.join(HOME, ".vivarc")
-DEFAULT_APP = os.environ.get("VIVARC_APP", "/Applications/Vivaldi.app")
-DEFAULT_DATA = os.environ.get("VIVARC_DATA_DIR", os.path.join(HOME, "Library", "Application Support", "Vivaldi"))
-UPDATE_COMMAND = os.path.join(HOME_DIR, "Update Vivarc.command")
-UPDATE_APP = os.path.join(HOME, "Applications", "Update Vivarc.app")
-LEGACY_UPDATE_COMMAND = os.path.join(HOME, "Applications", "Update Vivarc.command")
-UNINSTALL_COMMAND = os.path.join(HOME_DIR, "Uninstall Vivarc.command")
-UNINSTALL_APP = os.path.join(HOME, "Applications", "Uninstall Vivarc.app")
+LOCALAPPDATA = os.environ.get("LOCALAPPDATA", os.path.join(HOME, "AppData", "Local"))
+
+
+def _default_win_app():
+    """Vivaldi installs per user by default; a machine-wide install lives under Program Files."""
+    per_user = os.path.join(LOCALAPPDATA, "Vivaldi", "Application")
+    for base in (os.environ.get("ProgramFiles"), os.environ.get("ProgramFiles(x86)")):
+        machine = os.path.join(base, "Vivaldi", "Application") if base else None
+        if machine and not os.path.isdir(per_user) and os.path.isdir(machine):
+            return machine
+    return per_user
+
+
+if IS_WIN:
+    DEFAULT_APP = os.environ.get("VIVARC_APP") or _default_win_app()
+    DEFAULT_DATA = os.environ.get("VIVARC_DATA_DIR") or os.path.join(LOCALAPPDATA, "Vivaldi", "User Data")
+    START_MENU = os.path.join(os.environ.get("APPDATA", os.path.join(HOME, "AppData", "Roaming")),
+                              "Microsoft", "Windows", "Start Menu", "Programs", "Vivarc")
+    UPDATE_COMMAND = os.path.join(HOME_DIR, "Update Vivarc.cmd")
+    UPDATE_APP = os.path.join(START_MENU, "Update Vivarc.lnk")
+    UNINSTALL_COMMAND = os.path.join(HOME_DIR, "Uninstall Vivarc.cmd")
+    UNINSTALL_APP = os.path.join(START_MENU, "Uninstall Vivarc.lnk")
+    LEGACY_UPDATE_COMMAND = os.path.join(HOME_DIR, "Update Vivarc.command")  # never written on Windows
+else:
+    DEFAULT_APP = os.environ.get("VIVARC_APP", "/Applications/Vivaldi.app")
+    DEFAULT_DATA = os.environ.get("VIVARC_DATA_DIR", os.path.join(HOME, "Library", "Application Support", "Vivaldi"))
+    UPDATE_COMMAND = os.path.join(HOME_DIR, "Update Vivarc.command")
+    UPDATE_APP = os.path.join(HOME, "Applications", "Update Vivarc.app")
+    LEGACY_UPDATE_COMMAND = os.path.join(HOME, "Applications", "Update Vivarc.command")
+    UNINSTALL_COMMAND = os.path.join(HOME_DIR, "Uninstall Vivarc.command")
+    UNINSTALL_APP = os.path.join(HOME, "Applications", "Uninstall Vivarc.app")
 UPDATE_MARK = "# Created by Vivarc"
 RELEASES_LATEST = "https://github.com/KASOGIT/vivarc/releases/latest"
+INSTALL_PS1 = "https://raw.githubusercontent.com/KASOGIT/vivarc/main/install.ps1"
 REMINDER_LABEL = "com.vivarc.reminder"
 REMINDER_PLIST = os.path.join(HOME, "Library", "LaunchAgents", f"{REMINDER_LABEL}.plist")
+REMINDER_TASK = "\\Vivarc\\Reapply"
 REMIND_EVERY = 12 * 3600
 RESOURCES = "Contents/Frameworks/Vivaldi Framework.framework/Resources/vivaldi"
+WIN_VERSION_DIR = re.compile(r"^\d+(\.\d+){3}$")
 
 BEGIN, END = "<!-- vivarc:begin -->", "<!-- vivarc:end -->"
 BLOCK = f'{BEGIN}\n<script src="vivarc.js"></script>\n{END}'
-FREED_KEY = "meta+t"  # the command bar listens for Cmd+T itself
-COPY_URL_KEY = "shift+meta+c"
-PROFILE_KEYS = ("ctrl+meta+left", "ctrl+meta+right")  # the profile switcher's previous/next, handled by the JS
-SPACE_KEYS = {"COMMAND_WORKSPACE_SWITCH_BACK_ORDER": "alt+meta+left", "COMMAND_WORKSPACE_SWITCH_FORWARD_ORDER": "alt+meta+right",
-              "COMMAND_WORKSPACE_CREATE_NEW": "ctrl+meta+n"}  # like Arc's spaces; Ctrl+Cmd+N opens Vivaldi's own Create Workspace dialog
-TOGGLE_SIDEBAR_KEY = "meta+s"
+
+# One table per platform; the JS gets the same table through the bundle config. On Windows the Win key is
+# mostly taken by the OS (Win+S, Win+T, Win+Ctrl+arrows), so Ctrl stands in for Cmd like in Arc for Windows.
+KEYS = {
+    "mac": {
+        "commandBar": "meta+t",  # freed from New Tab: the command bar listens for it itself
+        "copyUrl": "shift+meta+c",
+        "toggleSidebar": "meta+s",
+        "profilePrev": "ctrl+meta+left", "profileNext": "ctrl+meta+right",  # handled by the JS profile switcher
+        "profileMods": "ctrl+meta",  # + 1..9 opens the nth profile chip
+        "spacePrev": "alt+meta+left", "spaceNext": "alt+meta+right",
+        "spaceNew": "ctrl+meta+n",  # opens Vivaldi's own Create Workspace dialog
+    },
+    "win": {
+        "commandBar": "ctrl+t",
+        "copyUrl": "ctrl+shift+c",  # taken from Copy to Note
+        "toggleSidebar": "ctrl+s",  # taken from Save Page
+        "profilePrev": "ctrl+alt+shift+left", "profileNext": "ctrl+alt+shift+right", "profileMods": "ctrl+alt+shift",
+        "spacePrev": "ctrl+alt+left", "spaceNext": "ctrl+alt+right",
+        "spaceNew": "ctrl+alt+n",
+    },
+}
+KEY_LABELS = {"mac": {"meta": "Cmd", "alt": "Option", "ctrl": "Ctrl", "shift": "Shift"},
+              "win": {"meta": "Win", "alt": "Alt", "ctrl": "Ctrl", "shift": "Shift"}}
+PLATFORM = "win" if IS_WIN else "mac"
+
+
+def use_keys(name):
+    """Point the module-level key constants at one platform's table (tests call this to switch)."""
+    global FREED_KEY, COPY_URL_KEY, PROFILE_KEYS, SPACE_KEYS, TOGGLE_SIDEBAR_KEY
+    k = KEYS[name]
+    FREED_KEY = k["commandBar"]
+    COPY_URL_KEY = k["copyUrl"]
+    PROFILE_KEYS = (k["profilePrev"], k["profileNext"])
+    SPACE_KEYS = {"COMMAND_WORKSPACE_SWITCH_BACK_ORDER": k["spacePrev"], "COMMAND_WORKSPACE_SWITCH_FORWARD_ORDER": k["spaceNext"],
+                  "COMMAND_WORKSPACE_CREATE_NEW": k["spaceNew"]}
+    TOGGLE_SIDEBAR_KEY = k["toggleSidebar"]
+
+
+use_keys(PLATFORM)
 SIDEBAR_WIDTH = 323
 SIDEBAR_BOTTOM = ["NewTab", "FlexibleSpacer", "AccountButton", "FlexibleSpacer", "PanelDownloads", "UpdateButton"]
 SIDEBAR_TOOLBAR = ["TabButton", "Extensions", "FlexibleSpacer", "Back", "Reload", "Forward", "AddressField"]
@@ -155,11 +219,12 @@ def patch_preferences(prefs, default_actions):
             _command(actions, defaults, name)
     taken = PROFILE_KEYS + tuple(SPACE_KEYS.values())
     for name, cmd in defaults.items():
-        if any(key in cmd.get("shortcuts", []) for key in taken):
+        if any(key in cmd.get("shortcuts", []) for key in taken + (COPY_URL_KEY,)):
             _command(actions, defaults, name)
-    for cmd in actions.values():
+    for name, cmd in actions.items():
         if isinstance(cmd, dict):
-            cmd["shortcuts"] = [s for s in cmd.get("shortcuts", []) if s != TOGGLE_SIDEBAR_KEY and s not in taken]
+            cmd["shortcuts"] = [s for s in cmd.get("shortcuts", []) if s != TOGGLE_SIDEBAR_KEY and s not in taken
+                                and (s != COPY_URL_KEY or name == "COMMAND_PAGE_COPY_URL")]
     for name, key in SPACE_KEYS.items():
         _command(actions, defaults, name)["shortcuts"].append(key)
     _command(actions, defaults, "COMMAND_TOGGLE_AUTO_HIDE_TAB_BAR")["shortcuts"] = [TOGGLE_SIDEBAR_KEY]
@@ -257,15 +322,51 @@ def read_json(path):
 
 
 def write_json(path, data):
-    with open(path, "w", encoding="utf8") as f:
+    with open(path, "w", encoding="utf8", newline="\n") as f:
         json.dump(data, f, separators=(",", ":"), ensure_ascii=False)
 
 
+def _version_key(name):
+    return tuple(int(n) for n in name.split("."))
+
+
+def win_version_dir(app):
+    """Vivaldi for Windows keeps each version in its own folder (Application/8.3.4191.26/...), and an update leaves
+    the old one next to the new one for a while: the newest folder that holds the UI is the one in use."""
+    try:
+        names = [n for n in os.listdir(app) if WIN_VERSION_DIR.match(n)
+                 and os.path.exists(os.path.join(app, n, "resources", "vivaldi", "window.html"))]
+    except OSError:
+        return None
+    return max(names, key=_version_key) if names else None
+
+
+def resources_dir(app):
+    if IS_WIN:
+        version = win_version_dir(app)
+        return os.path.join(app, version or "unknown", "resources", "vivaldi")
+    return os.path.join(app, RESOURCES)
+
+
+def vivaldi_exe(app):
+    return os.path.join(app, "vivaldi.exe")
+
+
+def _tasklist_has_vivaldi(output):
+    return any(line.strip().lower().startswith("vivaldi.exe") for line in output.splitlines())
+
+
 def vivaldi_running():
+    if IS_WIN:
+        out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq vivaldi.exe", "/NH"], capture_output=True, text=True,
+                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        return _tasklist_has_vivaldi(out.stdout)
     return subprocess.run(["pgrep", "-x", "Vivaldi"], capture_output=True).returncode == 0
 
 
 def app_version(app):
+    if IS_WIN:
+        return win_version_dir(app) or "unknown"
     out = subprocess.run(["defaults", "read", os.path.join(app, "Contents/Info"), "CFBundleShortVersionString"],
                          capture_output=True, text=True)
     return out.stdout.strip() or "unknown"
@@ -283,10 +384,14 @@ def say(message):
 SETTINGS_PANE = "x-apple.systempreferences:com.apple.preference.security?Privacy_AppBundles"
 
 
+QUIT_KEYS = "Alt+F4" if IS_WIN else "Cmd+Q"
+
+
 def ask(prompt):
     """Read an answer from the terminal even when stdin is a pipe; None when there is no terminal."""
+    out_name, in_name = ("CONOUT$", "CONIN$") if IS_WIN else ("/dev/tty", "/dev/tty")
     try:
-        with open("/dev/tty", "w") as out, open("/dev/tty") as tty:
+        with open(out_name, "w") as out, open(in_name) as tty:
             out.write(prompt)
             out.flush()
             return tty.readline().strip()
@@ -295,11 +400,16 @@ def ask(prompt):
 
 
 def open_settings():
-    subprocess.run(["open", SETTINGS_PANE], check=False)
+    if not IS_WIN:
+        subprocess.run(["open", SETTINGS_PANE], check=False)
 
 
 def quit_vivaldi():
-    subprocess.run(["osascript", "-e", 'tell application "Vivaldi" to quit'], check=False)
+    if IS_WIN:
+        # Without /F taskkill asks the windows to close, so Vivaldi saves its session like a normal exit.
+        subprocess.run(["taskkill", "/IM", "vivaldi.exe"], capture_output=True, check=False)
+    else:
+        subprocess.run(["osascript", "-e", 'tell application "Vivaldi" to quit'], check=False)
     for _ in range(40):
         if not vivaldi_running():
             return
@@ -318,6 +428,8 @@ def can_write(directory):
 
 
 def check_not_root():
+    if IS_WIN:
+        return
     if os.geteuid() == 0:
         die("Do not run Vivarc with sudo. It does not help (macOS asks for a separate permission, see below) "
             "and it leaves files in your home folder that only root can change.\n"
@@ -326,27 +438,38 @@ def check_not_root():
 
 
 def check_owner(path):
+    if IS_WIN:
+        return
     if os.path.exists(path) and os.stat(path).st_uid != os.getuid():
         die(f"{path} belongs to another user, probably from an earlier run with sudo. Fix it with:\n"
             f"  sudo chown -R \"$(whoami)\" \"{path}\"\nthen run the command again (without sudo).")
 
 
-def ensure_vivaldi_closed(ask=ask, quit_app=quit_vivaldi):
+def ensure_vivaldi_closed(ask=None, quit_app=None):
+    # Looked up at call time (not as default arguments) so a replaced ask/quit_vivaldi is honoured.
+    ask, quit_app = ask or globals()["ask"], quit_app or quit_vivaldi
     if not vivaldi_running():
         return
     answer = ask("Vivaldi is open and must be closed first. Quit it now? [Y/n] ")
     if answer is None:
-        die("Quit Vivaldi (Cmd+Q) first, then run this again. Nothing was changed.")
+        die(f"Quit Vivaldi ({QUIT_KEYS}) first, then run this again. Nothing was changed.")
     if answer.lower() in ("", "y", "yes"):
         quit_app()
         if not vivaldi_running():
             return
-        die("Vivaldi did not close. Quit it yourself (Cmd+Q), then run this again. Nothing was changed.")
+        die(f"Vivaldi did not close. Quit it yourself ({QUIT_KEYS}), then run this again. Nothing was changed.")
     die("Vivaldi has to be closed first. Nothing was changed.")
 
 
-def preflight(resources, ask=ask, open_settings=open_settings):
+def preflight(resources, ask=None, open_settings=None):
     """macOS only lets an app with the 'App Management' permission edit Vivaldi.app. Check before changing anything."""
+    ask, open_settings = ask or globals()["ask"], open_settings or globals()["open_settings"]
+    if IS_WIN:
+        if not os.path.isdir(resources) or can_write(resources):
+            return
+        die(f"Cannot write into {resources}. Nothing was changed.\n"
+            "Vivaldi is installed for all users (under Program Files), so changing it needs administrator rights: "
+            "run this again from a terminal opened with 'Run as administrator', or reinstall Vivaldi for your user only.")
     opened = False
     for _ in range(5):
         if can_write(resources):
@@ -370,8 +493,10 @@ def preflight(resources, ask=ask, open_settings=open_settings):
 def write_atomic(path, text):
     """Write next to the target and swap it in, so a reader never sees half a file and a stale owner cannot block us."""
     temp = f"{path}.vivarc-tmp"
-    with open(temp, "w", encoding="utf8") as f:
+    with open(temp, "w", encoding="utf8", newline="\n") as f:
         f.write(text)
+    if IS_WIN and os.path.exists(path) and not os.access(path, os.W_OK):
+        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)  # Windows refuses to replace a read-only file
     os.replace(temp, path)
 
 
@@ -382,7 +507,7 @@ def load_state():
 
 def save_state(state):
     os.makedirs(HOME_DIR, exist_ok=True)
-    with open(os.path.join(HOME_DIR, "state.json"), "w", encoding="utf8") as f:
+    with open(os.path.join(HOME_DIR, "state.json"), "w", encoding="utf8", newline="\n") as f:
         json.dump(state, f, indent=1)
 
 
@@ -433,7 +558,8 @@ def write_bundle(resources, with_peek):
         extras.append(("VividPeek.js", read_text(os.path.join(peek_dir, "VividPeek.js"))))
         extras.append(("VividPeek.css", style_script("vivarc-peek-css", read_text(os.path.join(peek_dir, "VividPeek.css")))))
     start_page = pathlib.Path(HOME_DIR, "start", "index.html").as_uri()
-    config = {**load_config(), "startUrl": start_page}
+    config = {**load_config(), "startUrl": start_page, "platform": PLATFORM,
+              "keys": KEYS[PLATFORM], "keyLabels": KEY_LABELS[PLATFORM]}
     bundle = build_bundle(os.path.join(HERE, "src/js"), config, extras, pre)
     write_atomic(os.path.join(resources, "vivarc.js"), bundle)
 
@@ -464,16 +590,49 @@ def latest_release_tag():
         return None
 
 
+def console_python():
+    """The python.exe next to the running interpreter: the scheduled task runs pythonw.exe, which has no console."""
+    folder, name = os.path.split(sys.executable)
+    if name.lower() == "pythonw.exe" and os.path.exists(os.path.join(folder, "python.exe")):
+        return os.path.join(folder, "python.exe")
+    return sys.executable
+
+
+def windowless_python():
+    folder = os.path.dirname(sys.executable)
+    candidate = os.path.join(folder, "pythonw.exe")
+    return candidate if os.path.exists(candidate) else sys.executable
+
+
+def _cmd_quote(path):
+    return '"' + path.replace("%", "%%") + '"'
+
+
+def command_script(purpose, subcommand, app=None, python=None):
+    if IS_WIN:
+        app = app or DEFAULT_APP
+        return "\r\n".join([
+            "@echo off",
+            f"rem {UPDATE_MARK}: {purpose}.",
+            f"{_cmd_quote(python or console_python())} {_cmd_quote(os.path.join(HERE, 'vivarc.py'))} {subcommand}",
+            "set status=%ERRORLEVEL%",
+            f"if exist {_cmd_quote(vivaldi_exe(app))} start \"\" {_cmd_quote(vivaldi_exe(app))}",
+            "if not %status%==0 pause",
+            "exit /b %status%",
+            ""])
+    return ("#!/bin/bash\n"
+            f"{UPDATE_MARK}: {purpose}.\n"
+            f"/usr/bin/python3 {shlex.quote(os.path.join(HERE, 'vivarc.py'))} {subcommand}\n"
+            "status=$?\n"
+            "open -a Vivaldi\n"
+            "exit $status\n")
+
+
 def write_command(path, purpose, subcommand):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    script = ("#!/bin/bash\n"
-              f"{UPDATE_MARK}: {purpose}.\n"
-              f"/usr/bin/python3 {shlex.quote(os.path.join(HERE, 'vivarc.py'))} {subcommand}\n"
-              "status=$?\n"
-              "open -a Vivaldi\n"
-              "exit $status\n")
-    write_atomic(path, script)
-    os.chmod(path, 0o755)
+    write_atomic(path, command_script(purpose, subcommand))
+    if not IS_WIN:
+        os.chmod(path, 0o755)
 
 
 def write_update_command(path):
@@ -484,14 +643,50 @@ def write_uninstall_command(path):
     write_command(path, "removes Vivarc and puts Vivaldi back as it was", "uninstall")
 
 
+def powershell(script, env=None):
+    return subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+                          capture_output=True, text=True, env={**os.environ, **(env or {})},
+                          creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+
+
 def write_update_app(app, command):
+    if IS_WIN:
+        # A Start Menu shortcut to the .cmd, so "Update Vivarc" can be found by typing it in Start.
+        os.makedirs(os.path.dirname(app), exist_ok=True)
+        script = ("$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:VIVARC_LNK); "
+                  "$s.TargetPath = $env:VIVARC_TARGET; $s.WorkingDirectory = $env:VIVARC_HOME; "
+                  "$s.Description = $env:VIVARC_MARK; "
+                  "if (Test-Path $env:VIVARC_ICON) { $s.IconLocation = \"$env:VIVARC_ICON,0\" }; $s.Save()")
+        out = powershell(script, {"VIVARC_LNK": app, "VIVARC_TARGET": command, "VIVARC_HOME": HOME_DIR,
+                                  "VIVARC_MARK": UPDATE_MARK, "VIVARC_ICON": vivaldi_exe(DEFAULT_APP)})
+        if out.returncode != 0:
+            say(f"Could not create the Start Menu shortcut {os.path.basename(app)}: {out.stderr.strip()}")
+        return
     shutil.rmtree(app, ignore_errors=True)
     os.makedirs(os.path.dirname(app), exist_ok=True)
     script = f'do shell script "open -a Terminal " & quoted form of {json.dumps(command, ensure_ascii=False)} & " {UPDATE_MARK}"'
     subprocess.run(["osacompile", "-o", app, "-e", script], check=True, capture_output=True)
 
 
+def _ours_lnk(path):
+    """A .lnk keeps its description as UTF-16 (or ANSI in old files): look for our mark in the raw bytes."""
+    try:
+        with open(path, "rb") as f:
+            data = f.read()
+    except OSError:
+        return False
+    return UPDATE_MARK.encode("utf-16-le") in data or UPDATE_MARK.encode() in data
+
+
 def remove_update_app(app):
+    if IS_WIN:
+        if os.path.exists(app) and _ours_lnk(app):
+            os.remove(app)
+            try:
+                os.rmdir(os.path.dirname(app))  # only goes when empty
+            except OSError:
+                pass
+        return
     source = os.path.join(app, "Contents", "Resources", "Scripts", "main.scpt")
     if os.path.exists(source) and UPDATE_MARK in subprocess.run(["osadecompile", source], capture_output=True, text=True).stdout:
         shutil.rmtree(app)
@@ -509,14 +704,39 @@ def needs_reapply(resources):
     return BEGIN not in read_text(html_path) or not os.path.exists(os.path.join(resources, "vivarc.js"))
 
 
+MB_OK, MB_YESNO, MB_ICONINFORMATION, MB_ICONQUESTION, MB_SETFOREGROUND, MB_TOPMOST = 0x0, 0x4, 0x40, 0x20, 0x10000, 0x40000
+IDYES = 6
+
+
+def message_box(message, flags, timeout_ms=300000):
+    """A Windows dialog from a windowless process; gives up after `timeout_ms` like the macOS dialog does."""
+    import ctypes
+    user32 = ctypes.windll.user32
+    flags |= MB_SETFOREGROUND | MB_TOPMOST
+    try:  # undocumented but present since Windows XP; falls back to a dialog without timeout
+        return user32.MessageBoxTimeoutW(None, message, "Vivarc", flags, 0, timeout_ms)
+    except AttributeError:
+        return user32.MessageBoxW(None, message, "Vivarc", flags)
+
+
 def prompt_update(message):
+    if IS_WIN:
+        return message_box(message, MB_YESNO | MB_ICONQUESTION) == IDYES
     script = (f'display dialog "{message}" with title "Vivarc" buttons {{"Later", "Update Vivarc"}} '
               'default button "Update Vivarc" giving up after 300')
     out = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
     return "button returned:Update Vivarc" in out.stdout
 
 
+def notify(message):
+    if IS_WIN:
+        message_box(message, MB_OK | MB_ICONINFORMATION)
+
+
 def open_in_terminal(path):
+    if IS_WIN:
+        os.startfile(path)  # a .cmd opens in its own console window
+        return
     subprocess.run(["open", "-a", "Terminal", path], check=False)
 
 
@@ -524,7 +744,32 @@ def launchctl(*args):
     subprocess.run(["launchctl", *args], capture_output=True, check=False)
 
 
+def schtasks(*args):
+    return subprocess.run(["schtasks", *args], capture_output=True, text=True, check=False,
+                          creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+
+
+def reminder_task_command(app):
+    parts = [f'"{windowless_python()}"', f'"{os.path.join(HERE, "vivarc.py")}"']
+    if os.path.normcase(app) != os.path.normcase(DEFAULT_APP):
+        parts += ["--app", f'"{app}"']
+    return " ".join(parts + ["remind"])
+
+
+def reminder_enabled():
+    if IS_WIN:
+        return schtasks("/Query", "/TN", REMINDER_TASK).returncode == 0
+    return os.path.exists(REMINDER_PLIST)
+
+
 def enable_reminder(app):
+    if IS_WIN:
+        # Every 30 minutes while you are logged in: re-applies Vivarc to a freshly updated Vivaldi on its own.
+        out = schtasks("/Create", "/F", "/TN", REMINDER_TASK, "/SC", "MINUTE", "/MO", "30", "/IT",
+                       "/TR", reminder_task_command(app))
+        if out.returncode != 0:
+            say(f"Could not create the scheduled task: {(out.stderr or out.stdout).strip()}")
+        return
     for folder in ("Documents", "Desktop", "Downloads"):
         if HERE.startswith(os.path.join(HOME, folder) + os.sep):
             say(f"Note: macOS does not let background jobs read ~/{folder}, so the reminder cannot run from this copy. "
@@ -545,12 +790,18 @@ def enable_reminder(app):
 
 
 def disable_reminder():
+    if IS_WIN:
+        schtasks("/Delete", "/F", "/TN", REMINDER_TASK)
+        return
     launchctl("bootout", f"gui/{os.getuid()}/{REMINDER_LABEL}")
     if os.path.exists(REMINDER_PLIST):
         os.remove(REMINDER_PLIST)
 
 
 def permission_hint(error):
+    if IS_WIN:
+        die(f"{error}\nWindows blocked writing into Vivaldi's folder. If Vivaldi is installed for all users "
+            "(Program Files), run this from a terminal opened with 'Run as administrator'.")
     die(f"{error}\nmacOS blocked writing into Vivaldi.app. Open System Settings > Privacy & Security > "
         "App Management, allow your terminal app, then run the command again.")
 
@@ -558,7 +809,7 @@ def permission_hint(error):
 # ---------------------------------------------------------------- commands
 def cmd_install(args):
     app, data = args.app, args.data_dir
-    resources = os.path.join(app, RESOURCES)
+    resources = resources_dir(app)
     if not os.path.isdir(resources):
         die(f"Vivaldi not found at {app} (use --app)")
     if not args.dry_run:
@@ -610,6 +861,13 @@ def cmd_install(args):
     write_uninstall_command(UNINSTALL_COMMAND)
     write_update_app(UNINSTALL_APP, UNINSTALL_COMMAND)
     remove_update_command(LEGACY_UPDATE_COMMAND)
+    if IS_WIN:
+        # Every Vivaldi update on Windows lands in a new folder without Vivarc: bring it back on its own.
+        enable_reminder(app)
+        say("Vivarc will re-apply itself after Vivaldi updates (scheduled task \"Vivarc\\Reapply\"). "
+            f"Turn it off with: python \"{os.path.join(HERE, 'vivarc.py')}\" reminder off")
+        say("Done. Open Vivaldi. \"Update Vivarc\" and \"Uninstall Vivarc\" are in the Start Menu.")
+        return
     if os.path.exists(REMINDER_PLIST):
         enable_reminder(app)
     elif (ask("Show a reminder when a Vivaldi update removes Vivarc? [y/N] ") or "").lower() in ("y", "yes"):
@@ -620,7 +878,7 @@ def cmd_install(args):
 
 
 def cmd_apply(args):
-    resources = os.path.join(args.app, RESOURCES)
+    resources = resources_dir(args.app)
     check_owner(HOME_DIR)
     preflight(resources)
     sync_guide()
@@ -636,19 +894,25 @@ def cmd_update(args):
         say("Closing Vivaldi...")
         quit_vivaldi()
         if vivaldi_running():
-            die("Vivaldi did not close. Quit it yourself (Cmd+Q), then run this again. Nothing was changed.")
+            die(f"Vivaldi did not close. Quit it yourself ({QUIT_KEYS}), then run this again. Nothing was changed.")
     extra = ["--no-peek"] if args.no_peek else []
     if os.path.isdir(os.path.join(HERE, ".git")):
-        pulled = subprocess.run(["git", "-C", HERE, "pull", "--ff-only"], capture_output=True, text=True)
+        try:
+            pulled = subprocess.run(["git", "-C", HERE, "pull", "--ff-only"], capture_output=True, text=True)
+        except FileNotFoundError:  # no git on PATH (common on Windows)
+            pulled = subprocess.CompletedProcess([], 1, "", "git is not installed")
         if pulled.returncode == 0:
             argv = [sys.executable, os.path.join(HERE, "vivarc.py"), "--app", args.app, "--data-dir", args.data_dir, "install", *extra]
-            os.execve(sys.executable, argv, os.environ)
+            run_instead(sys.executable, argv, os.environ)
         say(f"git pull did not work ({pulled.stderr.strip()}); re-applying the code you have.")
     else:
         latest = latest_release_tag()
         if is_newer(latest, VERSION):
             say(f"Updating Vivarc {VERSION} to {latest.lstrip('v')}...")
             env = {**os.environ, "VIVARC_APP": args.app, "VIVARC_DATA_DIR": args.data_dir}
+            if IS_WIN:
+                run_instead("powershell", ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+                                           os.path.join(HERE, "install.ps1"), *extra], env)
             os.execve("/bin/bash", ["/bin/bash", os.path.join(HERE, "install.sh"), *extra], env)
         elif latest is None:
             say("Could not check for a new version (offline?). Re-applying the one you have.")
@@ -657,8 +921,32 @@ def cmd_update(args):
     cmd_install(args)
 
 
+def run_instead(program, argv, env):
+    """Hand over to another program for good. Windows has no real exec, so wait for it and pass on its exit code."""
+    if IS_WIN:
+        sys.exit(subprocess.run(argv, env=env).returncode)
+    os.execve(shutil.which(program) or program, argv, env)
+
+
+def reapply_silently(args, resources):
+    """Windows: a Vivaldi update came with a fresh folder. Only Vivaldi's own UI files need Vivarc again (the profiles
+    keep their settings), and those are safe to write while Vivaldi runs: it picks them up at the next start."""
+    try:
+        apply_js(args.app, resources, os.path.exists(os.path.join(HOME_DIR, "peek", "VividPeek.js")))
+    except OSError:
+        return False
+    version = app_version(args.app)
+    stamp = os.path.join(HOME_DIR, "reapplied")
+    if not (os.path.exists(stamp) and read_text(stamp) == version):
+        write_atomic(stamp, version)
+        notify(f"Vivaldi was updated to {version}. Vivarc has been re-applied: restart Vivaldi to see it.")
+    return True
+
+
 def cmd_remind(args):
-    resources = os.path.join(args.app, RESOURCES)
+    resources = resources_dir(args.app)
+    if IS_WIN and needs_reapply(resources) and reapply_silently(args, resources):
+        return
     if needs_reapply(resources):
         stamp = os.path.join(HOME_DIR, "reminded")
         if os.path.exists(stamp) and time.time() - float(read_text(stamp)) < REMIND_EVERY:
@@ -683,14 +971,15 @@ def cmd_remind(args):
 def cmd_reminder(args):
     if args.state == "on":
         enable_reminder(args.app)
-        say("Reminder on: you will be asked when a Vivaldi update removes Vivarc.")
+        say("On: Vivarc re-applies itself after a Vivaldi update." if IS_WIN
+            else "Reminder on: you will be asked when a Vivaldi update removes Vivarc.")
     else:
         disable_reminder()
         say("Reminder off.")
 
 
 def cmd_uninstall(args):
-    resources = os.path.join(args.app, RESOURCES)
+    resources = resources_dir(args.app)
     ensure_vivaldi_closed()
     preflight(resources)
     state = load_state()
@@ -713,9 +1002,7 @@ def cmd_uninstall(args):
     html_path = os.path.join(resources, "window.html")
     try:
         if os.path.exists(html_path):
-            html = read_text(html_path)
-            with open(html_path, "w", encoding="utf8") as f:
-                f.write(remove_window_html(html))
+            write_atomic(html_path, remove_window_html(read_text(html_path)))
         bundle = os.path.join(resources, "vivarc.js")
         if os.path.exists(bundle):
             os.remove(bundle)
@@ -733,17 +1020,28 @@ def cmd_uninstall(args):
 
 
 def cmd_status(args):
-    resources = os.path.join(args.app, RESOURCES)
+    resources = resources_dir(args.app)
     html_path = os.path.join(resources, "window.html")
     injected = os.path.exists(html_path) and BEGIN in read_text(html_path)
     say(f"Vivarc {VERSION}; Vivaldi {app_version(args.app)} (running: {vivaldi_running()})")
     say(f"JS injected: {injected}" + ("" if injected else "  -> run ./vivarc.py apply"))
-    say(f"Update reminder: {'on' if os.path.exists(REMINDER_PLIST) else 'off'}")
+    say(f"{'Re-apply after Vivaldi updates' if IS_WIN else 'Update reminder'}: {'on' if reminder_enabled() else 'off'}")
     state = load_state()
     for directory, name in find_profiles(read_json(os.path.join(args.data_dir, "Local State"))):
         path = os.path.join(args.data_dir, directory, "Preferences")
         ours = directory in state["profiles"] or (os.path.exists(path) and looks_configured(read_json(path)))
         say(f"  {name} ({directory}): {'configured' if ours else 'not configured yet (set up when opened)'}")
+
+
+def default_arc_dir():
+    if not IS_WIN:
+        return os.path.join(HOME, "Library", "Application Support", "Arc")
+    # Arc for Windows is a packaged (MSIX) app: its data sits in the package's private LocalCache.
+    for package in sorted(glob.glob(os.path.join(LOCALAPPDATA, "Packages", "TheBrowserCompany.Arc*"))):
+        candidate = os.path.join(package, "LocalCache", "Local", "Arc")
+        if os.path.isdir(candidate):
+            return candidate
+    return os.path.join(LOCALAPPDATA, "Packages", "TheBrowserCompany.Arc", "LocalCache", "Local", "Arc")
 
 
 def cmd_import_arc(args):
@@ -771,10 +1069,10 @@ def main(argv=None):
     uninstall.add_argument("--purge", action="store_true", help="also delete ~/.vivarc")
     sub.add_parser("status")
     imp = sub.add_parser("import-arc")
-    imp.add_argument("--arc-dir", default=os.path.join(HOME, "Library", "Application Support", "Arc"))
+    imp.add_argument("--arc-dir", default=default_arc_dir())
     args = parser.parse_args(argv)
-    if platform.system() != "Darwin":
-        die("Vivarc currently supports macOS only")
+    if platform.system() not in ("Darwin", "Windows"):
+        die("Vivarc supports macOS and Windows only")
     check_not_root()
     {"install": cmd_install, "apply": cmd_apply, "update": cmd_update, "remind": cmd_remind, "reminder": cmd_reminder, "uninstall": cmd_uninstall,
      "status": cmd_status, "import-arc": cmd_import_arc}[args.command](args)

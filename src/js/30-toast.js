@@ -1,4 +1,4 @@
-// Vivarc: "Copied Current URL" toast when Vivaldi's Cmd+Shift+C (copy page URL) runs.
+// Vivarc: "Copied Current URL" toast when Vivaldi's copy page URL shortcut runs (Cmd+Shift+C, Ctrl+Shift+C on Windows).
 (() => {
   const SHARE_SVG =
     '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M6 12H5a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-1"/></svg>';
@@ -27,5 +27,5 @@
   };
 
   window.addEventListener("vm-toast", (e) => show(e.detail || undefined));
-  window.__vm.onShortcut((key) => { if (key === window.__vm.normalise("meta+shift+c")) show(); });
+  window.__vm.onShortcut((key) => { if (key === window.__vm.normalise(window.__vm.keys.copyUrl)) show(); });
 })();

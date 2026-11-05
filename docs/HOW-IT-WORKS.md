@@ -5,7 +5,7 @@ Vivaldi's UI is a web page (`window.html`). Vivarc adds one script and one style
 | Piece | Where it lives | What it does |
 |---|---|---|
 | CSS | Embedded in `vivarc.js` and added to the UI as a `<style>` element (source: `src/css/vivarc.css`) | Styles. Every rule is scoped to `#browser.vm-on`, a class the JS adds. No CSS-mods folder or browser flag is needed, and it never conflicts with your own CSS mods. |
-| JS | `<Vivaldi.app>/.../vivaldi/vivarc.js`, referenced from `window.html` by one marked block | The sidebar, command bar, toast and theme editor. Rebuilt from `src/js/` by `vivarc.py apply`. |
+| JS | `<Vivaldi.app>/.../vivaldi/vivarc.js` (Windows: `Vivaldi\Application\<version>\resources\vivaldi\vivarc.js`), referenced from `window.html` by one marked block | The sidebar, command bar, toast and theme editor. Rebuilt from `src/js/` by `vivarc.py apply`. |
 | Data | A bookmarks folder with `Favorites` and `Pinned` subfolders (created on first run) | Your favorites and pinned folders. Plain bookmarks: they sync, export and back up like any others. |
 | Settings | `~/.vivarc/config.json` | See below. |
 | State | `~/.vivarc/state.json`, `~/.vivarc/backup/` | What the installer changed and the original values, used by `uninstall`. |
@@ -59,7 +59,7 @@ Set `"autoConfigureProfiles": false` to skip this and configure profiles only wi
 
 - Vivaldi profiles are the equivalent of Arc spaces; each is its own window (switch with Cmd+`).
 - Vivaldi's own UI code cannot be called from a mod, so Cmd+T opens Vivarc's command bar, not Vivaldi's Quick Commands (Cmd+E and F2 still do).
-- macOS only for now.
+- macOS and Windows. On Windows each Vivaldi update unpacks into a new `Application\<version>` folder; Vivarc always patches the newest one, and the `Vivarc\Reapply` scheduled task re-applies the JS there (only `window.html` and `vivarc.js`, never the profiles) so it comes back at the next start. Linux is not supported yet.
 
 ## Notes for contributors
 

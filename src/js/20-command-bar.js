@@ -123,7 +123,7 @@
     { label: "View Downloads", words: "downloads files", run: openDownloads },
     { label: "View Bookmarks", words: "bookmarks saved", run: () => openPage("vivaldi://bookmarks") },
     { label: "Open Settings", words: "settings preferences options", run: () => openPage("vivaldi://settings") },
-    { label: "Create New Space (Ctrl+Cmd+N)", words: "space workspace new create add", run: () => toast(window.__vm.workspaces.CREATE_HINT) },
+    { label: `Create New Space (${window.__vm.workspaces?.CREATE_LABEL || "Ctrl+Cmd+N"})`, words: "space workspace new create add", run: () => toast(window.__vm.workspaces.CREATE_HINT) },
     { label: "Manage Extensions", words: "extensions addons", run: () => openPage("vivaldi://extensions") },
     { label: "Pin This Tab", words: "pin bookmark", tab: true, run: async (tab) => {
       if (await window.__vm.pinTab?.(tab, "Pinned")) toast("Pinned Tab");
@@ -438,7 +438,7 @@
   };
 
   window.addEventListener("vm-open-command-bar", () => open(null));
-  window.__vm.onShortcut((key) => { if (key === window.__vm.normalise("meta+t")) open(null); });
+  window.__vm.onShortcut((key) => { if (key === window.__vm.normalise(window.__vm.keys.commandBar)) open(null); });
 
   const activeHistory = [];
   chrome.tabs.onActivated.addListener(({ tabId }) => {
