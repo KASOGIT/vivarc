@@ -892,6 +892,9 @@
     if (!panel) {
       panel = el("div");
       panel.id = "vm-panel";
+      // The panel sits inside Vivaldi's vertical tab container, whose double-click handler opens a new tab (and the
+      // blank tab then opens the command bar). Two quick clicks on a folder header must only toggle the folder.
+      panel.addEventListener("dblclick", (e) => e.stopPropagation());
       panel.addEventListener("contextmenu", (e) => showMenu(e, [
         ["New Folder", async () => { await newFolder(null); }],
         ["Edit Theme…", () => window.dispatchEvent(new CustomEvent("vm-open-theme"))],
