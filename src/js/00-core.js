@@ -14,10 +14,10 @@
   const KEYMAPS = {
     mac: { commandBar: "meta+t", copyUrl: "shift+meta+c", toggleSidebar: "meta+s", profilePrev: "ctrl+meta+left",
       profileNext: "ctrl+meta+right", profileMods: "ctrl+meta", spacePrev: "alt+meta+left", spaceNext: "alt+meta+right",
-      spaceNew: "ctrl+meta+n" },
+      spaceNew: "ctrl+meta+n", tabNext: "ctrl+tab", tabPrev: "ctrl+shift+tab" },
     win: { commandBar: "ctrl+t", copyUrl: "ctrl+shift+c", toggleSidebar: "ctrl+s", profilePrev: "ctrl+alt+shift+left",
       profileNext: "ctrl+alt+shift+right", profileMods: "ctrl+alt+shift", spacePrev: "ctrl+alt+left",
-      spaceNext: "ctrl+alt+right", spaceNew: "ctrl+alt+n" },
+      spaceNext: "ctrl+alt+right", spaceNew: "ctrl+alt+n", tabNext: "ctrl+tab", tabPrev: "ctrl+shift+tab" },
   };
   const LABELS = { mac: { meta: "Cmd", alt: "Option", ctrl: "Ctrl", shift: "Shift" },
     win: { meta: "Win", alt: "Alt", ctrl: "Ctrl", shift: "Shift" } };

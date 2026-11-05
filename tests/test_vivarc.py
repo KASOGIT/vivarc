@@ -26,7 +26,7 @@ DEFAULTS = {
     "COMMAND_SAVE_PAGE": {"shortcuts": ["meta+s"]},
     "COMMAND_TOGGLE_AUTO_HIDE_TAB_BAR": {"shortcuts": []},
     "COMMAND_TAB_SWITCH_BACK_SETTING": {"shortcuts": ["alt+meta+left", "ctrl+shift+tab"]},
-    "COMMAND_TAB_SWITCH_FORWARD_SETTING": {"shortcuts": ["alt+meta+right"]},
+    "COMMAND_TAB_SWITCH_FORWARD_SETTING": {"shortcuts": ["alt+meta+right", "ctrl+tab"]},
     "COMMAND_WORKSPACE_SWITCH_1": {"shortcuts": ["ctrl+shift+1"]},
     "COMMAND_SOMETHING_ELSE": {"shortcuts": ["ctrl+meta+left", "ctrl+meta+right", "f9"]},
 }
@@ -45,10 +45,10 @@ class PatchPreferences(unittest.TestCase):
         self.assertIn("COMMAND_CLOSE_TAB", actions)
         self.assertEqual(actions["COMMAND_CLOSE_TAB"]["shortcuts"], ["meta+w"])
 
-    def test_cmd_option_left_and_right_leave_the_tab_switch_commands_and_keep_the_other_tab_shortcuts(self):
+    def test_cmd_option_left_and_right_leave_the_tab_switch_commands(self):
         new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])
         actions = new["vivaldi"]["actions"][0]
-        self.assertEqual(actions["COMMAND_TAB_SWITCH_BACK_SETTING"]["shortcuts"], ["ctrl+shift+tab"])
+        self.assertEqual(actions["COMMAND_TAB_SWITCH_BACK_SETTING"]["shortcuts"], [])
         self.assertEqual(actions["COMMAND_TAB_SWITCH_FORWARD_SETTING"]["shortcuts"], [])
 
     def test_cmd_option_left_and_right_go_to_the_previous_and_next_workspace(self):
@@ -66,6 +66,13 @@ class PatchPreferences(unittest.TestCase):
     def test_cmd_ctrl_left_and_right_are_freed_for_the_profile_switcher(self):
         new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])
         self.assertEqual(new["vivaldi"]["actions"][0]["COMMAND_SOMETHING_ELSE"]["shortcuts"], ["f9"])
+
+    def test_ctrl_tab_is_freed_for_the_tab_switcher(self):
+        new, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])
+        actions = new["vivaldi"]["actions"][0]
+        for name in ("COMMAND_TAB_SWITCH_FORWARD_SETTING", "COMMAND_TAB_SWITCH_BACK_SETTING"):
+            self.assertNotIn("ctrl+tab", actions[name]["shortcuts"])
+            self.assertNotIn("ctrl+shift+tab", actions[name]["shortcuts"])
 
     def test_patching_twice_does_not_duplicate_the_workspace_shortcuts(self):
         once, _ = vivarc.patch_preferences(prefs(), [DEFAULTS])
