@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- The Cmd+T command bar is more compact, closer to Arc's: smaller text, rows and icons. Its top edge no longer moves as results come and go; it sits where a full list would be centred in the window, and only the bottom grows or shrinks.
+
 ## 0.1.19 - 2026-11-05
 - Fix: the Cmd+T command bar always searched DuckDuckGo, whatever search engine you picked in Vivaldi's settings. Searches and suggestions now use your default engine (the private one in a private window), and change as soon as you pick another. An engine without a suggestions service gets no suggestions instead of DuckDuckGo's. Thanks @groenroos (#65).
 - Pinned folders slide open and shut instead of appearing at once. With Reduce Motion on, they still open instantly. Thanks @dknz7 (#59).
