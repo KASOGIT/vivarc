@@ -4,7 +4,7 @@
   const defaults = {
     hideWorkspaceButton: true,
     compactBottomBar: true,
-    suggestions: "ddg",
+    suggestions: "on", // "off" turns them off; "ddg" from older configs still means on
     spaceFolderTitle: "Vivarc",
   };
   const config = { ...defaults, ...(window.__vmConfig || {}) };

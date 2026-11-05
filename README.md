@@ -162,7 +162,7 @@ In each Vivaldi profile: **File > Import Bookmarks and Settings… > HTML file**
 
 Every file Vivarc edits is backed up in `~/.vivarc/backup/`, existing shortcuts are kept, and `uninstall` restores the original values. The styles ship inside the script, so a Vivaldi update can never leave you with half a UI. No Vivaldi flags are changed. See [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) for exactly what changes and how it works.
 
-The command bar sends what you type to DuckDuckGo's autocomplete for suggestions; set `"suggestions": "off"` in `~/.vivarc/config.json` to turn that off.
+The command bar searches with the default search engine you picked in Vivaldi's settings, and sends what you type to that engine's suggestions service; turn suggestions off in Vivarc Settings, or set `"suggestions": "off"` in `~/.vivarc/config.json`.
 
 ## Contributing
 

@@ -22,6 +22,12 @@ class Resolve(unittest.TestCase):
         self.assertFalse(values["compactBottomBar"])
         self.assertFalse(values["searchSuggestions"])
 
+    def test_suggestions_are_on_unless_the_config_says_off(self):
+        for value in ("on", "ddg", "google"):
+            self.assertTrue(resolve(config={"suggestions": value})["searchSuggestions"], value)
+        self.assertFalse(resolve(config={"suggestions": "off"})["searchSuggestions"])
+        self.assertFalse(resolve(config={"suggestions": False})["searchSuggestions"])
+
     def test_what_the_user_saved_wins_over_the_install_config(self):
         values = resolve(config={"compactBottomBar": False}, saved={"compactBottomBar": True, "spaceBar": False})
         self.assertTrue(values["compactBottomBar"])

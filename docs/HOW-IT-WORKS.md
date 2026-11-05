@@ -24,7 +24,7 @@ An update replaces `Vivaldi.app`, including `window.html`. Run `./vivarc.py upda
   "hideWorkspaceButton": true,
   "autoConfigureProfiles": true,
   "compactBottomBar": true,
-  "suggestions": "ddg",
+  "suggestions": "on",
   "spaceFolderTitle": "Vivarc"
 }
 ```
@@ -32,7 +32,9 @@ An update replaces `Vivaldi.app`, including `window.html`. Run `./vivarc.py upda
 - `hideWorkspaceButton`: hide Vivaldi's Workspaces button at the top of the sidebar (on by default).
 - `autoConfigureProfiles`: let Vivarc set up profiles created after install (see below).
 - `compactBottomBar`: shrink the bottom toolbar (profile button) to Arc's proportions.
-- `suggestions`: `"ddg"` sends what you type in the command bar to DuckDuckGo's autocomplete endpoint; `"off"` sends nothing.
+- `suggestions`: `"on"` sends what you type in the command bar to the suggest URL of the default search engine picked in Vivaldi's settings (nothing if that engine has none); `"off"` sends nothing. `"ddg"` from older configs means `"on"`.
+
+Command bar searches follow Vivaldi's default search engine (the private one in a private window). `15-search.js` reads it with `vivaldi.searchEngines.getTemplateUrls()` and lets Vivaldi build the URL with `getSearchRequest`, so engines like Google, whose template needs `{google:baseURL}`, work as in the address bar. `chrome.search` is not available to Vivaldi's UI, and DuckDuckGo is only the fallback when Vivaldi gives no answer.
 - `spaceFolderTitle`: name of the folder created on first run.
 
 `compactBottomBar` and `suggestions` are only the starting values: **Vivarc Settings** (Cmd+T, `settings`) overrides them per profile, live. `01-settings.js` holds the schema (one entry per switch, with the marker class it toggles on `#browser`) and the precedence (saved, then config, then default); `45-settings.js` is the overlay. The `glass` switch only adds the class `vm-glass`, and the `glassOpacity` slider (a `range` entry in the schema, 15 to 95, clamped when read) sets `--vm-glass-opacity` on `#browser`, which every glass fill mixes with; the rules at the end of `vivarc.css` do the rest (the regular variant of Apple's material: blurred, saturated backdrop, translucent fill, specular rim; floating surfaces and the sidebar only, never rows inside them). Vivarc's surfaces sit in Vivaldi's UI layer, where `backdrop-filter` also blurs the page behind floating ones; the sidebar blurs the window background, so it shows real glass over a theme with a background image. `prefers-reduced-transparency` and `prefers-contrast` are supported by Vivaldi's Chromium and switch the surfaces back to solid. Windows of a profile stay in step through a `BroadcastChannel`. Only switches that apply live belong there: anything that writes Vivaldi's Preferences (shortcuts, toolbars) is read at launch, so it stays out.

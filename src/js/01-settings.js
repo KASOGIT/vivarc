@@ -10,8 +10,8 @@
     { key: "spaceBar", label: "Space bar", hint: "The row of space tiles under the sidebar.", default: true, offClass: "vm-no-space-bar" },
     { key: "compactBottomBar", label: "Compact bottom bar", hint: "A tighter row for the profile avatars and downloads.", default: true,
       fromConfig: (c) => c.compactBottomBar, onClass: "vm-compact-bottom" },
-    { key: "searchSuggestions", label: "Search suggestions", hint: "Show DuckDuckGo suggestions in the command bar while you type.", default: true,
-      fromConfig: (c) => (c.suggestions === undefined ? undefined : c.suggestions === "ddg") },
+    { key: "searchSuggestions", label: "Search suggestions", hint: "Show suggestions from your default search engine (Vivaldi settings) in the command bar while you type.",
+      default: true, fromConfig: (c) => (c.suggestions === undefined ? undefined : c.suggestions !== "off" && c.suggestions !== false) },
   ];
 
   const resolve = (schema, config, saved) => Object.fromEntries(schema.map((s) => {
