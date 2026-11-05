@@ -58,7 +58,7 @@ Every Vivaldi update on Windows installs into a new folder, which leaves Vivarc 
 
 - **"Operation not permitted" or "macOS blocked writing into Vivaldi.app":** switch on Terminal under System Settings > Privacy & Security > App Management, then paste the line again. **Do not use `sudo`**: it does not help and can leave files only root can change.
 - **Already used `sudo`?** Run `sudo chown -R "$(whoami)" ~/.vivarc` once, then paste the install line again (without `sudo`).
-- **"Vivaldi not found":** Vivarc looks in `/Applications/Vivaldi.app` (Windows: `%LOCALAPPDATA%\Vivaldi\Application`, then `Program Files`). If yours is elsewhere, use the developer install below with `--app` (on Windows, the folder that contains `vivaldi.exe`).
+- **"Vivaldi not found":** Vivarc looks in `/Applications/Vivaldi.app` (Windows: `%LOCALAPPDATA%\Vivaldi\Application`, then `Program Files`). If yours is elsewhere, use the developer install below with `--app` (on Windows, the folder that contains `vivaldi.exe`, or `vivaldi.exe` itself; a portable copy without version folders works too). The Update and Uninstall launchers remember the `--app` and `--data-dir` you installed with.
 - **Windows: "Cannot write into ... Vivaldi" or "Python was not found":** Vivaldi installed for all users lives under Program Files, which needs an administrator terminal; reinstalling Vivaldi for your user only avoids that. "Python was not found" means only the Microsoft Store shortcut is there: install Python as in step 1.
 
 ### For developers

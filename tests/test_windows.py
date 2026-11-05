@@ -59,6 +59,27 @@ class VersionFolders(WinCase):
         self.assertFalse(os.path.isdir(vivarc.resources_dir(os.path.join(self.tmp, "nowhere"))))
         self.assertEqual(vivarc.app_version(os.path.join(self.tmp, "nowhere")), "unknown")
 
+    def test_a_standalone_vivaldi_without_version_folders_is_found(self):
+        app = os.path.join(self.tmp, "Application")
+        flat = os.path.join(app, "resources", "vivaldi")
+        os.makedirs(flat)
+        with open(os.path.join(flat, "window.html"), "w", encoding="utf8") as f:
+            f.write("<html></html>")
+        self.assertEqual(vivarc.resources_dir(app), flat)
+
+    def test_a_version_folder_wins_over_a_flat_resources_folder(self):
+        app = os.path.join(self.tmp, "Application")
+        versioned = self.version(app, "8.3.4191.26")
+        os.makedirs(os.path.join(app, "resources", "vivaldi"))
+        self.assertEqual(vivarc.resources_dir(app), versioned)
+
+    def test_the_app_can_be_given_as_the_vivaldi_exe(self):
+        self.assertEqual(vivarc.win_app_dir(os.path.join("D:\\", "V", "Application", "vivaldi.exe")),
+                         os.path.join("D:\\", "V", "Application"))
+        self.assertEqual(vivarc.win_app_dir(os.path.join("D:\\", "V", "Application", "VIVALDI.EXE")),
+                         os.path.join("D:\\", "V", "Application"))
+        self.assertEqual(vivarc.win_app_dir(os.path.join("D:\\", "V", "Application")), os.path.join("D:\\", "V", "Application"))
+
 
 class Running(unittest.TestCase):
     def test_reads_tasklists_answer(self):
@@ -107,21 +128,35 @@ class WindowsKeys(unittest.TestCase):
 
 
 class Launchers(WinCase):
-    def script(self, here, app, python=r"C:\Py\python.exe"):
+    def script(self, here, app, python=r"C:\Py\python.exe", data=r"C:\D"):
         with mock.patch.object(vivarc, "HERE", here):
-            return vivarc.command_script("updates Vivarc", "update", app=app, python=python)
+            # os.path.join joins with "/" off Windows; the launcher is judged as cmd.exe would read it
+            script = vivarc.command_script("updates Vivarc", "update", app=app, python=python, data=data)
+        return re.sub(r"(?<=[\w%])/(?=\w)", lambda _: "\\", script)
 
     def test_the_cmd_runs_update_with_python_then_reopens_vivaldi(self):
         script = self.script(r"C:\Users\some one\.vivarc\app", r"C:\Users\some one\AppData\Local\Vivaldi\Application")
         self.assertTrue(script.startswith("@echo off\r\n"))
         self.assertIn(vivarc.UPDATE_MARK, script)
-        self.assertIn(r'"C:\Py\python.exe" "C:\Users\some one\.vivarc\app\vivarc.py" update', script)
+        self.assertIn(r'"C:\Py\python.exe" "C:\Users\some one\.vivarc\app\vivarc.py" --app "C:\Users\some one\AppData\Local\Vivaldi\Application" '
+                      r'--data-dir "C:\D" update', script)
         self.assertIn(r'start "" "C:\Users\some one\AppData\Local\Vivaldi\Application\vivaldi.exe"', script)
         self.assertTrue(script.rstrip().endswith("exit /b %status%"))
         self.assertNotIn("\n", script.replace("\r\n", ""))  # CRLF throughout: cmd.exe misreads bare LF
 
     def test_percent_signs_in_paths_are_escaped(self):
-        self.assertIn(r'"C:\100%%\vivarc.py"', self.script(r"C:\100%", r"C:\V"))
+        script = self.script(r"C:\100%", r"C:\V%", data=r"C:\D%")
+        self.assertIn(r'"C:\100%%\vivarc.py"', script)
+        self.assertIn(r'--app "C:\V%%"', script)
+        self.assertIn(r'--data-dir "C:\D%%"', script)
+
+    def test_a_custom_vivaldi_location_survives_the_launcher(self):
+        script = self.script(r"C:\H", r"D:\Portable Vivaldi\Application", data=r"D:\Portable Vivaldi\User Data")
+        self.assertIn(r'--app "D:\Portable Vivaldi\Application" --data-dir "D:\Portable Vivaldi\User Data" update', script)
+
+    def test_the_console_switches_to_utf8_before_any_path_is_read(self):
+        lines = self.script(r"C:\Users\Zoë\.vivarc\app", r"C:\V").split("\r\n")
+        self.assertEqual(lines[:2], ["@echo off", "chcp 65001 >nul"])
 
     def test_the_console_python_is_used_even_from_the_windowless_task(self):
         folder = os.path.join(self.tmp, "py")
@@ -172,7 +207,7 @@ class ReapplyTask(WinCase):
             vivarc.disable_reminder()
         create, delete = (c.args for c in schtasks.call_args_list)
         self.assertEqual(create[:9], ("/Create", "/F", "/TN", vivarc.REMINDER_TASK, "/SC", "MINUTE", "/MO", "30", "/IT"))
-        self.assertEqual(create[-1], r'"C:\Py\pythonw.exe" "C:\Users\me\.vivarc\app\vivarc.py" remind')
+        self.assertEqual(create[-1].replace("/", "\\"), r'"C:\Py\pythonw.exe" "C:\Users\me\.vivarc\app\vivarc.py" remind')
         self.assertEqual(delete, ("/Delete", "/F", "/TN", vivarc.REMINDER_TASK))
 
     def test_a_vivaldi_in_another_folder_is_passed_along(self):

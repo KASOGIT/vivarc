@@ -341,10 +341,20 @@ def win_version_dir(app):
     return max(names, key=_version_key) if names else None
 
 
+def win_app_dir(path):
+    """--app and VIVARC_APP take the Application folder or the vivaldi.exe inside it."""
+    return os.path.dirname(path) if path.lower().endswith(".exe") else path
+
+
 def resources_dir(app):
     if IS_WIN:
         version = win_version_dir(app)
-        return os.path.join(app, version or "unknown", "resources", "vivaldi")
+        if version:
+            return os.path.join(app, version, "resources", "vivaldi")
+        flat = os.path.join(app, "resources", "vivaldi")  # a standalone copy without version folders
+        if os.path.exists(os.path.join(flat, "window.html")):
+            return flat
+        return os.path.join(app, "unknown", "resources", "vivaldi")
     return os.path.join(app, RESOURCES)
 
 
@@ -608,13 +618,15 @@ def _cmd_quote(path):
     return '"' + path.replace("%", "%%") + '"'
 
 
-def command_script(purpose, subcommand, app=None, python=None):
+def command_script(purpose, subcommand, app=None, python=None, data=None):
     if IS_WIN:
-        app = app or DEFAULT_APP
+        app, data = app or DEFAULT_APP, data or DEFAULT_DATA
         return "\r\n".join([
             "@echo off",
+            "chcp 65001 >nul",  # the file is UTF-8: read paths with a non-ASCII user name correctly
             f"rem {UPDATE_MARK}: {purpose}.",
-            f"{_cmd_quote(python or console_python())} {_cmd_quote(os.path.join(HERE, 'vivarc.py'))} {subcommand}",
+            f"{_cmd_quote(python or console_python())} {_cmd_quote(os.path.join(HERE, 'vivarc.py'))} "
+            f"--app {_cmd_quote(app)} --data-dir {_cmd_quote(data)} {subcommand}",
             "set status=%ERRORLEVEL%",
             f"if exist {_cmd_quote(vivaldi_exe(app))} start \"\" {_cmd_quote(vivaldi_exe(app))}",
             "if not %status%==0 pause",
@@ -628,19 +640,19 @@ def command_script(purpose, subcommand, app=None, python=None):
             "exit $status\n")
 
 
-def write_command(path, purpose, subcommand):
+def write_command(path, purpose, subcommand, app=None, data=None):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    write_atomic(path, command_script(purpose, subcommand))
+    write_atomic(path, command_script(purpose, subcommand, app=app, data=data))
     if not IS_WIN:
         os.chmod(path, 0o755)
 
 
-def write_update_command(path):
-    write_command(path, "updates Vivarc and brings it back after a Vivaldi update", "update")
+def write_update_command(path, app=None, data=None):
+    write_command(path, "updates Vivarc and brings it back after a Vivaldi update", "update", app, data)
 
 
-def write_uninstall_command(path):
-    write_command(path, "removes Vivarc and puts Vivaldi back as it was", "uninstall")
+def write_uninstall_command(path, app=None, data=None):
+    write_command(path, "removes Vivarc and puts Vivaldi back as it was", "uninstall", app, data)
 
 
 def powershell(script, env=None):
@@ -856,9 +868,9 @@ def cmd_install(args):
         apply_js(app, resources, not args.no_peek)
     except PermissionError as error:
         permission_hint(error)
-    write_update_command(UPDATE_COMMAND)
+    write_update_command(UPDATE_COMMAND, app, data)
     write_update_app(UPDATE_APP, UPDATE_COMMAND)
-    write_uninstall_command(UNINSTALL_COMMAND)
+    write_uninstall_command(UNINSTALL_COMMAND, app, data)
     write_update_app(UNINSTALL_APP, UNINSTALL_COMMAND)
     remove_update_command(LEGACY_UPDATE_COMMAND)
     if IS_WIN:
@@ -911,9 +923,10 @@ def cmd_update(args):
             say(f"Updating Vivarc {VERSION} to {latest.lstrip('v')}...")
             env = {**os.environ, "VIVARC_APP": args.app, "VIVARC_DATA_DIR": args.data_dir}
             if IS_WIN:
-                run_instead("powershell", ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
-                                           os.path.join(HERE, "install.ps1"), *extra], env)
-            os.execve("/bin/bash", ["/bin/bash", os.path.join(HERE, "install.sh"), *extra], env)
+                argv = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", os.path.join(HERE, "install.ps1"), *extra]
+            else:
+                argv = ["/bin/bash", os.path.join(HERE, "install.sh"), *extra]
+            run_instead(argv[0], argv, env)
         elif latest is None:
             say("Could not check for a new version (offline?). Re-applying the one you have.")
         else:
@@ -964,7 +977,7 @@ def cmd_remind(args):
     write_atomic(stamp, value)
     if prompt_update(message):
         if not os.path.exists(UPDATE_COMMAND):
-            write_update_command(UPDATE_COMMAND)
+            write_update_command(UPDATE_COMMAND, args.app, args.data_dir)
         open_in_terminal(UPDATE_COMMAND)
 
 
@@ -1071,6 +1084,8 @@ def main(argv=None):
     imp = sub.add_parser("import-arc")
     imp.add_argument("--arc-dir", default=default_arc_dir())
     args = parser.parse_args(argv)
+    if IS_WIN:
+        args.app = win_app_dir(args.app)
     if platform.system() not in ("Darwin", "Windows"):
         die("Vivarc supports macOS and Windows only")
     check_not_root()
