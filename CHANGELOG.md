@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.17 - 2026-11-05
+- Fix: after updating to Vivaldi 8.3, the profile chips floated at the top right of the empty space under the tabs. They are back at the bottom-left of the sidebar with the Downloads button at the bottom-right.
+
 ## 0.1.16 - 2026-10-28
 - **Uninstall Vivarc**: the installer now also leaves `~/Applications/Uninstall Vivarc.app` next to Update Vivarc. It quits Vivaldi, restores your settings, removes Vivarc and reopens Vivaldi, so removing or reinstalling no longer needs Terminal.
 - Docs: the README and the guide page now say that a sidebar hidden with Cmd+S slides back in when you move the pointer to the left edge of the window.
