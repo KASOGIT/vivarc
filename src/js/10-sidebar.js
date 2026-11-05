@@ -207,6 +207,20 @@
   // ---- drag and drop ----
   let drag = null;
   let refreshAfterDrag = false;
+  // The window a chrome.tabs event belongs to, or undefined when the event does not say.
+  const eventWindowId = (ev, [first, second, third]) => ({
+    onCreated: first?.windowId, onUpdated: third?.windowId, onActivated: first?.windowId,
+    onRemoved: second?.windowId, onMoved: second?.windowId, onAttached: second?.newWindowId, onDetached: second?.oldWindowId,
+  })[ev];
+  // While a pointer button is held on the panel, re-renders wait: replacing the pressed node between mousedown and
+  // mouseup swallows the click.
+  let pressing = false;
+  let refreshAfterPress = false;
+  const released = () => {
+    if (!pressing) return;
+    pressing = false;
+    if (refreshAfterPress) { refreshAfterPress = false; refresh(false); }
+  };
   const clearDrop = () => {
     for (const n of panel?.querySelectorAll(".drop-before, .drop-after, .drop-into") ?? []) {
       n.classList.remove("drop-before", "drop-after", "drop-into");
@@ -864,6 +878,7 @@
     clearTimeout(timer);
     timer = setTimeout(async () => {
       if (drag) { refreshAfterDrag = true; return; } // re-rendering would detach the node being dragged
+      if (pressing) { refreshAfterPress = true; return; }
       refreshAfterDrag = false;
       const bookmarks = wantBookmarks || !state.defaultSpace;
       wantBookmarks = false;
@@ -895,6 +910,7 @@
       // The panel sits inside Vivaldi's vertical tab container, whose double-click handler opens a new tab (and the
       // blank tab then opens the command bar). Two quick clicks on a folder header must only toggle the folder.
       panel.addEventListener("dblclick", (e) => e.stopPropagation());
+      panel.addEventListener("pointerdown", () => { pressing = true; }, true);
       panel.addEventListener("contextmenu", (e) => showMenu(e, [
         ["New Folder", async () => { await newFolder(null); }],
         ["Edit Theme…", () => window.dispatchEvent(new CustomEvent("vm-open-theme"))],
@@ -938,6 +954,7 @@
     }).observe(document.body, { childList: true, subtree: true });
     place();
     window.addEventListener("resize", fitHeight);
+    for (const ev of ["pointerup", "pointercancel", "dragstart", "blur"]) window.addEventListener(ev, () => setTimeout(released), true);
     window.__vm.settings.onChange(fitHeight);
     for (const ev of ["onCreated", "onRemoved", "onChanged", "onMoved", "onImportEnded"]) {
       chrome.bookmarks[ev]?.addListener(() => refresh(true));
@@ -950,7 +967,12 @@
       }).catch(() => {});
     });
     for (const ev of ["onCreated", "onRemoved", "onUpdated", "onMoved", "onActivated", "onAttached", "onDetached", "onReplaced"]) {
-      chrome.tabs[ev]?.addListener(() => refresh(false));
+      // Every window runs its own sidebar and sees the tab events of all windows (a popup loading, another window's
+      // titles): only this window's events, or ones that do not say, re-render it.
+      chrome.tabs[ev]?.addListener((...args) => {
+        const id = eventWindowId(ev, args);
+        if (id == null || id === window.vivaldiWindowId) refresh(false);
+      });
     }
     setInterval(async () => {
       const brief = (list) => JSON.stringify(list.map((w) => [w.id, w.name, w.emoji]));
