@@ -187,7 +187,7 @@ class Launchers(WinCase):
         fake = os.path.join(self.tmp, "app dir")
         os.makedirs(fake)
         with open(os.path.join(fake, "vivarc.py"), "w") as f:
-            f.write("import sys; print('ran', sys.argv[1]); sys.exit(3)\n")
+            f.write("import sys; print('ran', sys.argv[-1]); sys.exit(3)\n")
         path = os.path.join(self.tmp, "Update Vivarc.cmd")
         with mock.patch.object(vivarc, "HERE", fake), mock.patch.object(vivarc, "DEFAULT_APP", os.path.join(self.tmp, "none")):
             vivarc.write_update_command(path)
