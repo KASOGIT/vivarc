@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.18 - 2026-11-05
 - **Windows support.** Install with `irm https://raw.githubusercontent.com/KASOGIT/vivarc/main/install.ps1 | iex` (needs Python 3). Ctrl stands in for Cmd: Ctrl+T command bar, Ctrl+S sidebar, Ctrl+Shift+C copy URL, Ctrl+Alt+Left/Right spaces, Ctrl+Alt+N new space, Ctrl+Alt+Shift+Left/Right and 1..9 profiles. **Update Vivarc** and **Uninstall Vivarc** are in the Start Menu, and a scheduled task re-applies Vivarc by itself after each Vivaldi update. macOS is unchanged.
 - Site icons show up straight away for pins, favorites and tabs restored after a restart: when no open tab has provided one yet, Vivarc takes it from Vivaldi's own favicon database (filled by browsing and Sync). Before, these showed a letter until the site had been opened once.
 - Files Vivarc writes now always use Unix line endings, and the repository has a `.gitattributes`, so a checkout made on Windows keeps `install.sh` working.
