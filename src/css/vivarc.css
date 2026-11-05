@@ -477,11 +477,14 @@
 
 #browser.vm-on .vm-spaces { flex: none; display: flex; align-items: center; gap: 7px; margin-right: 8px; }
 #browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after:has(> .vm-spaces) {
+  flex-direction: row !important;
   flex-wrap: nowrap !important;
   align-items: flex-end !important;
   justify-content: flex-start !important;
 }
+#browser.vm-on .toolbar-tabbar-after:has(> .vm-spaces) > .tabbar-nested-buttons { width: auto !important; flex: none; }
 #browser.vm-on .toolbar-tabbar-after:has(> .vm-spaces) > .toolbar-spacer-flexible {
+  display: flex !important;
   flex: 1 1 0 !important;
   width: auto !important;
   min-width: 0 !important;
