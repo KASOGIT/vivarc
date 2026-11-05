@@ -205,6 +205,24 @@ class DeleteSpace(unittest.TestCase):
         self.assertIsNone(js("workspaces.findRemover(undefined)"))
         self.assertIsNone(js("workspaces.findRemover({ push: () => { throw new Error('boom'); } })"))
 
+    def test_the_switcher_is_found_in_vivaldis_own_modules_and_activates_the_workspace(self):
+        out = js("""(() => {
+          const calls = [];
+          const actions = { setActiveWorkspace(windowId, id) { calls.push([windowId, id === undefined ? "default" : id]); return "switched"; } };
+          const modules = { 1: function () { return "nothing"; }, 2: function () { return "x={setActiveWorkspace:Pe}"; } };
+          const exportsOf = { 2: { ZP: actions } };
+          const require = (id) => { if (!(id in exportsOf)) throw new Error("not loaded: " + id); return exportsOf[id]; };
+          require.m = modules;
+          const chunks = { push: ([ids, extra, run]) => run(require) };
+          const activate = workspaces.findSwitcher(chunks);
+          return [typeof activate, activate(7, 42), activate(7, 0), calls];
+        })()""")
+        self.assertEqual(out, ["function", "switched", "switched", [[7, 42], [7, "default"]]])
+
+    def test_no_switcher_when_the_chunk_list_is_missing_or_broken(self):
+        self.assertIsNone(js("workspaces.findSwitcher(undefined)"))
+        self.assertIsNone(js("workspaces.findSwitcher({ push: () => { throw new Error('boom'); } })"))
+
     def test_the_delete_button_names_the_space_and_counts_its_tabs(self):
         self.assertEqual(js("workspaces.removalLabel('Work', 5)"), "Delete \u201cWork\u201d and close its 5 tabs")
         self.assertEqual(js("workspaces.removalLabel('Work', 1)"), "Delete \u201cWork\u201d and close its 1 tab")
