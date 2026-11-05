@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Ctrl+Tab switcher, like Arc's.** Hold Ctrl and press Tab to open a row of your five latest tabs with thumbnails; Tab or Shift+Tab (or the arrow keys) move through it, and holding Tab keeps moving faster and faster. Let go of Ctrl to switch. A quick Ctrl+Tab goes straight to the previous tab. A tab you open or focus takes the first place and the oldest drops out. Ctrl+Tab and Ctrl+Shift+Tab are taken from Vivaldi's own tab cycling; Vivaldi reads shortcuts at launch, so a profile needs one restart after it is updated.
+
 ## 0.1.20 - 2026-11-05
 - The Cmd+T command bar is more compact, closer to Arc's: smaller text, rows and icons. Its top edge no longer moves as results come and go; it sits where a full list would be centred in the window, and only the bottom grows or shrinks.
 

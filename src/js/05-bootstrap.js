@@ -12,9 +12,10 @@
   const COPY_URL = K.copyUrl;
 
   // Bump when the steps change: profiles already set up then run the (idempotent) steps once more.
-  const VERSION = 13;
+  const VERSION = 14;
   const TOGGLE = K.toggleSidebar;
   const PROFILE_KEYS = [K.profilePrev, K.profileNext]; // the profile switcher's previous/next, handled in 06-spaces.js
+  const TAB_KEYS = [K.tabNext, K.tabPrev]; // the tab switcher's, handled in 25-tab-switcher.js
   const SPACE_KEYS = { COMMAND_WORKSPACE_SWITCH_BACK_ORDER: K.spacePrev, COMMAND_WORKSPACE_SWITCH_FORWARD_ORDER: K.spaceNext,
     COMMAND_WORKSPACE_CREATE_NEW: K.spaceNew }; // like Arc's spaces; "new" opens Vivaldi's own Create Workspace dialog
 
@@ -75,7 +76,7 @@
     if (!copy.shortcuts.includes(COPY_URL)) copy.shortcuts.push(COPY_URL);
     command("COMMAND_SAVE_PAGE").shortcuts = command("COMMAND_SAVE_PAGE").shortcuts.filter((s) => s !== TOGGLE);
     command("COMMAND_TOGGLE_AUTO_HIDE_TAB_BAR").shortcuts = [TOGGLE];
-    const taken = [...PROFILE_KEYS, ...Object.values(SPACE_KEYS)];
+    const taken = [...PROFILE_KEYS, ...TAB_KEYS, ...Object.values(SPACE_KEYS)];
     for (const cmd of Object.values(table)) {
       if (Array.isArray(cmd?.shortcuts)) cmd.shortcuts = cmd.shortcuts.filter((s) => !taken.includes(s));
     }

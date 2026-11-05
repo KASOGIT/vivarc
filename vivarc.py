@@ -88,6 +88,7 @@ KEYS = {
         "profileMods": "ctrl+meta",  # + 1..9 opens the nth profile chip
         "spacePrev": "alt+meta+left", "spaceNext": "alt+meta+right",
         "spaceNew": "ctrl+meta+n",  # opens Vivaldi's own Create Workspace dialog
+        "tabNext": "ctrl+tab", "tabPrev": "ctrl+shift+tab",  # freed from Vivaldi's tab cycling: the tab switcher handles them
     },
     "win": {
         "commandBar": "ctrl+t",
@@ -96,6 +97,7 @@ KEYS = {
         "profilePrev": "ctrl+alt+shift+left", "profileNext": "ctrl+alt+shift+right", "profileMods": "ctrl+alt+shift",
         "spacePrev": "ctrl+alt+left", "spaceNext": "ctrl+alt+right",
         "spaceNew": "ctrl+alt+n",
+        "tabNext": "ctrl+tab", "tabPrev": "ctrl+shift+tab",
     },
 }
 KEY_LABELS = {"mac": {"meta": "Cmd", "alt": "Option", "ctrl": "Ctrl", "shift": "Shift"},
@@ -105,11 +107,12 @@ PLATFORM = "win" if IS_WIN else "mac"
 
 def use_keys(name):
     """Point the module-level key constants at one platform's table (tests call this to switch)."""
-    global FREED_KEY, COPY_URL_KEY, PROFILE_KEYS, SPACE_KEYS, TOGGLE_SIDEBAR_KEY
+    global FREED_KEY, COPY_URL_KEY, PROFILE_KEYS, SPACE_KEYS, TAB_KEYS, TOGGLE_SIDEBAR_KEY
     k = KEYS[name]
     FREED_KEY = k["commandBar"]
     COPY_URL_KEY = k["copyUrl"]
     PROFILE_KEYS = (k["profilePrev"], k["profileNext"])
+    TAB_KEYS = (k["tabNext"], k["tabPrev"])
     SPACE_KEYS = {"COMMAND_WORKSPACE_SWITCH_BACK_ORDER": k["spacePrev"], "COMMAND_WORKSPACE_SWITCH_FORWARD_ORDER": k["spaceNext"],
                   "COMMAND_WORKSPACE_CREATE_NEW": k["spaceNew"]}
     TOGGLE_SIDEBAR_KEY = k["toggleSidebar"]
@@ -217,7 +220,7 @@ def patch_preferences(prefs, default_actions):
     for name, cmd in defaults.items():
         if TOGGLE_SIDEBAR_KEY in cmd.get("shortcuts", []):
             _command(actions, defaults, name)
-    taken = PROFILE_KEYS + tuple(SPACE_KEYS.values())
+    taken = PROFILE_KEYS + TAB_KEYS + tuple(SPACE_KEYS.values())
     for name, cmd in defaults.items():
         if any(key in cmd.get("shortcuts", []) for key in taken + (COPY_URL_KEY,)):
             _command(actions, defaults, name)

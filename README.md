@@ -125,6 +125,7 @@ python3 ~/.vivarc/app/vivarc.py status      # what is installed
 | macOS | Windows | Does |
 |---|---|---|
 | Cmd+T | Ctrl+T | Command bar |
+| Ctrl+Tab, Ctrl+Shift+Tab | Ctrl+Tab, Ctrl+Shift+Tab | Tab switcher: the five latest tabs with thumbnails. Hold Ctrl and press Tab to move (hold Tab to speed up), let go of Ctrl to switch. A quick press goes to the previous tab. |
 | Cmd+S | Ctrl+S | Hide the sidebar, or show it again. While it is hidden, move the pointer to the left edge of the window and it slides back in. |
 | Cmd+Shift+C | Ctrl+Shift+C | Copy the page URL (with a toast) |
 | Cmd+L | Ctrl+L | Edit the address |
@@ -152,7 +153,7 @@ In each Vivaldi profile: **File > Import Bookmarks and Settings… > HTML file**
 
 ### Where Vivaldi differs from Arc
 
-- **Spaces and profiles are two layers.** A **space** is a Vivaldi workspace: a group of tabs and pinned links inside one window. Once a profile has workspaces, a row of emoji tiles under the sidebar switches between them (click one, or **Cmd+Option+Left/Right** for the previous/next; **Ctrl+Cmd+N** makes one; right-click a tile to delete it). Each space lists only its own tabs and has its own Pinned folder, named after the workspace; favorites are shared. Spaces **share the profile's logins**, which Vivaldi does not separate. A **profile** is the real boundary: its own window, bookmarks, logins and extensions. Switch with the **round avatars in the bottom bar** (click one, **Cmd+Ctrl+1..9** for the nth, **Cmd+Ctrl+Left/Right** for the previous/next); the **+** creates a profile and right-clicking your own avatar opens Vivaldi's profile manager. Vivaldi's own use of Cmd+Option+arrows for switching tabs is given up for the spaces, and Ctrl+Tab still cycles tabs.
+- **Spaces and profiles are two layers.** A **space** is a Vivaldi workspace: a group of tabs and pinned links inside one window. Once a profile has workspaces, a row of emoji tiles under the sidebar switches between them (click one, or **Cmd+Option+Left/Right** for the previous/next; **Ctrl+Cmd+N** makes one; right-click a tile to delete it). Each space lists only its own tabs and has its own Pinned folder, named after the workspace; favorites are shared. Spaces **share the profile's logins**, which Vivaldi does not separate. A **profile** is the real boundary: its own window, bookmarks, logins and extensions. Switch with the **round avatars in the bottom bar** (click one, **Cmd+Ctrl+1..9** for the nth, **Cmd+Ctrl+Left/Right** for the previous/next); the **+** creates a profile and right-clicking your own avatar opens Vivaldi's profile manager. Vivaldi's own use of Cmd+Option+arrows for switching tabs is given up for the spaces, and Ctrl+Tab opens the tab switcher instead of cycling tabs.
 - **Links do not pick a space.** Arc can send a link to a given space; Vivaldi opens links from other apps in whichever profile was used last. On macOS the workaround is [Finicky](https://github.com/johnste/finicky), a tiny app that becomes your default browser and routes each link to a profile by domain:
   1. `brew install --cask finicky`, then set Finicky as the default browser in System Settings.
   2. Copy [templates/finicky.js](templates/finicky.js) to `~/.finicky.js` and edit it: one `handlers` entry per space, with the domains you want in it and the profile name as shown in Vivaldi's profile menu.
