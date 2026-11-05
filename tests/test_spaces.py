@@ -1,7 +1,11 @@
+import os
 import shutil
+import sys
 import unittest
 
 from jsrun import run_js
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
 def js(expr, **data):
@@ -84,6 +88,28 @@ class PreviousAndNext(unittest.TestCase):
     def test_cmd_option_arrows_belong_to_the_spaces_not_the_profiles(self):
         self.assertIsNone(self.path("alt+meta+right"))
         self.assertIsNone(self.path("alt+meta+left"))
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class WindowsProfileKeys(unittest.TestCase):
+    """On Windows, Win+Ctrl+arrows switch virtual desktops, so profiles use Ctrl+Alt+Shift."""
+    PROFILES = [profile("C", "/p/3"), profile("A", "/p/1"), profile("B", "/p/2", active=True)]
+
+    def path(self, combo):
+        import vivarc
+        return run_js("06-spaces.js", "spaces.pathForShortcut(profiles, combo)", _vm={"keys": vivarc.KEYS["win"]},
+                      profiles=self.PROFILES, combo=combo)
+
+    def test_ctrl_alt_shift_arrows_go_to_the_previous_and_next_profile(self):
+        self.assertEqual(self.path("ctrl+alt+shift+right"), "/p/3")
+        self.assertEqual(self.path("Shift+Ctrl+Alt+Left"), "/p/1")  # any order or case, as Vivaldi reports it
+
+    def test_ctrl_alt_shift_digits_open_the_nth_profile(self):
+        self.assertEqual(self.path("ctrl+alt+shift+1"), "/p/1")
+
+    def test_the_space_keys_and_the_mac_keys_do_nothing_here(self):
+        self.assertIsNone(self.path("ctrl+alt+right"))
+        self.assertIsNone(self.path("ctrl+meta+right"))
 
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")

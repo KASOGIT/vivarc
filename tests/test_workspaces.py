@@ -163,8 +163,13 @@ class CreateSpace(unittest.TestCase):
     def test_the_hint_names_the_key_the_install_binds_to_create_workspace(self):
         import vivarc
         names = {"ctrl": "Ctrl", "meta": "Cmd", "alt": "Option", "shift": "Shift"}
-        shown = "+".join(names.get(k, k.upper()) for k in vivarc.SPACE_KEYS["COMMAND_WORKSPACE_CREATE_NEW"].split("+"))
+        shown = "+".join(names.get(k, k.upper()) for k in vivarc.KEYS["mac"]["spaceNew"].split("+"))
         self.assertEqual(js("workspaces.CREATE_HINT"), f"Press {shown} to create a space")
+
+    def test_on_windows_the_hint_follows_the_keys_the_installer_passed(self):
+        import vivarc
+        hint = run_js("07-workspaces.js", "workspaces.CREATE_HINT", _vm={"keys": vivarc.KEYS["win"], "platform": "win"})
+        self.assertEqual(hint, "Press Ctrl+Alt+N to create a space")
 
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")

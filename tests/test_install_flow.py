@@ -9,13 +9,19 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import vivarc  # noqa: E402
+from platforms import WIN, fake_app, mac_only, windows_only  # noqa: E402
 
-REAL_DEFS = os.path.join(vivarc.DEFAULT_APP, vivarc.RESOURCES, "prefs_definitions.json")
 FAKE_DEFS = {"vivaldi": {"actions": {"default_mac": [{
     "COMMAND_NEW_TAB": {"shortcuts": ["meta+t"]},
     "COMMAND_SHOW_QUICK_COMMANDS": {"shortcuts": ["meta+t", "meta+e", "f2"]},
     "COMMAND_PAGE_COPY_URL": {"shortcuts": ["meta+c"]},
-}], "default": [{}], "default_linux": [{}]}}}
+}], "default": [{
+    "COMMAND_NEW_TAB": {"shortcuts": ["ctrl+t"]},
+    "COMMAND_SHOW_QUICK_COMMANDS": {"shortcuts": ["ctrl+e", "f2"]},
+    "COMMAND_COPY_SELECTION_TO_NOTE": {"shortcuts": ["ctrl+shift+c"]},
+}], "default_linux": [{}]}}}
+NATIVE_DEFS = FAKE_DEFS["vivaldi"]["actions"]["default" if WIN else "default_mac"]
+LAUNCHER = ".cmd" if WIN else ".command"
 
 
 class InstallFlow(unittest.TestCase):
@@ -24,9 +30,8 @@ class InstallFlow(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.tmp, True)
-        self.app = os.path.join(self.tmp, "Vivaldi.app")
-        res = os.path.join(self.app, vivarc.RESOURCES)
-        os.makedirs(res)
+        self.app, res = fake_app(self.tmp)
+        self.res = res
         with open(os.path.join(res, "prefs_definitions.json"), "w") as f:
             json.dump(FAKE_DEFS, f)
         with open(os.path.join(res, "window.html"), "w") as f:
@@ -43,11 +48,14 @@ class InstallFlow(unittest.TestCase):
             mock.patch.object(vivarc, "HOME_DIR", self.home),
             mock.patch.object(vivarc, "REMINDER_PLIST", os.path.join(self.tmp, "LaunchAgents", "reminder.plist")),
             mock.patch.object(vivarc, "launchctl"),
-            mock.patch.object(vivarc, "UPDATE_COMMAND", os.path.join(self.tmp, "home", "Update Vivarc.command")),
+            mock.patch.object(vivarc, "UPDATE_COMMAND", os.path.join(self.tmp, "home", "Update Vivarc" + LAUNCHER)),
             mock.patch.object(vivarc, "UPDATE_APP", os.path.join(self.tmp, "Applications", "Update Vivarc.app")),
             mock.patch.object(vivarc, "LEGACY_UPDATE_COMMAND", os.path.join(self.tmp, "Applications", "Update Vivarc.command")),
-            mock.patch.object(vivarc, "UNINSTALL_COMMAND", os.path.join(self.tmp, "home", "Uninstall Vivarc.command")),
+            mock.patch.object(vivarc, "UNINSTALL_COMMAND", os.path.join(self.tmp, "home", "Uninstall Vivarc" + LAUNCHER)),
             mock.patch.object(vivarc, "UNINSTALL_APP", os.path.join(self.tmp, "Applications", "Uninstall Vivarc.app")),
+            # Windows: no real Start Menu shortcuts or scheduled tasks from the tests
+            mock.patch.object(vivarc, "powershell", return_value=mock.Mock(returncode=0, stderr="")),
+            mock.patch.object(vivarc, "schtasks", return_value=mock.Mock(returncode=0, stdout="", stderr="")),
             mock.patch.object(vivarc, "vivaldi_running", return_value=False),
             mock.patch.object(vivarc, "app_version", return_value="9.9.9"),
             mock.patch.object(vivarc, "ask", return_value=None),
@@ -60,8 +68,12 @@ class InstallFlow(unittest.TestCase):
         vivarc.main(["--app", self.app, "--data-dir", self.data, *args])
 
     def prefs(self, name):
-        with open(os.path.join(self.data, name, "Preferences")) as f:
+        with open(os.path.join(self.data, name, "Preferences"), encoding="utf8") as f:
             return json.load(f)
+
+    def read(self, path):
+        with open(path, encoding="utf8") as f:
+            return f.read()
 
     def test_install_configures_every_profile_and_injects_the_js(self):
         self.run_cli("install", "--no-peek")
@@ -71,12 +83,10 @@ class InstallFlow(unittest.TestCase):
             self.assertNotIn("Spacer", vivaldi["toolbars"]["tabbar_before"])
             self.assertNotIn("appearance", vivaldi)
             self.assertEqual(vivaldi["actions"][0]["COMMAND_NEW_TAB"]["shortcuts"], [])
-        res = os.path.join(self.app, vivarc.RESOURCES)
-        with open(os.path.join(res, "window.html")) as f:
-            self.assertIn("vivarc.js", f.read())
-        with open(os.path.join(res, "vivarc.js")) as f:
-            bundle = f.read()
+        self.assertIn("vivarc.js", self.read(os.path.join(self.res, "window.html")))
+        bundle = self.read(os.path.join(self.res, "vivarc.js"))
         self.assertIn("[vivarc] core started", bundle)
+        self.assertIn(json.dumps(vivarc.KEYS[vivarc.PLATFORM]), bundle)  # the JS gets this platform's shortcuts
         self.assertFalse(os.path.exists(os.path.join(self.home, "css")))
 
     def test_running_install_twice_keeps_the_original_snapshot(self):
@@ -90,32 +100,25 @@ class InstallFlow(unittest.TestCase):
         self.run_cli("install", "--no-peek")
         self.run_cli("uninstall")
         self.assertEqual(self.prefs("Default"), before)
-        res = os.path.join(self.app, vivarc.RESOURCES)
-        with open(os.path.join(res, "window.html")) as f:
-            self.assertNotIn("vivarc", f.read())
-        self.assertFalse(os.path.exists(os.path.join(res, "vivarc.js")))
+        self.assertNotIn("vivarc", self.read(os.path.join(self.res, "window.html")))
+        self.assertFalse(os.path.exists(os.path.join(self.res, "vivarc.js")))
 
     def test_the_stylesheet_travels_inside_the_bundle(self):
         self.run_cli("install", "--no-peek")
-        res = os.path.join(self.app, vivarc.RESOURCES)
-        with open(os.path.join(res, "vivarc.js")) as f:
-            bundle = f.read()
-        with open(os.path.join(vivarc.HERE, "src", "css", "vivarc.css")) as f:
-            self.assertIn(json.dumps(f.read()), bundle)
+        bundle = self.read(os.path.join(self.res, "vivarc.js"))
+        self.assertIn(json.dumps(self.read(os.path.join(vivarc.HERE, "src", "css", "vivarc.css"))), bundle)
 
     def test_install_puts_the_guide_page_in_place_and_tells_the_js_its_url(self):
         self.run_cli("install", "--no-peek")
         page = os.path.join(self.home, "start", "index.html")
         self.assertTrue(os.path.exists(page))
-        res = os.path.join(self.app, vivarc.RESOURCES)
-        with open(os.path.join(res, "vivarc.js")) as f:
-            self.assertIn(json.dumps(pathlib.Path(page).as_uri()), f.read())
+        self.assertIn(json.dumps(pathlib.Path(page).as_uri()), self.read(os.path.join(self.res, "vivarc.js")))
 
     def test_uninstall_also_cleans_profiles_the_js_configured_on_its_own(self):
         self.run_cli("install", "--no-peek")
         # a profile created later and configured at runtime: Vivarc's keys, no snapshot
         os.makedirs(os.path.join(self.data, "Profile 2"))
-        configured, _ = vivarc.patch_preferences({}, [FAKE_DEFS["vivaldi"]["actions"]["default_mac"][0]])
+        configured, _ = vivarc.patch_preferences({}, [NATIVE_DEFS[0]])
         with open(os.path.join(self.data, "Profile 2", "Preferences"), "w") as f:
             json.dump(configured, f)
         with open(os.path.join(self.data, "Local State"), "w") as f:
@@ -150,16 +153,15 @@ class InstallFlow(unittest.TestCase):
     def test_apply_works_while_vivaldi_is_open_and_says_to_restart(self):
         with mock.patch.object(vivarc, "vivaldi_running", return_value=True):
             self.run_cli("apply")
-        res = os.path.join(self.app, vivarc.RESOURCES)
+        res = self.res
         self.assertTrue(os.path.exists(os.path.join(res, "vivarc.js")))
 
     def test_apply_overwrites_a_read_only_bundle_left_by_an_earlier_run(self):
         self.run_cli("install", "--no-peek")
-        bundle = os.path.join(self.app, vivarc.RESOURCES, "vivarc.js")
+        bundle = os.path.join(self.res, "vivarc.js")
         os.chmod(bundle, 0o444)
         self.run_cli("apply")
-        with open(bundle) as f:
-            self.assertIn("[vivarc] core started", f.read())
+        self.assertIn("[vivarc] core started", self.read(bundle))
 
     def test_install_leaves_a_double_clickable_update_script_and_uninstall_removes_it(self):
         self.run_cli("install", "--no-peek")
@@ -167,12 +169,14 @@ class InstallFlow(unittest.TestCase):
         self.run_cli("uninstall")
         self.assertFalse(os.path.exists(vivarc.UPDATE_COMMAND))
 
+    @mac_only
     def test_install_leaves_a_dockable_app_and_uninstall_removes_it(self):
         self.run_cli("install", "--no-peek")
         self.assertTrue(os.path.exists(os.path.join(vivarc.UPDATE_APP, "Contents", "Info.plist")))
         self.run_cli("uninstall")
         self.assertFalse(os.path.exists(vivarc.UPDATE_APP))
 
+    @mac_only
     def test_install_leaves_an_uninstall_app_that_runs_uninstall_and_uninstall_removes_it(self):
         self.run_cli("install", "--no-peek")
         self.assertTrue(os.path.exists(os.path.join(vivarc.UNINSTALL_APP, "Contents", "Info.plist")))
@@ -190,6 +194,7 @@ class InstallFlow(unittest.TestCase):
         self.run_cli("install", "--no-peek")
         self.assertFalse(os.path.exists(vivarc.LEGACY_UPDATE_COMMAND))
 
+    @mac_only
     def test_install_only_turns_the_reminder_on_when_the_user_says_yes(self):
         self.run_cli("install", "--no-peek")
         self.assertFalse(os.path.exists(vivarc.REMINDER_PLIST))
@@ -198,6 +203,22 @@ class InstallFlow(unittest.TestCase):
         self.assertTrue(os.path.exists(vivarc.REMINDER_PLIST))
         self.run_cli("uninstall")
         self.assertFalse(os.path.exists(vivarc.REMINDER_PLIST))
+
+    @windows_only
+    def test_windows_install_adds_start_menu_shortcuts_and_the_reapply_task_and_uninstall_removes_them(self):
+        self.run_cli("install", "--no-peek")
+        script = self.read(vivarc.UNINSTALL_COMMAND)
+        self.assertTrue(script.startswith("@echo off"))
+        self.assertIn(" uninstall", script)
+        shortcuts = [c.args[1]["VIVARC_LNK"] for c in vivarc.powershell.call_args_list]
+        self.assertEqual(shortcuts, [vivarc.UPDATE_APP, vivarc.UNINSTALL_APP])
+        created = [c.args for c in vivarc.schtasks.call_args_list if c.args[0] == "/Create"]
+        self.assertEqual(len(created), 1)
+        self.assertIn(vivarc.REMINDER_TASK, created[0])
+        self.assertIn("remind", created[0][-1])
+        self.run_cli("uninstall")
+        self.assertIn(("/Delete", "/F", "/TN", vivarc.REMINDER_TASK), [c.args for c in vivarc.schtasks.call_args_list])
+        self.assertFalse(os.path.exists(vivarc.UNINSTALL_COMMAND))
 
     def test_refuses_to_run_while_vivaldi_is_open(self):
         with mock.patch.object(vivarc, "vivaldi_running", return_value=True):

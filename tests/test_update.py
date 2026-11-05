@@ -11,6 +11,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import vivarc  # noqa: E402
+from platforms import WIN, mac_only  # noqa: E402
 
 
 class IsNewer(unittest.TestCase):
@@ -25,6 +26,7 @@ class IsNewer(unittest.TestCase):
         self.assertFalse(vivarc.is_newer("latest", "0.1.2"))
 
 
+@mac_only
 class UpdateCommandFile(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
@@ -77,9 +79,25 @@ class UpdateCommandFile(unittest.TestCase):
 
 
 class Replaced(Exception):
-    """os.execve never returns; the fake stops the run the same way."""
+    """run_instead never returns (os.execve, or sys.exit on Windows); the fake stops the run the same way."""
 
 
+class RunInstead(unittest.TestCase):
+    def test_windows_waits_for_the_program_and_exits_with_its_code(self):
+        with mock.patch.object(vivarc, "IS_WIN", True), \
+                mock.patch("subprocess.run", return_value=mock.Mock(returncode=4)) as run:
+            with self.assertRaises(SystemExit) as stop:
+                vivarc.run_instead("powershell", ["powershell", "-File", "x.ps1"], {"A": "1"})
+        self.assertEqual(stop.exception.code, 4)
+        run.assert_called_once_with(["powershell", "-File", "x.ps1"], env={"A": "1"})
+
+    def test_macos_replaces_the_process(self):
+        with mock.patch.object(vivarc, "IS_WIN", False), mock.patch("os.execve") as execve:
+            vivarc.run_instead("/bin/bash", ["/bin/bash", "install.sh"], {})
+        execve.assert_called_once_with("/bin/bash", ["/bin/bash", "install.sh"], {})
+
+
+@mac_only
 class UpdateApp(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
@@ -143,7 +161,7 @@ class Update(unittest.TestCase):
                 mock.patch.object(vivarc, "quit_vivaldi", side_effect=fake_quit), \
                 mock.patch.object(vivarc, "latest_release_tag", return_value=latest), \
                 mock.patch.object(vivarc, "cmd_install", side_effect=lambda a: calls["install"].append(a)), \
-                mock.patch("os.execve", side_effect=fake_execve), \
+                mock.patch.object(vivarc, "run_instead", side_effect=fake_execve), \
                 mock.patch("subprocess.run", side_effect=fake_git), \
                 redirect_stdout(out), redirect_stderr(io.StringIO()):
             try:
@@ -156,8 +174,12 @@ class Update(unittest.TestCase):
         calls, out = self.run_update(self.copy, "v9.0.0")
         self.assertEqual(calls["install"], [])
         (program, argv, env), = calls["execve"]
-        self.assertEqual(program, "/bin/bash")
-        self.assertEqual(argv[1], os.path.join(self.copy, "install.sh"))
+        if WIN:
+            self.assertEqual(program, "powershell")
+            self.assertIn(os.path.join(self.copy, "install.ps1"), argv)
+        else:
+            self.assertEqual(program, "/bin/bash")
+            self.assertEqual(argv[1], os.path.join(self.copy, "install.sh"))
         self.assertEqual(env["VIVARC_APP"], "/Apps/Vivaldi.app")
         self.assertEqual(env["VIVARC_DATA_DIR"], "/data")
         self.assertIn("9.0.0", out)

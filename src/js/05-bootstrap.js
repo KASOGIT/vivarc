@@ -1,20 +1,22 @@
 // Sets up a Vivaldi profile that the installer has not configured (for example one created later): tabs on
-// the left, Cmd+T freed for the command bar, Cmd+S for the sidebar, toolbar tidy-up. All of it applies live.
+// the left, Cmd+T (Ctrl+T on Windows) freed for the command bar, Cmd+S / Ctrl+S for the sidebar, toolbar tidy-up.
+// All of it applies live.
 (() => {
   const cfg = window.__vm.config;
   if (cfg.autoConfigureProfiles === false) return;
 
   const get = async (path) => (await vivaldi.prefs.get(path))?.value;
   const set = (path, value) => vivaldi.prefs.set({ path, value });
-  const FREED = "meta+t";
-  const COPY_URL = "shift+meta+c";
+  const K = window.__vm.keys;
+  const FREED = K.commandBar;
+  const COPY_URL = K.copyUrl;
 
   // Bump when the steps change: profiles already set up then run the (idempotent) steps once more.
-  const VERSION = 12;
-  const TOGGLE = "meta+s";
-  const PROFILE_KEYS = ["ctrl+meta+left", "ctrl+meta+right"]; // the profile switcher's previous/next, handled in 06-spaces.js
-  const SPACE_KEYS = { COMMAND_WORKSPACE_SWITCH_BACK_ORDER: "alt+meta+left", COMMAND_WORKSPACE_SWITCH_FORWARD_ORDER: "alt+meta+right",
-    COMMAND_WORKSPACE_CREATE_NEW: "ctrl+meta+n" }; // like Arc's spaces; Ctrl+Cmd+N opens Vivaldi's own Create Workspace dialog
+  const VERSION = 13;
+  const TOGGLE = K.toggleSidebar;
+  const PROFILE_KEYS = [K.profilePrev, K.profileNext]; // the profile switcher's previous/next, handled in 06-spaces.js
+  const SPACE_KEYS = { COMMAND_WORKSPACE_SWITCH_BACK_ORDER: K.spacePrev, COMMAND_WORKSPACE_SWITCH_FORWARD_ORDER: K.spaceNext,
+    COMMAND_WORKSPACE_CREATE_NEW: K.spaceNew }; // like Arc's spaces; "new" opens Vivaldi's own Create Workspace dialog
 
   // The address bar and navigation buttons live inside the sidebar; the top bar is hidden.
   const SIDEBAR_TOOLBAR = ["TabButton", "Extensions", "FlexibleSpacer", "Back", "Reload", "Forward", "AddressField"];
@@ -67,6 +69,9 @@
       cmd.shortcuts = cmd.shortcuts.filter((s) => s !== FREED);
     }
     const copy = command("COMMAND_PAGE_COPY_URL");
+    for (const [name, cmd] of Object.entries(table)) {
+      if (name !== "COMMAND_PAGE_COPY_URL" && Array.isArray(cmd?.shortcuts)) cmd.shortcuts = cmd.shortcuts.filter((s) => s !== COPY_URL);
+    }
     if (!copy.shortcuts.includes(COPY_URL)) copy.shortcuts.push(COPY_URL);
     command("COMMAND_SAVE_PAGE").shortcuts = command("COMMAND_SAVE_PAGE").shortcuts.filter((s) => s !== TOGGLE);
     command("COMMAND_TOGGLE_AUTO_HIDE_TAB_BAR").shortcuts = [TOGGLE];

@@ -102,7 +102,10 @@ def collect_icons(arc_user_data, wanted_origins):
     try:
         for db_path in glob.glob(os.path.join(arc_user_data, "*", "Favicons")):
             copy = os.path.join(tmp, re.sub(r"\W", "_", db_path) + ".db")
-            shutil.copy(db_path, copy)
+            try:
+                shutil.copy(db_path, copy)
+            except OSError:  # Windows locks the file while Arc is open: skip its icons rather than fail
+                continue
             db = sqlite3.connect(copy)
             try:
                 rows = db.execute(

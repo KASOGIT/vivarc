@@ -1,0 +1,24 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"  # the oldest we support: macOS's /usr/bin/python3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v

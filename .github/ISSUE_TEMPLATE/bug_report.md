@@ -13,6 +13,6 @@ labels: bug
 **Does it also happen in a brand-new Vivaldi profile?**
 
 **Environment**
-- macOS version:
+- OS and version (macOS 15.x, Windows 11...):
 - Vivaldi version:
 - Output of `./vivarc.py status`:

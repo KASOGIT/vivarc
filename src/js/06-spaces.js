@@ -7,7 +7,7 @@
     return hash;
   };
 
-  // A single profile needs no switcher. Chips are sorted by name so Cmd+Ctrl+N stays predictable.
+  // A single profile needs no switcher. Chips are sorted by name so the numbered shortcuts stay predictable.
   const profileChips = (profiles) => {
     const real = (profiles || []).filter((p) => !p.guest);
     if (real.length < 2) return [];
@@ -23,18 +23,21 @@
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
   };
 
-  // Cmd+Ctrl+Left/Right goes to the previous/next profile (wrapping).
-  // Cmd+Ctrl+1..9 opens the nth chip, unless it is the profile already open.
+  // The profile modifiers (Cmd+Ctrl on macOS, Ctrl+Alt+Shift on Windows) + Left/Right go to the previous/next
+  // profile (wrapping); + 1..9 opens the nth chip, unless it is the profile already open.
   const pathForShortcut = (profiles, combo) => {
-    const keys = String(combo).toLowerCase().split("+").map((s) => s.trim()).sort();
+    const split = (s) => String(s).toLowerCase().split("+").map((k) => k.trim()).filter(Boolean);
+    const mods = split(window.__vm.keys?.profileMods || "ctrl+meta");
+    const keys = split(combo);
     const chips = profileChips(profiles);
-    if (keys.length !== 3 || !keys.includes("ctrl") || !keys.includes("meta")) return null;
-    const digit = keys.find((k) => /^[1-9]$/.test(k));
+    const rest = keys.filter((k) => !mods.includes(k));
+    if (keys.length !== mods.length + 1 || rest.length !== 1) return null;
+    const digit = rest.find((k) => /^[1-9]$/.test(k));
     if (digit) {
       const chip = chips[Number(digit) - 1];
       return chip && !chip.active ? chip.path : null;
     }
-    const step = keys.includes("right") ? 1 : keys.includes("left") ? -1 : 0;
+    const step = rest[0] === "right" ? 1 : rest[0] === "left" ? -1 : 0;
     const at = chips.findIndex((c) => c.active);
     if (!step || chips.length < 2 || at === -1) return null;
     return chips[(at + step + chips.length) % chips.length].path;

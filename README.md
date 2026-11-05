@@ -2,12 +2,12 @@
 
 <p align="center">
   <b>Arc's sidebar and command bar, inside Vivaldi.</b><br>
-  Favorites, pinned folders and open tabs in one panel. A Cmd+T command bar with quick actions. A theme editor. One command to install, one to remove.
+  Favorites, pinned folders and open tabs in one panel. A Cmd+T (Ctrl+T on Windows) command bar with quick actions. A theme editor. One command to install, one to remove.
 </p>
 
 <p align="center">
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue"></a>
-  <img alt="macOS" src="https://img.shields.io/badge/platform-macOS-lightgrey">
+  <img alt="macOS and Windows" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey">
   <img alt="Vivaldi 8" src="https://img.shields.io/badge/Vivaldi-8.x-ef3939">
   <img alt="No dependencies" src="https://img.shields.io/badge/dependencies-none-brightgreen">
 </p>
@@ -21,6 +21,8 @@
 ## Install
 
 No developer experience needed. It takes about two minutes.
+
+### macOS
 
 1. Open **Terminal** (press Cmd+Space, type `Terminal`, press Enter).
 2. Paste this line and press Enter:
@@ -36,17 +38,35 @@ Every profile gets the sidebar, and profiles you create later set themselves up 
 
 Requires macOS and Vivaldi 8.x. If your Mac has never had developer tools, macOS shows an "Install" window the first time (it is Apple's free command line tools, which include Python); click Install, wait, then paste the line again.
 
+### Windows
+
+1. Vivarc needs Python 3. If you do not have it, open **PowerShell** (press Start, type `PowerShell`, press Enter) and run `winget install Python.Python.3.13`, then close and reopen PowerShell.
+2. Paste this line in PowerShell and press Enter:
+
+   ```powershell
+   irm https://raw.githubusercontent.com/KASOGIT/vivarc/main/install.ps1 | iex
+   ```
+
+3. Follow what it says. It offers to close Vivaldi for you.
+4. Open Vivaldi.
+
+Requires Windows 10 or 11 and Vivaldi 8.x installed the default way (for your user). Use a normal PowerShell window, not "Run as administrator". On Windows the shortcuts use **Ctrl** where macOS uses Cmd (see [Shortcuts](#what-you-get)).
+
+Every Vivaldi update on Windows installs into a new folder, which leaves Vivarc behind. The installer adds a small scheduled task (`Vivarc\Reapply`, every 30 minutes while you are logged in) that puts Vivarc back by itself and tells you to restart Vivaldi. Turn it off with `python ~\.vivarc\app\vivarc.py reminder off`.
+
 ### Troubleshooting
 
 - **"Operation not permitted" or "macOS blocked writing into Vivaldi.app":** switch on Terminal under System Settings > Privacy & Security > App Management, then paste the line again. **Do not use `sudo`**: it does not help and can leave files only root can change.
 - **Already used `sudo`?** Run `sudo chown -R "$(whoami)" ~/.vivarc` once, then paste the install line again (without `sudo`).
-- **"Vivaldi not found":** Vivarc looks in `/Applications/Vivaldi.app`. If yours is elsewhere, use the developer install below with `--app`.
+- **"Vivaldi not found":** Vivarc looks in `/Applications/Vivaldi.app` (Windows: `%LOCALAPPDATA%\Vivaldi\Application`, then `Program Files`). If yours is elsewhere, use the developer install below with `--app` (on Windows, the folder that contains `vivaldi.exe`, or `vivaldi.exe` itself; a portable copy without version folders works too). The Update and Uninstall launchers remember the `--app` and `--data-dir` you installed with.
+- **Windows: "Cannot write into ... Vivaldi" or "Python was not found":** Vivaldi installed for all users lives under Program Files, which needs an administrator terminal; reinstalling Vivaldi for your user only avoids that. "Python was not found" means only the Microsoft Store shortcut is there: install Python as in step 1.
 
 ### For developers
 
 ```sh
 git clone https://github.com/KASOGIT/vivarc.git && cd vivarc
 ./vivarc.py install       # also: apply, status, uninstall, import-arc
+# Windows: python vivarc.py install
 ```
 
 ## Update, uninstall or start fresh
@@ -72,6 +92,8 @@ python3 ~/.vivarc/app/vivarc.py status      # what is installed
 ```
 
 **Update reminder (optional).** The installer offers it. When a Vivaldi update removes Vivarc, or a new Vivarc release is out, a small dialog asks whether to update. Switch it on or off with `python3 ~/.vivarc/app/vivarc.py reminder on` (or `off`).
+
+**On Windows**, **Update Vivarc** and **Uninstall Vivarc** are in the Start Menu (type their name). They work as above. From PowerShell: `python ~\.vivarc\app\vivarc.py update` (or `uninstall`, `status`). After a Vivaldi update you normally do nothing: the scheduled task re-applies Vivarc and asks you to restart Vivaldi. It also asks before updating when a new Vivarc release is out.
 
 ## What you get
 
@@ -100,13 +122,18 @@ python3 ~/.vivarc/app/vivarc.py status      # what is installed
 
 **Shortcuts**
 
-| Keys | Does |
-|---|---|
-| Cmd+T | Command bar |
-| Cmd+S | Hide the sidebar, or show it again. While it is hidden, move the pointer to the left edge of the window and it slides back in. |
-| Cmd+Shift+C | Copy the page URL (with a toast) |
-| Cmd+L | Edit the address |
-| Cmd+E | Vivaldi's own Quick Commands |
+| macOS | Windows | Does |
+|---|---|---|
+| Cmd+T | Ctrl+T | Command bar |
+| Cmd+S | Ctrl+S | Hide the sidebar, or show it again. While it is hidden, move the pointer to the left edge of the window and it slides back in. |
+| Cmd+Shift+C | Ctrl+Shift+C | Copy the page URL (with a toast) |
+| Cmd+L | Ctrl+L | Edit the address |
+| Cmd+E | Ctrl+E | Vivaldi's own Quick Commands |
+| Cmd+Option+Left/Right | Ctrl+Alt+Left/Right | Previous/next space |
+| Ctrl+Cmd+N | Ctrl+Alt+N | New space |
+| Ctrl+Cmd+Left/Right, 1..9 | Ctrl+Alt+Shift+Left/Right, 1..9 | Previous/next profile, nth profile |
+
+On Windows, Win+Ctrl+arrows belong to virtual desktops, so the profile keys add Shift instead. Ctrl+T, Ctrl+S and Ctrl+Shift+C take over New Tab, Save Page and Copy to Note (the command bar opens a new tab; Save Page stays in Vivaldi's menu).
 
 **Also:** an optional link preview (Peek, by [PaRr0tBoY](https://github.com/PaRr0tBoY/Awesome-Vivaldi), downloaded from upstream and verified at install), and an importer for your Arc spaces and site icons.
 
@@ -118,6 +145,7 @@ python3 ~/.vivarc/app/vivarc.py status      # what is installed
 
 ```sh
 ./vivarc.py import-arc     # reads Arc's data (read only), writes ~/.vivarc/import/arc-<space>.html and your site icons
+# Windows: python vivarc.py import-arc  (close Arc first; pass --arc-dir if Arc's data is not found)
 ```
 
 In each Vivaldi profile: **File > Import Bookmarks and Settings… > HTML file**, pick the matching file. Quit Vivaldi and run `./vivarc.py apply` once to include the icons. Each Arc profile goes to a Vivaldi profile; its spaces become `Arc - <space>` folders, which a Vivaldi workspace with the same name picks up as that space's pinned links.
@@ -125,7 +153,7 @@ In each Vivaldi profile: **File > Import Bookmarks and Settings… > HTML file**
 ### Where Vivaldi differs from Arc
 
 - **Spaces and profiles are two layers.** A **space** is a Vivaldi workspace: a group of tabs and pinned links inside one window. Once a profile has workspaces, a row of emoji tiles under the sidebar switches between them (click one, or **Cmd+Option+Left/Right** for the previous/next; **Ctrl+Cmd+N** makes one; right-click a tile to delete it). Each space lists only its own tabs and has its own Pinned folder, named after the workspace; favorites are shared. Spaces **share the profile's logins**, which Vivaldi does not separate. A **profile** is the real boundary: its own window, bookmarks, logins and extensions. Switch with the **round avatars in the bottom bar** (click one, **Cmd+Ctrl+1..9** for the nth, **Cmd+Ctrl+Left/Right** for the previous/next); the **+** creates a profile and right-clicking your own avatar opens Vivaldi's profile manager. Vivaldi's own use of Cmd+Option+arrows for switching tabs is given up for the spaces, and Ctrl+Tab still cycles tabs.
-- **Links do not pick a space.** Arc can send a link to a given space; Vivaldi opens links from other apps in whichever profile was used last. The workaround is [Finicky](https://github.com/johnste/finicky), a tiny app that becomes your default browser and routes each link to a profile by domain:
+- **Links do not pick a space.** Arc can send a link to a given space; Vivaldi opens links from other apps in whichever profile was used last. On macOS the workaround is [Finicky](https://github.com/johnste/finicky), a tiny app that becomes your default browser and routes each link to a profile by domain:
   1. `brew install --cask finicky`, then set Finicky as the default browser in System Settings.
   2. Copy [templates/finicky.js](templates/finicky.js) to `~/.finicky.js` and edit it: one `handlers` entry per space, with the domains you want in it and the profile name as shown in Vivaldi's profile menu.
 - **Not built yet:** Boosts, automatic archiving of old tabs, and Arc's share links.

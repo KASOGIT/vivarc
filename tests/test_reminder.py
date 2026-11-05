@@ -11,10 +11,16 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import vivarc  # noqa: E402
+from platforms import posix_only  # noqa: E402
 
 
 class ReminderCase(unittest.TestCase):
+    """The macOS reminder (a question, then the update script). The Windows silent re-apply is in test_windows.py."""
+
     def setUp(self):
+        p = mock.patch.object(vivarc, "IS_WIN", False)
+        p.start()
+        self.addCleanup(p.stop)
         self.tmp = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.tmp, True)
         self.app = os.path.join(self.tmp, "Vivaldi.app")
@@ -92,7 +98,7 @@ class Remind(ReminderCase):
     def test_asks_again_the_next_day(self):
         self.inject(html=False)
         self.remind(False)
-        with open(os.path.join(self.home, "reminded")) as f:
+        with open(os.path.join(self.home, "reminded"), encoding="utf8") as f:
             asked_at = float(f.read())
         with mock.patch("time.time", return_value=asked_at + 24 * 3600):
             asked, _ = self.remind(False)
@@ -139,6 +145,7 @@ class NewRelease(ReminderCase):
         self.assertIn("Vivaldi was updated", asked[0])
 
 
+@posix_only
 class ReminderAgent(ReminderCase):
     def test_on_writes_a_launch_agent_that_runs_remind_and_loads_it(self):
         vivarc.enable_reminder(self.app)
