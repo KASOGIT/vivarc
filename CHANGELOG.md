@@ -3,6 +3,7 @@
 ## Unreleased
 - Clicking a pinned folder twice quickly only opens and closes it. Before, the double-click reached Vivaldi's tab bar, which opened a new tab and the command bar.
 - A click on a space tile or a sidebar row no longer gets lost while pages load: the sidebar redraws only for its own window's tabs, and waits while a mouse button is held.
+- Fix: a tab could vanish from the sidebar when Favorites held a folder with a link to the same site. Links inside such folders are not drawn, but they claimed the tab; now only the favorites and pinned links the sidebar shows do.
 
 ## 0.1.22 - 2026-11-06
 - **Archive inactive tabs, like Arc** (off by default; turn it on in Vivarc Settings). A tab you have not opened for the chosen time, 12 hours by default and from 1 hour to 7 days, is closed. Tabs bound to a pinned link or favorite, Vivaldi-pinned tabs, split views, tabs playing sound and the tab you are on are never closed. Bring one back with Reopen Closed Tab. It only runs while a Vivaldi window is open, and each window looks after its own tabs.
