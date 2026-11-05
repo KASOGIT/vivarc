@@ -9,7 +9,7 @@
 - Site icons show up straight away for pins, favorites and tabs restored after a restart: when no open tab has provided one yet, Vivarc takes it from Vivaldi's own favicon database (filled by browsing and Sync). Before, these showed a letter until the site had been opened once.
 - Files Vivarc writes now always use Unix line endings, and the repository has a `.gitattributes`, so a checkout made on Windows keeps `install.sh` working.
 - Tests run on macOS and Windows in GitHub Actions.
-- Windows: a Vivaldi in a custom place keeps working after an update, because the Update and Uninstall launchers pass along the `--app` and `--data-dir` it was installed with. `--app` also accepts `vivaldi.exe`, and a portable copy without version folders is found.
+- Windows: a Vivaldi in a custom place keeps working after an update, because the Update and Uninstall launchers pass along the `--app` and `--data-dir` it was installed with. `--app` also accepts `vivaldi.exe`, and a portable copy without version folders is found. Thanks @saurL (#58), whose Windows work inspired these.
 
 ## 0.1.17 - 2026-11-05
 - Fix: after updating to Vivaldi 8.3, the profile chips floated at the top right of the empty space under the tabs. They are back at the bottom-left of the sidebar with the Downloads button at the bottom-right.
