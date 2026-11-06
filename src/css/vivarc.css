@@ -12,7 +12,7 @@
 #browser.vm-on #tabs-tabbar-container .button-toolbar.newtab { display: none !important; }
 /* Vivaldi lets the side tab bar shrink to a few pixels; the sidebar is unusable below this width */
 #browser.vm-on #tabs-tabbar-container:is(.left, .right) { min-width: 220px; }
-#browser.vm-on #tabs-container > .vm-collapsed:not(:focus-within) {
+#browser.vm-on:not(.vm-url-bar) #tabs-container > .vm-collapsed:not(:focus-within) {
   height: 0 !important;
   min-height: 0 !important;
   margin: 0 !important;
@@ -22,8 +22,9 @@
 }
 
 /* URL bar: collapsed until focused (Cmd+L), then floats over the sidebar. It also floats while one of its
-   popups is open: Vivaldi puts site permission requests (camera, microphone...) there, and they would be invisible. */
-#browser.vm-on #tabs-tabbar-container .UrlBar-AddressField:not(:focus-within, :has(.addressfield-popup-container)) {
+   popups is open: Vivaldi puts site permission requests (camera, microphone...) there, and they would be invisible.
+   With the "URL bar" setting (vm-url-bar) it always shows at the top of the sidebar, under the navigation buttons. */
+#browser.vm-on:not(.vm-url-bar) #tabs-tabbar-container .UrlBar-AddressField:not(:focus-within, :has(.addressfield-popup-container)) {
   height: 0 !important;
   min-height: 0 !important;
   margin: 0 !important;
@@ -33,7 +34,7 @@
   opacity: 0;
   pointer-events: none;
 }
-#browser.vm-on #tabs-tabbar-container .UrlBar-AddressField:is(:focus-within, :has(.addressfield-popup-container)) {
+#browser.vm-on:not(.vm-url-bar) #tabs-tabbar-container .UrlBar-AddressField:is(:focus-within, :has(.addressfield-popup-container)) {
   position: absolute;
   z-index: 100;
   top: 8px;
@@ -41,6 +42,8 @@
   right: 8px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
+
+#browser.vm-on.vm-url-bar #tabs-tabbar-container .UrlBar-AddressField { margin-bottom: 8px; }
 
 #vm-panel {
   flex: 0 1 auto;
