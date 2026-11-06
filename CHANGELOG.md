@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Archive inactive tabs, like Arc** (off by default; turn it on in Vivarc Settings). A tab you have not opened for the chosen time, 12 hours by default and from 1 hour to 7 days, is closed. Tabs bound to a pinned link or favorite, Vivaldi-pinned tabs, split views, tabs playing sound and the tab you are on are never closed. Bring one back with Reopen Closed Tab. It only runs while a Vivaldi window is open, and each window looks after its own tabs.
+
 ## 0.1.21 - 2026-11-05
 - **Ctrl+Tab switcher, like Arc's.** Hold Ctrl and press Tab to open a row of your five latest tabs with thumbnails; Tab or Shift+Tab (or the arrow keys) move through it, and holding Tab keeps moving faster and faster. Let go of Ctrl to switch. A quick Ctrl+Tab goes straight to the previous tab. A tab you open or focus takes the first place and the oldest drops out. Ctrl+Tab and Ctrl+Shift+Tab are taken from Vivaldi's own tab cycling; Vivaldi reads shortcuts at launch, so a profile needs one restart after it is updated.
 
