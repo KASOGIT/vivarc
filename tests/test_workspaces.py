@@ -210,6 +210,28 @@ class DeleteSpace(unittest.TestCase):
         self.assertEqual(js("workspaces.removalLabel('Work', 1)"), "Delete \u201cWork\u201d and close its 1 tab")
         self.assertEqual(js("workspaces.removalLabel('Work', 0)"), "Delete \u201cWork\u201d")
 
+class CreateSpaceDialog(unittest.TestCase):
+    def test_opens_native_dialog_in_the_requested_window(self):
+        fake = DeleteSpace.FAKE.replace("removeWorkspace", "showWorkspaceDialog")
+        out = js("(() => {" + fake + "const create = workspaces.findCreator(chunks); create(7); return calls; })()")
+        self.assertEqual(out, [[7, {"createInBackground": False}]])
+
+    def test_missing_native_api_returns_no_creator(self):
+        self.assertIsNone(js("workspaces.findCreator(undefined)"))
+
+
+class SwitchSpace(unittest.TestCase):
+    def test_switches_to_new_empty_workspace_through_native_action(self):
+        fake = DeleteSpace.FAKE.replace("removeWorkspace", "setActiveWorkspace")
+        self.assertEqual(js("(() => {" + fake + "workspaces.findSwitcher(chunks)(7, 42); return calls; })()"), [[7, 42]])
+
+    def test_home_uses_native_undefined_workspace_id(self):
+        fake = DeleteSpace.FAKE.replace("removeWorkspace", "setActiveWorkspace")
+        self.assertEqual(js("(() => {" + fake + "workspaces.findSwitcher(chunks)(7, 0); return calls; })()"), [[7, None]])
+
+    def test_no_switcher_when_native_modules_are_missing(self):
+        self.assertIsNone(js("workspaces.findSwitcher(undefined)"))
+
 
 if __name__ == "__main__":
     unittest.main()

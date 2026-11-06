@@ -442,9 +442,18 @@
     if (activeHistory.length > 6) activeHistory.shift();
   });
 
-  chrome.tabs.onCreated.addListener((tab) => {
+  chrome.tabs.onCreated.addListener(async (tab) => {
     if (Date.now() - startedAt < 5000 || !isBlank(tab) || tab.active === false) return;
     const previous = activeHistory.filter((id) => id !== tab.id).pop();
+    // The first tab of an empty workspace must not reactivate a different workspace.
+    const workspaceOf = (value) => {
+      try { return Number(JSON.parse(value.vivExtData || "{}").workspaceId) || 0; }
+      catch (_) { return 0; }
+    };
+    if (previous != null) {
+      const prior = await chrome.tabs.get(previous).catch(() => null);
+      if (!prior || workspaceOf(prior) !== workspaceOf(tab)) return;
+    } else if (workspaceOf(tab)) return;
     open(tab.id);
     if (previous != null) {
       setTimeout(() => {

@@ -598,10 +598,17 @@
 
   // ---- space bar: Vivaldi workspaces as Arc-style spaces ----
   const switchSpace = async (item) => {
-    if (item.id === state.active) return;
-    const tab = spacesOf.recentTab(state.allTabs, item.id);
-    if (tab) await chrome.tabs.update(tab.id, { active: true });
-    else await chrome.tabs.create({ active: true, vivExtData: JSON.stringify({ workspaceId: item.id }) });
+    try {
+      const activate = spacesOf.findSwitcher(window.webpackChunkgapp_browser_react) ||
+        spacesOf.findSwitcher(chrome.extension.getBackgroundPage?.()?.webpackChunkgapp_browser_react);
+      if (!activate) throw new Error("Native workspace switching is unavailable");
+      const win = await chrome.windows.getCurrent();
+      await activate(win.id, item.id);
+      refresh(false);
+    } catch (error) {
+      console.warn("[vivarc] switch space:", error);
+      window.dispatchEvent(new CustomEvent("vm-toast", { detail: "Could not switch space. Use Vivaldi's workspace shortcut." }));
+    }
   };
 
   const spacePill = (item) => {
@@ -614,18 +621,32 @@
 
   const confirmDeleteSpace = (item, event) => {
     const label = spacesOf.removalLabel(item.name, spacesOf.tabsIn(state.allTabs, item.id).length);
-    const at = { clientX: event.clientX, clientY: event.clientY, preventDefault() {}, stopPropagation() {} };
-    showMenu(at, [[label, () => deleteSpace(item), true], ["Cancel", () => {}]]);
+    showMenu(event, [[label, () => deleteSpace(item), true], ["Cancel", () => {}]]);
   };
 
   const deleteSpace = async (item) => {
-    const remove = spacesOf.findRemover(chrome.extension.getBackgroundPage?.()?.webpackChunkgapp_browser_react);
+    const remove = spacesOf.findRemover(window.webpackChunkgapp_browser_react) ||
+      spacesOf.findRemover(chrome.extension.getBackgroundPage?.()?.webpackChunkgapp_browser_react);
     if (!remove) {
       window.dispatchEvent(new CustomEvent("vm-toast", { detail: "Could not delete the space. Use Vivaldi's Workspaces button." }));
       return;
     }
-    await remove(window.vivaldiWindowId, item.id);
+    const win = await chrome.windows.getCurrent();
+    await remove(win.id, item.id);
     refresh(false);
+  };
+
+  const openCreateSpaceDialog = async () => {
+    try {
+      const create = spacesOf.findCreator(window.webpackChunkgapp_browser_react) ||
+        spacesOf.findCreator(chrome.extension.getBackgroundPage?.()?.webpackChunkgapp_browser_react);
+      if (!create) throw new Error("Workspace dialog unavailable");
+      const win = await chrome.windows.getCurrent();
+      await create(win.id);
+    } catch (error) {
+      console.warn("[vivarc] create space:", error);
+      window.dispatchEvent(new CustomEvent("vm-toast", { detail: spacesOf.CREATE_HINT }));
+    }
   };
 
   const spaceBar = () => {
@@ -633,8 +654,8 @@
     if (!items.length) return null;
     const bar = el("div", "vm-space-bar");
     const plus = el("div", "vm-space-pill vm-space-plus", "+");
-    plus.title = "New space";
-    plus.addEventListener("click", () => window.dispatchEvent(new CustomEvent("vm-toast", { detail: spacesOf.CREATE_HINT })));
+    plus.title = "Create a new space";
+    plus.addEventListener("click", openCreateSpaceDialog);
     bar.append(...items.map(spacePill), plus);
     return bar;
   };
