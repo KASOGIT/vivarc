@@ -527,6 +527,33 @@
   background-color: var(--colorHighlightBg, #7b8cff);
 }
 #vm-panel .vm-split-mark { flex: none; opacity: 0.55; font-size: 14px; }
+#vm-panel .vm-sound {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  opacity: 0.75;
+  cursor: pointer;
+}
+#vm-panel .vm-sound svg { width: 15px; height: 15px; }
+#vm-panel .vm-sound.muted { opacity: 0.5; }
+#vm-panel .vm-sound:hover { opacity: 1; background-color: color-mix(in srgb, var(--colorFg) 18%, transparent); }
+#vm-panel .vm-fav .vm-sound {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--colorBg, #222) 80%, transparent);
+}
+#vm-panel .vm-fav .vm-sound svg { width: 11px; height: 11px; }
+#vm-panel .vm-fav .vm-sound:hover { background-color: color-mix(in srgb, var(--colorBg, #222) 55%, var(--colorFg) 25%); }
+/* Pressing the badge mutes the tab, not the tile: the tile does not play its press animation */
+#browser.vm-on #vm-panel .vm-fav:has(.vm-sound:active) { transform: none; }
 
 #browser.vm-on .vm-spaces { flex: none; display: flex; align-items: center; gap: 7px; margin-right: 8px; }
 #browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after:has(> .vm-spaces) {
