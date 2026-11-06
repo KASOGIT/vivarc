@@ -62,9 +62,8 @@
     return JSON.stringify({ ...data, workspaceId: activeSpace });
   };
 
-  // A mod can neither create a workspace (Vivaldi reads its list once) nor press a shortcut for the user: events a
-  // mod dispatches never reach Vivaldi's shortcut handler. So the install binds "Create New Workspace" to this chord,
-  // and the + tile and the command bar tell the user to press it.
+  // Keep the native shortcut as a fallback when Vivaldi's internal dialog action
+  // is unavailable. Synthetic keyboard events do not reach its shortcut handler.
   const CREATE_KEY = window.__vm.keys?.spaceNew || "ctrl+meta+n";
   const KEY_NAMES = window.__vm.platform === "win" ? { ctrl: "Ctrl", meta: "Win", alt: "Alt", shift: "Shift" }
     : { ctrl: "Ctrl", meta: "Cmd", alt: "Option", shift: "Shift" };
@@ -93,8 +92,45 @@
     return null;
   };
 
+  // Reuse Vivaldi's own dialog so naming, icons and workspace creation remain native.
+  const findCreator = (chunks) => {
+    try {
+      let load;
+      chunks.push([[Symbol("vivarc-create-space")], {}, (require) => { load = require; }]);
+      for (const [id, factory] of Object.entries(load?.m || {})) {
+        if (!String(factory).includes("showWorkspaceDialog(")) continue;
+        let exported;
+        try { exported = load(id); } catch (_) { continue; }
+        for (const manager of Object.values(exported || {})) {
+          if (typeof manager?.showWorkspaceDialog === "function") {
+            return (windowId) => manager.showWorkspaceDialog(windowId, { createInBackground: false });
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  };
+
+  const findSwitcher = (chunks) => {
+    try {
+      let load;
+      chunks.push([[Symbol("vivarc-switch-space")], {}, (require) => { load = require; }]);
+      for (const [id, factory] of Object.entries(load?.m || {})) {
+        if (!String(factory).includes("setActiveWorkspace")) continue;
+        let exported;
+        try { exported = load(id); } catch (_) { continue; }
+        for (const manager of Object.values(exported || {})) {
+          if (typeof manager?.setActiveWorkspace === "function") {
+            return (windowId, workspaceId) => manager.setActiveWorkspace(windowId, workspaceId || undefined);
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  };
+
   const removalLabel = (name, tabCount) =>
     `Delete \u201c${name}\u201d${tabCount ? ` and close its ${tabCount} ${tabCount === 1 ? "tab" : "tabs"}` : ""}`;
 
-  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, recentTab, label, assign, stamp, findRemover, removalLabel, CREATE_HINT, CREATE_LABEL };
+  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, recentTab, label, assign, stamp, findRemover, findCreator, findSwitcher, removalLabel, CREATE_HINT, CREATE_LABEL };
 })();
