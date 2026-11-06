@@ -90,13 +90,15 @@
 #vm-panel .vm-fav .vm-ico { width: 24px; height: 24px; border-radius: 6px; }
 
 #vm-panel .vm-space-bar {
+  overflow-x: auto;
   flex: none;
   display: flex;
-  justify-content: center;
+  justify-content: safe center;
   gap: 6px;
   padding: 8px 0 2px;
 }
 #vm-panel .vm-space-pill {
+  flex: 0 0 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -705,3 +707,46 @@
 .vm-set-value { margin-left: 4px; font-weight: 500; opacity: 0.6; font-variant-numeric: tabular-nums; }
 .vm-set-slider { width: 100%; margin: 8px 0 0; accent-color: var(--colorHighlightBg, #6b63a0); }
 .vm-set-ends { display: flex; justify-content: space-between; margin-top: 2px; opacity: 0.5; font-size: 12px; }
+
+/* Keep the space-creation icon plain, including with Liquid Glass enabled. */
+#browser.vm-on #vm-panel .vm-space-bar .vm-space-plus {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+/* Workspace glyphs stay visible without the letter tiles. */
+#browser.vm-on #vm-panel .vm-space-bar .vm-space-pill {
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  font-size: 20px;
+}
+#vm-panel .vm-workspace-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  background: currentColor;
+  mask-size: contain;
+  mask-position: center;
+  mask-repeat: no-repeat;
+}
+#vm-panel .vm-space-pill.active { border-bottom: 2px solid var(--colorHighlightBg, #7b8cff) !important; }
+#vm-panel .vm-space-pill:focus-visible { outline: 2px solid var(--colorHighlightBg, #7b8cff); }
+.vm-space-tooltip {
+  position: fixed;
+  z-index: 100002;
+  max-width: min(220px, calc(100vw - 16px));
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: var(--colorBg, #25252b);
+  color: var(--colorFg, #f2f2f5);
+  box-shadow: 0 3px 12px rgb(0 0 0 / 25%);
+  font: 12px system-ui, sans-serif;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}

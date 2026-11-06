@@ -604,11 +604,36 @@
     else await chrome.tabs.create({ active: true, vivExtData: JSON.stringify({ workspaceId: item.id }) });
   };
 
+  let spaceTooltip = null;
+  const hideSpaceTooltip = () => { spaceTooltip?.remove(); spaceTooltip = null; };
   const spacePill = (item) => {
-    const pill = el("div", `vm-space-pill${item.id === state.active ? " active" : ""}`, item.emoji || item.name.trim().charAt(0).toUpperCase() || "?");
-    pill.title = item.name;
-    pill.addEventListener("click", () => switchSpace(item));
-    if (item.id) pill.addEventListener("contextmenu", (e) => showMenu(e, [["Delete Space…", () => confirmDeleteSpace(item, e), true]]));
+    const pill = el("button", `vm-space-pill${item.id === state.active ? " active" : ""}`);
+    pill.type = "button";
+    pill.setAttribute("aria-label", item.name);
+    pill.setAttribute("aria-pressed", String(item.id === state.active));
+    if (item.emoji) pill.textContent = item.emoji;
+    else if (typeof item.icon === "string" && item.icon.trim().startsWith("<svg")) {
+      // Render the native SVG as a mask: no HTML injection, and it follows the theme.
+      const icon = el("span", "vm-workspace-icon");
+      icon.style.maskImage = `url("data:image/svg+xml,${encodeURIComponent(item.icon)}")`;
+      pill.append(icon);
+    } else pill.textContent = Array.from((item.name || "").trim())[0]?.toLocaleUpperCase() || "?";
+    const showName = () => {
+      hideSpaceTooltip();
+      spaceTooltip = el("div", "vm-space-tooltip", item.name);
+      spaceTooltip.setAttribute("role", "tooltip");
+      document.body.append(spaceTooltip);
+      const rect = pill.getBoundingClientRect();
+      const width = spaceTooltip.getBoundingClientRect().width;
+      spaceTooltip.style.left = `${Math.max(8, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 8))}px`;
+      spaceTooltip.style.bottom = `${window.innerHeight - rect.top + 8}px`;
+    };
+    pill.addEventListener("mouseenter", showName);
+    pill.addEventListener("focus", showName);
+    pill.addEventListener("mouseleave", hideSpaceTooltip);
+    pill.addEventListener("blur", hideSpaceTooltip);
+    pill.addEventListener("click", () => { hideSpaceTooltip(); switchSpace(item); });
+    if (item.id) pill.addEventListener("contextmenu", (e) => { hideSpaceTooltip(); showMenu(e, [["Delete Space…", () => confirmDeleteSpace(item, e), true]]); });
     return pill;
   };
 
@@ -630,7 +655,6 @@
 
   const spaceBar = () => {
     const items = spacesOf.items(state.workspaces, state.defaultSpace ? spacesOf.label(state.defaultSpace) : "Home");
-    if (!items.length) return null;
     const bar = el("div", "vm-space-bar");
     const plus = el("div", "vm-space-pill vm-space-plus", "+");
     plus.title = "New space";
@@ -648,6 +672,7 @@
 
   const render = () => {
     if (!panel) return;
+    hideSpaceTooltip();
     const scroll = panel.querySelector(".vm-scroll")?.scrollTop ?? 0;
     const body = el("div", "vm-scroll");
     const favLeaves = state.favs ? state.favs.children.filter((c) => !c.children) : [];
@@ -950,7 +975,7 @@
       chrome.tabs[ev]?.addListener(() => refresh(false));
     }
     setInterval(async () => {
-      const brief = (list) => JSON.stringify(list.map((w) => [w.id, w.name, w.emoji]));
+      const brief = (list) => JSON.stringify(list.map((w) => [w.id, w.name, w.emoji, w.icon]));
       if (brief(await readWorkspaces()) !== brief(state.workspaces)) refresh(false);
     }, 3000);
     try {
