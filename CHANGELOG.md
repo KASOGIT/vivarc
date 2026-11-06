@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.22 - 2026-11-06
 - **Archive inactive tabs, like Arc** (off by default; turn it on in Vivarc Settings). A tab you have not opened for the chosen time, 12 hours by default and from 1 hour to 7 days, is closed. Tabs bound to a pinned link or favorite, Vivaldi-pinned tabs, split views, tabs playing sound and the tab you are on are never closed. Bring one back with Reopen Closed Tab. It only runs while a Vivaldi window is open, and each window looks after its own tabs.
 
 ## 0.1.21 - 2026-11-05
