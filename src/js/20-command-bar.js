@@ -401,9 +401,19 @@
     autoCompleted = e.key.length === 1 && !e.metaKey && !e.ctrlKey;
   };
 
-  const open = (tabId) => {
-    if (!window.__vm.cssLoaded) return;
-    if (bar) { targetTab = tabId; return; }
+  const open = async (tabId, tabWindowId) => {
+    if (!window.__vm.cssLoaded || window.__vm.settings.isOpen?.()) return false;
+    try {
+      const win = await chrome.windows.getCurrent();
+      const kind = win.vivExtData ? JSON.parse(win.vivExtData).windowType : null;
+      if (win.type !== "normal" || (kind && kind !== "normal") || win.focused === false ||
+          (tabWindowId != null && tabWindowId !== win.id)) return false;
+    } catch (error) {
+      console.warn("[vivarc] cannot determine command bar window:", error);
+      return false;
+    }
+    if (!window.__vm.cssLoaded || window.__vm.settings.isOpen?.()) return false;
+    if (bar) { targetTab = tabId; return true; }
     targetTab = tabId;
     mode = null;
     bar = el("div");
@@ -431,6 +441,7 @@
     setTimeout(focus, 250);
     compute();
     window.dispatchEvent(new CustomEvent("vm-command-bar-opened"));
+    return true;
   };
 
   window.addEventListener("vm-open-command-bar", () => open(null));
@@ -442,10 +453,10 @@
     if (activeHistory.length > 6) activeHistory.shift();
   });
 
-  chrome.tabs.onCreated.addListener((tab) => {
+  chrome.tabs.onCreated.addListener(async (tab) => {
     if (Date.now() - startedAt < 5000 || !isBlank(tab) || tab.active === false) return;
     const previous = activeHistory.filter((id) => id !== tab.id).pop();
-    open(tab.id);
+    if (!(await open(tab.id, tab.windowId))) return;
     if (previous != null) {
       setTimeout(() => {
         if (bar && targetTab === tab.id) {

@@ -2,6 +2,7 @@
 (() => {
   const { settings } = window.__vm;
   let overlay = null;
+  settings.isOpen = () => !!overlay;
   let unsubs = [];
 
   const el = (tag, cls, text) => {
