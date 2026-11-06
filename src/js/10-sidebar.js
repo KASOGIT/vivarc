@@ -883,10 +883,19 @@
   }
 
   // ---- placement ----
+  const guardedSidebars = new WeakSet();
   const place = () => {
     const container = document.querySelector("#tabs-container.left, #tabs-container.right");
     const strip = container?.querySelector(".tab-strip");
     if (!strip) return;
+    const sidebar = container.closest("#tabs-tabbar-container");
+    if (sidebar && !guardedSidebars.has(sidebar)) {
+      // Vivaldi delegates double-clicks to its native tab-bar handler, which
+      // creates a blank tab even when a Vivarc control was clicked. Stop only
+      // propagation, preserving text selection and the controls' click events.
+      sidebar.addEventListener("dblclick", (event) => event.stopPropagation());
+      guardedSidebars.add(sidebar);
+    }
     let anchor = strip;
     while (anchor.parentElement !== container) anchor = anchor.parentElement;
     if (!panel) {
