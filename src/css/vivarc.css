@@ -42,8 +42,29 @@
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
+/* Allocate the sidebar height once: tabs scroll, footer controls never move. */
+#browser.vm-on #tabs-tabbar-container:is(.left, .right) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+#browser.vm-on #tabs-container:is(.left, .right) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  height: auto !important;
+  overflow: hidden;
+}
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-before,
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after {
+  flex: 0 0 auto;
+}
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after {
+  margin-top: auto;
+}
 #vm-panel {
-  flex: 0 1 auto;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -375,9 +396,9 @@
 
 /* Bottom toolbar (profile button): shorter, content centred so it sits lower */
 #browser.vm-on.vm-compact-bottom #tabs-tabbar-container .toolbar-tabbar-after {
-  height: 21px !important;
-  min-height: 0 !important;
-  padding-bottom: 0 !important;
+  height: auto !important;
+  min-height: 40px !important;
+  padding-block: 4px !important;
   align-items: center !important;
 }
 #browser.vm-on.vm-compact-bottom #tabs-tabbar-container .toolbar-tabbar-after .button-toolbar { padding-bottom: 0 !important; }
@@ -532,7 +553,7 @@
 #browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after:has(> .vm-spaces) {
   flex-direction: row !important;
   flex-wrap: nowrap !important;
-  align-items: flex-end !important;
+  align-items: center !important;
   justify-content: flex-start !important;
 }
 #browser.vm-on .toolbar-tabbar-after:has(> .vm-spaces) > .tabbar-nested-buttons { width: auto !important; flex: none; }
@@ -542,7 +563,7 @@
   width: auto !important;
   min-width: 0 !important;
 }
-#browser.vm-on .toolbar-tabbar-after > .vm-spaces { margin-bottom: 6px; }
+#browser.vm-on .toolbar-tabbar-after > .vm-spaces { margin-block: 0; }
 #browser.vm-on .vm-space-chip {
   display: flex;
   align-items: center;
@@ -705,3 +726,43 @@
 .vm-set-value { margin-left: 4px; font-weight: 500; opacity: 0.6; font-variant-numeric: tabular-nums; }
 .vm-set-slider { width: 100%; margin: 8px 0 0; accent-color: var(--colorHighlightBg, #6b63a0); }
 .vm-set-ends { display: flex; justify-content: space-between; margin-top: 2px; opacity: 0.5; font-size: 12px; }
+
+/* Vivaldi's size container and full-width flexible spacers otherwise collapse
+   the footer or push its children onto rows outside its allocated height. */
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after {
+  container-type: normal !important;
+  justify-content: space-between !important;
+  display: flex;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  height: auto;
+  min-height: 40px;
+  min-width: 0;
+  padding-block: 4px;
+  flex-shrink: 0;
+  align-items: center !important;
+}
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after > .vm-spaces {
+  margin-block: 0;
+}
+/* Native flexible spacers center the account button even in a full-width footer. */
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after > .toolbar-spacer-flexible {
+  display: none !important;
+}
+
+/* Native toolbar buttons and profile chips share the same vertical center. */
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after > .button-toolbar,
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after > .vm-spaces {
+  align-self: center;
+  margin-block: 0 !important;
+}
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after > .button-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: 0 !important;
+}

@@ -4,7 +4,6 @@
 (() => {
   const cfg = window.__vm.config;
   const BLANK = /^(chrome|vivaldi):\/\/(newtab|vivaldi-webui\/startpage)/;
-  const bottomToolbar = () => (window.__vm.settings.get("compactBottomBar") ? 35 : 64);
 
   const store = window.__vm.store;
   const openFolders = new Set();
@@ -640,12 +639,6 @@
   };
 
   // ---- render ----
-  const fitHeight = () => {
-    if (!panel?.isConnected) return;
-    const top = panel.getBoundingClientRect().top;
-    panel.style.maxHeight = `${Math.max(120, window.innerHeight - top - bottomToolbar())}px`;
-  };
-
   const render = () => {
     if (!panel) return;
     const scroll = panel.querySelector(".vm-scroll")?.scrollTop ?? 0;
@@ -696,7 +689,6 @@
     const bar = spaceBar();
     panel.replaceChildren(...(grid ? [grid] : []), body, ...(bar ? [bar] : []));
     body.scrollTop = scroll;
-    fitHeight();
   };
 
   const ICON_MAX = 20000;
@@ -909,7 +901,6 @@
       row.classList.toggle("vm-collapsed", bare && !!row.querySelector(".UrlBar-AddressField"));
     }
     placeProfileBar();
-    fitHeight();
     if (panel.parentElement !== container || panel.nextElementSibling !== anchor) {
       container.insertBefore(panel, anchor);
     }
@@ -934,8 +925,6 @@
       requestAnimationFrame(() => { queued = false; place(); });
     }).observe(document.body, { childList: true, subtree: true });
     place();
-    window.addEventListener("resize", fitHeight);
-    window.__vm.settings.onChange(fitHeight);
     for (const ev of ["onCreated", "onRemoved", "onChanged", "onMoved", "onImportEnded"]) {
       chrome.bookmarks[ev]?.addListener(() => refresh(true));
     }
