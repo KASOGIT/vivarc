@@ -15,7 +15,8 @@ def resolve(config=None, saved=None):
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class Resolve(unittest.TestCase):
     def test_without_anything_saved_the_defaults_apply(self):
-        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True})
+        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
+                                    "archive": False, "archiveHours": 12})
 
     def test_the_install_config_sets_the_starting_point(self):
         values = resolve(config={"compactBottomBar": False, "suggestions": "off"})
@@ -78,3 +79,13 @@ class MarkerClasses(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class ArchiveHours(unittest.TestCase):
+    def test_a_saved_number_of_hours_is_used(self):
+        self.assertEqual(resolve(saved={"archiveHours": 48})["archiveHours"], 48)
+
+    def test_hours_outside_the_range_are_pulled_back_in(self):
+        self.assertEqual(resolve(saved={"archiveHours": 0})["archiveHours"], 1)
+        self.assertEqual(resolve(saved={"archiveHours": 1000})["archiveHours"], 168)

@@ -12,6 +12,10 @@
       fromConfig: (c) => c.compactBottomBar, onClass: "vm-compact-bottom" },
     { key: "searchSuggestions", label: "Search suggestions", hint: "Show suggestions from your default search engine (Vivaldi settings) in the command bar while you type.",
       default: true, fromConfig: (c) => (c.suggestions === undefined ? undefined : c.suggestions !== "off" && c.suggestions !== false) },
+    { key: "archive", label: "Archive inactive tabs", hint: "Close tabs you have not opened for a while, like Arc. Pinned links, favorites, split views and tabs playing sound stay. Bring one back with Reopen Closed Tab.",
+      default: false },
+    { key: "archiveHours", type: "range", min: 1, max: 168, step: 1, default: 12, unit: " h", needs: "archive",
+      label: "Archive after", hint: "How long a tab can sit unopened before it is closed.", low: "1 hour", high: "7 days" },
   ];
 
   const resolve = (schema, config, saved) => Object.fromEntries(schema.map((s) => {
