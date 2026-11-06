@@ -3,6 +3,8 @@
 (() => {
   // onClass / offClass: a marker class on #browser while the setting is on / off (the stylesheet reacts to it).
   const SCHEMA = [
+    { key: "showUrl", label: "Show URL", hint: "Show the current page URL above favorites. Click it to select and copy it.",
+      default: true, fromConfig: (c) => c.showUrl, offClass: "vm-no-url" },
     { key: "glass", label: "Liquid glass", hint: "Translucent, blurred sidebar, menus, command bar and dialogs, after Apple's Liquid Glass. Follows Reduce Transparency and Increase Contrast.",
       default: false, onClass: "vm-glass" },
     { key: "glassOpacity", type: "range", min: 15, max: 95, step: 1, default: 55, unit: "%", needs: "glass", cssVar: "--vm-glass-opacity",

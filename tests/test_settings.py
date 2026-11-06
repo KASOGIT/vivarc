@@ -15,7 +15,7 @@ def resolve(config=None, saved=None):
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class Resolve(unittest.TestCase):
     def test_without_anything_saved_the_defaults_apply(self):
-        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
+        self.assertEqual(resolve(), {"showUrl": True, "glass": False, "glassOpacity": 55, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
                                     "archive": False, "archiveHours": 12})
 
     def test_the_install_config_sets_the_starting_point(self):
@@ -38,6 +38,12 @@ class Resolve(unittest.TestCase):
         values = resolve(saved={"spaceBar": "no", "nonsense": True})
         self.assertTrue(values["spaceBar"])
         self.assertNotIn("nonsense", values)
+
+    def test_url_visibility_can_be_overridden_per_profile(self):
+        self.assertTrue(resolve()["showUrl"])
+        self.assertFalse(resolve(saved={"showUrl": False})["showUrl"])
+        classes = js("settings.classes(settings.SCHEMA, values)", values={"showUrl": False})
+        self.assertTrue(classes["vm-no-url"])
 
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")

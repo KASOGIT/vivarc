@@ -705,3 +705,31 @@
 .vm-set-value { margin-left: 4px; font-weight: 500; opacity: 0.6; font-variant-numeric: tabular-nums; }
 .vm-set-slider { width: 100%; margin: 8px 0 0; accent-color: var(--colorHighlightBg, #6b63a0); }
 .vm-set-ends { display: flex; justify-content: space-between; margin-top: 2px; opacity: 0.5; font-size: 12px; }
+
+/* Persistent toast above the favorites; settings hide it without rebuilding it. */
+#browser.vm-no-url #vm-panel .vm-current-url { display: none; }
+#vm-panel .vm-current-url {
+  display: block;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  margin: 6px 0 12px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--colorFg) 15%, transparent);
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 15%);
+  background: var(--vm-surface);
+  color: var(--colorFg);
+  font: inherit;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  cursor: text;
+  user-select: text;
+  app-region: no-drag;
+}
+#vm-panel .vm-current-url:focus {
+  outline: 1px solid var(--colorHighlightBg, #7b8cff);
+  text-overflow: clip;
+}

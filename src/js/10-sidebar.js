@@ -646,6 +646,23 @@
     panel.style.maxHeight = `${Math.max(120, window.innerHeight - top - bottomToolbar())}px`;
   };
 
+  const currentUrlField = () => {
+    const active = state.allTabs.find((tab) => tab.active);
+    const url = active?.pendingUrl || active?.url || "";
+    const field = el("input", "vm-current-url");
+    field.type = "text";
+    field.readOnly = true;
+    field.value = url;
+    field.title = url;
+    field.placeholder = "No active page";
+    field.setAttribute("aria-label", "Current page URL");
+    field.spellcheck = false;
+    field.addEventListener("click", () => field.select());
+    // Let the field's native copy/select context menu work.
+    field.addEventListener("contextmenu", (event) => event.stopPropagation());
+    return field;
+  };
+
   const render = () => {
     if (!panel) return;
     const scroll = panel.querySelector(".vm-scroll")?.scrollTop ?? 0;
@@ -694,7 +711,7 @@
     open.sort((a, b) => b.index - a.index).forEach((t) => body.append(tabRow(t)));
 
     const bar = spaceBar();
-    panel.replaceChildren(...(grid ? [grid] : []), body, ...(bar ? [bar] : []));
+    panel.replaceChildren(currentUrlField(), ...(grid ? [grid] : []), body, ...(bar ? [bar] : []));
     body.scrollTop = scroll;
     fitHeight();
   };
