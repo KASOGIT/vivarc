@@ -22,3 +22,5 @@ jobs:
           node-version: "lts/*"
       - name: Unit tests
         run: python -m unittest discover -s tests -v
+      - name: Command bar tests
+        run: node --test tests/command_bar_windows.test.cjs
