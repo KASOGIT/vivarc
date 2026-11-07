@@ -69,9 +69,9 @@ class SpaceList(unittest.TestCase):
     def items(self, workspaces):
         return js("workspaces.items(list, 'Home')", list=workspaces)
 
-    def test_a_profile_without_workspaces_has_no_space_bar(self):
-        self.assertEqual(self.items([]), [])
-        self.assertEqual(js("workspaces.items(undefined, 'Home')"), [])
+    def test_a_profile_without_workspaces_still_shows_home(self):
+        self.assertEqual(self.items([]), [{"id": 0, "name": "Home", "emoji": ""}])
+        self.assertEqual(js("workspaces.items(undefined, 'Home')"), [{"id": 0, "name": "Home", "emoji": ""}])
 
     def test_the_default_space_comes_first_followed_by_the_workspaces_in_vivaldis_order(self):
         items = self.items([WORK, SIDE])
@@ -79,6 +79,12 @@ class SpaceList(unittest.TestCase):
 
     def test_each_space_keeps_its_emoji_and_the_default_has_none(self):
         self.assertEqual([i["emoji"] for i in self.items([WORK])], ["", "📚"])
+
+    def test_workspace_svg_is_preserved_for_the_selector(self):
+        icon = '<svg viewBox="0 0 16 16"><path d="M1 1h4v4z"/></svg>'
+        entries = self.items([{**WORK, "icon": icon}])
+        self.assertEqual(entries[1]["icon"], icon)
+
 
     def test_the_most_recently_used_tab_of_a_space_is_where_switching_goes(self):
         tabs = [tab(1, WORK["id"], accessed=100), tab(2, WORK["id"], accessed=300), tab(3, WORK["id"], accessed=200), tab(4, accessed=900)]
