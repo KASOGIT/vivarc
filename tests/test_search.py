@@ -67,6 +67,10 @@ class Suggestions(unittest.TestCase):
     def test_duckduckgos_phrase_list_is_read(self):
         self.assertEqual(js("search.parseSuggestions(t)", t='[{"phrase":"cats"},{"phrase":"catan"}]'), ["cats", "catan"])
 
+    def test_navigation_urls_in_suggestions_are_read(self):
+        self.assertEqual(js("search.parseSuggestions(t)", t='["b&q",["b&q near me","https://www.diy.com/"]]'),
+                         ["b&q near me", "https://www.diy.com/"])
+
     def test_garbage_gives_no_suggestions(self):
         self.assertEqual(js("search.parseSuggestions('<html>')"), [])
         self.assertEqual(js("search.parseSuggestions('{}')"), [])

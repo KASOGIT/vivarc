@@ -342,12 +342,15 @@
           const phrases = search.parseSuggestions(await (await fetch(suggest)).text());
           if (id !== seq) return;
           phrases.filter((p) => p && p.toLowerCase() !== needle).slice(0, 4)
-            .forEach((p) => out.push({ type: "suggest", engine: DEFAULT, query: p, label: p }));
+            .forEach((p) => {
+              if (looksLikeUrl(p)) out.push({ type: "url", url: toUrl(p), label: p, sub: "Open" });
+              else out.push({ type: "suggest", engine: DEFAULT, query: p, label: p });
+            });
         } catch (_) {}
       }
     }
     if (id !== seq) return;
-    rows = out.map((r) => (r.type === "suggest" ? { ...r, type: "search" } : r));
+    rows = out.map((r) => (r.type === "suggest" ? (looksLikeUrl(r.query) ? { type: "url", url: toUrl(r.query), label: r.query, sub: "Open" } : { ...r, type: "search" }) : r));
     selected = 0;
     render();
   };
