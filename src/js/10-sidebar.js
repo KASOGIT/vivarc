@@ -99,7 +99,8 @@
     node.children ? node.children.flatMap(leaves) : [node];
 
   const hasPinnedChild = (n) => n.children?.some((c) => c.children && c.title === "Pinned");
-  const findSpaces = (nodes) => nodes.flatMap((n) => hasPinnedChild(n) ? [n] : n.children ? findSpaces(n.children) : []);
+  // A space folder in the trash is not a space: a deleted space, or a new one with the same name, would find it again.
+  const findSpaces = (nodes) => nodes.flatMap((n) => n.trash === true ? [] : hasPinnedChild(n) ? [n] : n.children ? findSpaces(n.children) : []);
 
   // The tab that belongs to a pin or favorite stays bound to it wherever it navigates (see 08-pins.js).
   const boundTab = (node) => state.bound.get(node.id);
