@@ -15,7 +15,7 @@ def resolve(config=None, saved=None):
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class Resolve(unittest.TestCase):
     def test_without_anything_saved_the_defaults_apply(self):
-        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
+        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "urlBar": False, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
                                     "archive": False, "archiveHours": 12})
 
     def test_the_install_config_sets_the_starting_point(self):
@@ -75,6 +75,11 @@ class MarkerClasses(unittest.TestCase):
     def test_hiding_the_space_bar_is_a_class_while_it_is_off(self):
         self.assertTrue(self.classes({"spaceBar": False})["vm-no-space-bar"])
         self.assertFalse(self.classes({"spaceBar": True})["vm-no-space-bar"])
+
+    def test_the_url_bar_is_a_class_while_on_and_off_by_default(self):
+        self.assertTrue(self.classes({"urlBar": True})["vm-url-bar"])
+        self.assertFalse(self.classes({"urlBar": False})["vm-url-bar"])
+        self.assertFalse(resolve()["urlBar"])
 
 
 if __name__ == "__main__":

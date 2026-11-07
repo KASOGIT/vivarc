@@ -7,6 +7,7 @@
 - Switching spaces has a short transition: the sidebar fades and slides in over 220 ms and the page fades in. The switch itself is not delayed, and Reduce Motion turns the transition off.
 - Fix: switching to an empty space works again, and opens the command bar there for an address. Before, the command bar opened over the old space; on Vivaldi 8.3 the space did not change at all, because Vivaldi ignores a workspace written into a new tab.
 - **Mute a single tab, like Arc.** A tab that is playing sound shows a speaker in the sidebar, on its row, its pinned row or its favorite tile; click it to mute the tab, and click the crossed-out speaker to unmute it. Right-click a tab, or a pin or favorite with an open tab, for *Mute Tab* / *Unmute Tab*.
+- **URL bar at the top of the sidebar, like Arc**: a new switch in Vivarc Settings (off by default). On, the address bar is always shown under the back, reload and forward buttons; off, it stays hidden until you press Cmd+L (Ctrl+L on Windows), as before.
 
 ## 0.1.22 - 2026-11-06
 - **Archive inactive tabs, like Arc** (off by default; turn it on in Vivarc Settings). A tab you have not opened for the chosen time, 12 hours by default and from 1 hour to 7 days, is closed. Tabs bound to a pinned link or favorite, Vivaldi-pinned tabs, split views, tabs playing sound and the tab you are on are never closed. Bring one back with Reopen Closed Tab. It only runs while a Vivaldi window is open, and each window looks after its own tabs.
