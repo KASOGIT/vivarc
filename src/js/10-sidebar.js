@@ -15,6 +15,25 @@
     profiles: [], renameId: null, workspaces: [], active: 0 };
   const spacesOf = window.__vm.workspaces;
   let panel = null;
+  let renderedSpace = null;
+  let spaceAnimations = [];
+
+  // A short transition when the space changes, on the existing surfaces only: the switch itself is not delayed
+  // (Vivaldi shows the page at once), a new switch cancels the previous animation, and Reduce Motion turns it off.
+  const animateSpaceChange = () => {
+    spaceAnimations.forEach((animation) => animation.cancel());
+    spaceAnimations = [];
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const page = document.querySelector("#webpage-stack");
+    if (panel?.animate) spaceAnimations.push(panel.animate(
+      [{ opacity: 0.72, transform: "translateY(4px)" }, { opacity: 1, transform: "translateY(0)" }],
+      { duration: 220, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
+    ));
+    if (page?.animate) spaceAnimations.push(page.animate(
+      [{ opacity: 0.9 }, { opacity: 1 }],
+      { duration: 180, easing: "ease-out" }
+    ));
+  };
 
   const ICON_CLOSED =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h4l2 2.5h7A2.5 2.5 0 0 1 21 10v7.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>';
@@ -714,6 +733,8 @@
     panel.replaceChildren(...(grid ? [grid] : []), body, ...(bar ? [bar] : []));
     body.scrollTop = scroll;
     fitHeight();
+    if (renderedSpace !== null && renderedSpace !== state.active) animateSpaceChange();
+    renderedSpace = state.active;
   };
 
   const ICON_MAX = 20000;
