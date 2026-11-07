@@ -40,6 +40,10 @@
   const ICON_OPEN =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 17.5V7.5A2.5 2.5 0 0 1 5.5 5h4l2 2.5h7A2.5 2.5 0 0 1 21 10v1.5"/><path d="M3.3 18.6 5.2 12a2 2 0 0 1 1.9-1.5H21a1 1 0 0 1 1 1.3l-1.8 6.4A2 2 0 0 1 18.3 20H5.5a2.2 2.2 0 0 1-2.2-1.4z"/></svg>';
 
+  const SPEAKER = '<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/>';
+  const ICON_SOUND = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${SPEAKER}<path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>`;
+  const ICON_MUTED = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${SPEAKER}<path d="m16 9.5 5 5"/><path d="m21 9.5-5 5"/></svg>`;
+
   const el = (tag, cls, text) => {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -318,6 +322,20 @@
     if (!hadTab) await chrome.tabs.create({ url, active: false });
   };
 
+  // ---- sound: like Arc, a tab that plays sound (or was muted) shows a speaker that mutes it ----
+  const isMuted = (tab) => !!tab?.mutedInfo?.muted;
+  const toggleMute = (tab) => chrome.tabs.update(tab.id, { muted: !isMuted(tab) }).catch(() => {});
+  const muteItem = (tab) => [isMuted(tab) ? "Unmute Tab" : "Mute Tab", () => toggleMute(tab)];
+  const soundButton = (tab) => {
+    if (!tab?.audible && !isMuted(tab)) return [];
+    const b = el("span", `vm-sound${isMuted(tab) ? " muted" : ""}`);
+    b.innerHTML = isMuted(tab) ? ICON_MUTED : ICON_SOUND;
+    b.title = isMuted(tab) ? "Unmute tab" : "Mute tab";
+    b.addEventListener("click", (e) => { e.stopPropagation(); toggleMute(tab); });
+    b.addEventListener("auxclick", (e) => e.stopPropagation()); // a middle click on a tab row closes the tab
+    return [b];
+  };
+
   // ---- rows ----
   const actionButton = (symbol, title, onClick) => {
     const b = el("span", "vm-act", symbol);
@@ -379,7 +397,7 @@
         const target = isFav ? state.pinned : await ensureFolder("Favorites");
         if (target) chrome.bookmarks.move(node.id, { parentId: target.id });
       }],
-      ...(tab ? [["Close Tab", () => chrome.tabs.remove(tab.id)]] : []),
+      ...(tab ? [muteItem(tab), ["Close Tab", () => chrome.tabs.remove(tab.id)]] : []),
       [],
       [isFav ? "Remove from Favorites" : "Remove from Pinned", () => discard(node), true],
     ]);
@@ -396,7 +414,7 @@
     row.append(iconEl(node.url, away ? undefined : tab?.favIconUrl));
     if (away) row.append(el("span", "vm-away-mark", "/"));
     const title = el("span", "vm-title", away ? (tab.title || tab.url) : (node.title || node.url));
-    row.append(title);
+    row.append(title, ...soundButton(tab));
     if (away) row.append(actionButton("↩", "Back to pinned page", () => backToPin(tab, node)));
     if (!tab) row.append(actionButton("×", "Remove from Pinned", () => discard(node)));
     else if (away) row.append(actionButton("–", "Separate From Pinned Tab", () => separate(tab, node)));
@@ -482,7 +500,7 @@
     const away = isAway(tab, node);
     if (tab?.active) tile.classList.add("active");
     if (away) tile.classList.add("away");
-    tile.append(iconEl(node.url, away ? undefined : tab?.favIconUrl));
+    tile.append(iconEl(node.url, away ? undefined : tab?.favIconUrl), ...soundButton(tab));
     tile.addEventListener("click", () => focusOrOpen(node));
     tile.addEventListener("contextmenu", bookmarkMenu(node, true));
     wireDrag(tile, { type: "bm", node, url: node.url });
@@ -507,7 +525,7 @@
     if (tab.active) row.classList.add("active");
     if (tab.discarded) row.classList.add("discarded");
     row.title = tab.url;
-    row.append(iconEl(tab.url, tab.favIconUrl), el("span", "vm-title", tab.title || tab.url));
+    row.append(iconEl(tab.url, tab.favIconUrl), el("span", "vm-title", tab.title || tab.url), ...soundButton(tab));
     if (window.__vm.tilingOf(tab)) row.append(el("span", "vm-split-mark", "◫"));
     row.append(actionButton("×", "Close tab", () => chrome.tabs.remove(tab.id)));
     row.addEventListener("click", () => chrome.tabs.update(tab.id, { active: true }));
@@ -533,6 +551,7 @@
       ] : []),
       ["Duplicate Tab", () => chrome.tabs.duplicate(tab.id)],
       ["Copy Link", () => copy(tab.url)],
+      muteItem(tab),
       [],
       ["Close Tab", () => chrome.tabs.remove(tab.id)],
       ["Close Other Tabs", () => {

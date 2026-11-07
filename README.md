@@ -97,7 +97,7 @@ python3 ~/.vivarc/app/vivarc.py status      # what is installed
 
 ## What you get
 
-**One sidebar.** A favorites grid on top, your pinned folders below, a divider with *Clear*, then your open tabs. Drag and drop between all of them, nest folders, rename in place, right-click for everything. Removed items go to Vivaldi's bookmark trash. Like Arc, a pinned tab stays on its pin when you navigate inside it: the row shows a `/` and the title of the page you are on, and on hover you can jump back to the pinned page or separate the page you are on into its own tab.
+**One sidebar.** A favorites grid on top, your pinned folders below, a divider with *Clear*, then your open tabs. Drag and drop between all of them, nest folders, rename in place, right-click for everything. Removed items go to Vivaldi's bookmark trash. Like Arc, a pinned tab stays on its pin when you navigate inside it: the row shows a `/` and the title of the page you are on, and on hover you can jump back to the pinned page or separate the page you are on into its own tab. A tab playing sound shows a speaker on its row or favorite tile: click it to mute just that tab.
 
 <p align="center">
   <img src="docs/screenshots/sidebar.png" alt="Vivarc sidebar: favorites grid, pinned folders, open tabs" width="760">
