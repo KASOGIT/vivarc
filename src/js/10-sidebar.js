@@ -633,11 +633,40 @@
   };
 
   // ---- space bar: Vivaldi workspaces as Arc-style spaces ----
+  // A space with open pages: activate its most recent tab (Vivaldi follows it into the workspace). An empty space
+  // (or one with only Vivaldi's blank start page): Vivaldi's own workspace action, which opens its landing tab
+  // there; then the command bar opens on it, ready for an address (#57). While the switch runs, the landing tab is
+  // neither stamped with the old space nor taken by the command bar for a new-tab request.
   const switchSpace = async (item) => {
     if (item.id === state.active) return;
-    const tab = spacesOf.recentTab(state.allTabs, item.id);
-    if (tab) await chrome.tabs.update(tab.id, { active: true });
-    else await chrome.tabs.create({ active: true, vivExtData: JSON.stringify({ workspaceId: item.id }) });
+    const tabs = await chrome.tabs.query({ currentWindow: true });
+    const pages = spacesOf.tabsIn(tabs, item.id).filter((t) => !BLANK.test(t.pendingUrl || t.url || ""));
+    const tab = spacesOf.recentTab(pages, item.id);
+    if (tab) { await chrome.tabs.update(tab.id, { active: true }); return; }
+    const activate = spacesOf.findSwitcher(chrome.extension.getBackgroundPage?.()?.webpackChunkgapp_browser_react);
+    if (!activate) {
+      const blank = spacesOf.recentTab(tabs, item.id);
+      if (blank) await chrome.tabs.update(blank.id, { active: true });
+      else window.dispatchEvent(new CustomEvent("vm-toast", { detail: "Could not switch space. Use Vivaldi's Workspaces button." }));
+      return;
+    }
+    window.__vm.switchingSpace = true;
+    try {
+      await activate(window.vivaldiWindowId, item.id);
+      // A space left with only its blank landing tab from an earlier visit: Vivaldi may not switch to it again, so
+      // land on that tab ourselves.
+      const [after] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (after && spacesOf.of(after) !== item.id) {
+        const landing = spacesOf.recentTab(await chrome.tabs.query({ currentWindow: true }), item.id);
+        if (landing) await chrome.tabs.update(landing.id, { active: true });
+      }
+    } finally { window.__vm.switchingSpace = false; }
+    refresh(false);
+    const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+    // Not if the user switched again while the activation was in flight.
+    if (active && spacesOf.of(active) === item.id && BLANK.test(active.pendingUrl || active.url || "")) {
+      window.dispatchEvent(new CustomEvent("vm-open-command-bar"));
+    }
   };
 
   const spacePill = (item) => {
@@ -984,6 +1013,7 @@
       chrome.bookmarks[ev]?.addListener(() => refresh(true));
     }
     chrome.tabs.onCreated.addListener((tab) => {
+      if (window.__vm.switchingSpace) return; // the landing tab of a space switch belongs to the new space
       const active = state.active;
       chrome.windows.getCurrent().then((win) => {
         const data = spacesOf.stamp(tab, active, win.id);

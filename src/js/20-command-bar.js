@@ -443,7 +443,8 @@
   });
 
   chrome.tabs.onCreated.addListener((tab) => {
-    if (Date.now() - startedAt < 5000 || !isBlank(tab) || tab.active === false) return;
+    // The landing tab of a space switch is not a new-tab request (the sidebar opens the bar on it once it is active).
+    if (window.__vm.switchingSpace || Date.now() - startedAt < 5000 || !isBlank(tab) || tab.active === false) return;
     const previous = activeHistory.filter((id) => id !== tab.id).pop();
     open(tab.id);
     if (previous != null) {
