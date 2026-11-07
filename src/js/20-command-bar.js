@@ -172,6 +172,7 @@
   let selected = 0;
   let seq = 0;
   let autoCompleted = false;
+  let navigated = false;
 
   const iconFor = (url, favicon) => {
     const wrap = el("span", "vm-cmd-ico");
@@ -200,6 +201,7 @@
     bar = input = list = chipHolder = targetTab = mode = null;
     rows = [];
     seq++;
+    navigated = false;
     if (removeBlank && blank != null) chrome.tabs.remove(blank).catch(() => {});
   };
 
@@ -266,6 +268,7 @@
       item.addEventListener("mousemove", () => {
         if (selected === i) return;
         selected = i;
+        navigated = true;
         list.querySelector(".sel")?.classList.remove("sel");
         item.classList.add("sel");
       });
@@ -335,19 +338,32 @@
       const keyword = !/\s/.test(text) && engines.find((en) => en.keyword.toLowerCase() === needle);
       if (keyword) out.unshift({ type: "engine", engine: keyword, label: `Search ${keyword.name}` });
       out.push(...matches.filter((m) => m !== prefix));
+      if (id !== seq) return;
+      rows = out.slice();
+      selected = 0;
+      render();
+
       const suggest = window.__vm.settings.get("searchSuggestions") && !looksLikeUrl(text) && text.length > 1
         && search.suggestUrl(search.current(), text);
       if (suggest) {
-        try {
-          const phrases = search.parseSuggestions(await (await fetch(suggest)).text());
-          if (id !== seq) return;
-          phrases.filter((p) => p && p.toLowerCase() !== needle).slice(0, 4)
-            .forEach((p) => out.push({ type: "suggest", engine: DEFAULT, query: p, label: p }));
-        } catch (_) {}
+        fetch(suggest)
+          .then((r) => r.text())
+          .then((body) => {
+            if (id !== seq) return;
+            const phrases = search.parseSuggestions(body);
+            const suggestions = phrases.filter((p) => p && p.toLowerCase() !== needle).slice(0, 4)
+              .map((p) => ({ type: "search", engine: DEFAULT, query: p, label: p }));
+            if (suggestions.length) {
+              rows = [...out, ...suggestions];
+              render();
+            }
+          })
+          .catch(() => {});
       }
+      return;
     }
     if (id !== seq) return;
-    rows = out.map((r) => (r.type === "suggest" ? { ...r, type: "search" } : r));
+    rows = out.slice();
     selected = 0;
     render();
   };
@@ -362,6 +378,7 @@
     }
     input.placeholder = engine ? "Search…" : "Search or Enter URL…";
     input.value = "";
+    navigated = false;
     compute();
   };
 
@@ -380,16 +397,52 @@
     }
   };
 
-  const onKey = (e) => {
+  const onKey = async (e) => {
     if (e.key === "Escape") { e.preventDefault(); close(true); return; }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       if (!rows.length) return;
       selected = (selected + (e.key === "ArrowDown" ? 1 : rows.length - 1)) % rows.length;
+      navigated = true;
       render();
       return;
     }
-    if (e.key === "Enter") { e.preventDefault(); run(rows[selected]); return; }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const text = input ? input.value.trim() : "";
+      if (!navigated && text) {
+        if (mode) {
+          if (mode === DEFAULT) defaultSearch(text);
+          else if (mode.guid) search.searchUrl(text, mode).then(go);
+          else go(engineUrl(mode, text));
+          return;
+        }
+        if (looksLikeUrl(text)) {
+          go(toUrl(text));
+          return;
+        }
+        const needle = text.toLowerCase();
+        const keyword = !/\s/.test(text) && engines.find((en) => en.keyword.toLowerCase() === needle);
+        if (keyword) {
+          input.value = "";
+          setMode(keyword);
+          return;
+        }
+        try {
+          const tabs = await allTabs();
+          const tab = tabs.find((t) => hostOf(t.url).startsWith(needle) || t.title?.toLowerCase().startsWith(needle));
+          if (tab) {
+            chrome.tabs.update(tab.id, { active: true });
+            close(true);
+            return;
+          }
+        } catch (_) {}
+        defaultSearch(text);
+        return;
+      }
+      run(rows[selected]);
+      return;
+    }
     if (e.key === "Tab") {
       e.preventDefault();
       const keyword = input.value.trim().toLowerCase();
@@ -406,6 +459,7 @@
     if (bar) { targetTab = tabId; return; }
     targetTab = tabId;
     mode = null;
+    navigated = false;
     bar = el("div");
     bar.id = "vm-cmd";
     const box = el("div", "vm-cmd-box");
@@ -423,7 +477,11 @@
     bar.append(box);
     bar.addEventListener("mousedown", (e) => { if (e.target === bar) close(true); });
     input.addEventListener("keydown", onKey);
-    input.addEventListener("input", async () => { await compute(); autocomplete(); });
+    input.addEventListener("input", async () => {
+      navigated = false;
+      await compute();
+      autocomplete();
+    });
     (document.querySelector("#browser") || document.body).append(bar);
     const focus = () => input?.focus();
     focus();
