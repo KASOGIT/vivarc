@@ -156,6 +156,7 @@
       window.dispatchEvent(new CustomEvent("vm-folders", { detail: "expand" }));
       toast("Expanded all folders");
     } },
+    { label: "Clear All Tabs", words: "clear close tabs sidebar today", run: () => window.dispatchEvent(new CustomEvent("vm-clear-tabs")) },
     { label: "Vivarc Settings", words: "preferences options configure features toggle glass", run: () => window.dispatchEvent(new CustomEvent("vm-open-settings")) },
     { label: "Edit Theme", words: "color appearance sidebar", run: () => window.dispatchEvent(new CustomEvent("vm-open-theme")) },
   ];

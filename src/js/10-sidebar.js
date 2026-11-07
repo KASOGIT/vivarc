@@ -730,6 +730,14 @@
     panel.style.maxHeight = `${Math.max(120, window.innerHeight - top - bottomToolbar())}px`;
   };
 
+  const isLoose = (t) => !BLANK.test(t.url || "") && ![...state.bound.values()].some((b) => b.id === t.id);
+  const clearTabs = async () => {
+    const loose = state.tabs.filter(isLoose);
+    if (!loose.length) return;
+    if (loose.length + state.tabs.filter((t) => BLANK.test(t.url || "")).length === state.tabs.length) await chrome.tabs.create({});
+    chrome.tabs.remove(loose.map((t) => t.id));
+  };
+
   const render = () => {
     if (!panel) return;
     const scroll = panel.querySelector(".vm-scroll")?.scrollTop ?? 0;
@@ -756,16 +764,10 @@
     }
     if (state.pinned) state.pinned.children.forEach((c) => body.append(pinnedNode(c, 0)));
 
-    const taken = new Set([...state.bound.values()].map((t) => t.id));
-    const blank = state.tabs.filter((t) => BLANK.test(t.url || ""));
-    const open = state.tabs.filter((t) => !BLANK.test(t.url || "") && !taken.has(t.id));
+    const open = state.tabs.filter(isLoose);
     const divider = el("div", "vm-divider");
     const clear = el("span", "vm-clear", "Clear");
-    clear.addEventListener("click", async () => {
-      if (!open.length) return;
-      if (open.length + blank.length === state.tabs.length) await chrome.tabs.create({});
-      chrome.tabs.remove(open.map((t) => t.id));
-    });
+    clear.addEventListener("click", clearTabs);
     divider.append(clear);
     wireDrop(divider, { accept: isBookmark, onDrop: (_zone, data) => unpin(data) });
     body.append(divider);
@@ -1012,6 +1014,7 @@
     saveOpen();
     render();
   });
+  window.addEventListener("vm-clear-tabs", clearTabs);
   window.addEventListener("vm-command-bar-opened", () => {
     const scroller = panel?.querySelector(".vm-scroll");
     scroller?.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" });
