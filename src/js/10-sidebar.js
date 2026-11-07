@@ -160,11 +160,12 @@
   };
 
   // Vivaldi 8.3 moves a tab between workspaces only with tabsPrivate.move (what its "Move to Workspace" menu does);
-  // writing workspaceId into vivExtData is ignored. The moved tab becomes active, in the space on screen.
+  // writing workspaceId into vivExtData is ignored. The default space is "no workspace": workspaceId null (0 or
+  // "window" leave the tab where it is). The moved tab becomes active, in the space on screen.
   const moveTabToSpace = async (tabId, id) => {
     const tab = await chrome.tabs.get(tabId);
     if (spacesOf.of(tab) === id) return;
-    await vivaldi.tabsPrivate.move({ tabIds: [tab.id], target: "last", tweaks: ["do-not-reparent"], workspaceId: id || "window" });
+    await vivaldi.tabsPrivate.move({ tabIds: [tab.id], target: "last", tweaks: ["do-not-reparent"], workspaceId: id || null });
     await chrome.tabs.update(tab.id, { active: true });
   };
 
