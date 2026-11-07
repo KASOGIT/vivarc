@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Docs: profiles on the same Vivaldi account share bookmarks, and so Vivarc's favorites and pinned folders. The README, the guide page and the technical notes now say to sign each profile into its own Vivaldi account to keep profiles apart and still sync each one.
+
 ## 0.1.23 - 2026-11-07
 - Clicking a pinned folder twice quickly only opens and closes it. Before, the double-click reached Vivaldi's tab bar, which opened a new tab and the command bar. Thanks @gulin-desigenr (#83), after the guard @saurL first wrote in #58.
 - A click on a space tile or a sidebar row no longer gets lost while pages load: the sidebar redraws only for its own window's tabs, and waits while a mouse button is held. Thanks @gulin-desigenr (#84).
