@@ -22,6 +22,19 @@ SIDE = {"id": 1792856044277, "name": "Side", "emoji": "🎁", "icon": "<svg/>"}
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class WhichSpace(unittest.TestCase):
+    def test_closing_a_tab_that_handed_focus_to_another_space_brings_back_its_space(self):
+        tabs = [tab(1, 5, accessed=10), tab(2, 5, accessed=30), tab(3, 7, active=True), tab(4, 5, accessed=40)]
+        out = js("workspaces.stayIn(tabs, 5, new Set([4]))", tabs=tabs)
+        self.assertEqual(out["tab"]["id"], 2)
+
+    def test_closing_stays_put_when_vivaldi_kept_the_space(self):
+        tabs = [tab(1, 5, active=True), tab(3, 7)]
+        self.assertIsNone(js("workspaces.stayIn(tabs, 5, new Set())", tabs=tabs))
+
+    def test_closing_the_last_tab_of_a_space_asks_for_the_empty_space(self):
+        tabs = [tab(3, 7, active=True)]
+        self.assertEqual(js("workspaces.stayIn(tabs, 5, new Set([9]))", tabs=tabs), {"empty": True})
+
     def test_a_tab_belongs_to_the_workspace_vivaldi_stored_in_its_data(self):
         self.assertEqual(js("workspaces.of(t)", t=tab(1, WORK["id"])), WORK["id"])
 
