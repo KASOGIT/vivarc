@@ -65,6 +65,10 @@
     /^(https?:\/\/|chrome:\/\/|vivaldi:\/\/)/i.test(text) || (/^[^\s]+\.[a-z]{2,}(\/\S*)?$/i.test(text) && !text.includes(" "));
   const toUrl = (text) => (/^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `https://${text}`);
   const engineUrl = (engine, query) => engine.url.replace(/\{searchTerms\}|%s/, encodeURIComponent(query));
+  const suggestionRow = (p) =>
+    /^https?:\/\//i.test(p)
+      ? { type: "url", url: toUrl(p), label: p, sub: "Open" }
+      : { type: "suggest", engine: DEFAULT, query: p, label: p };
 
   const toast = (message) => window.dispatchEvent(new CustomEvent("vm-toast", { detail: message }));
   const openPage = (url) => chrome.tabs.create({ url });
@@ -342,15 +346,12 @@
           const phrases = search.parseSuggestions(await (await fetch(suggest)).text());
           if (id !== seq) return;
           phrases.filter((p) => p && p.toLowerCase() !== needle).slice(0, 4)
-            .forEach((p) => {
-              if (looksLikeUrl(p)) out.push({ type: "url", url: toUrl(p), label: p, sub: "Open" });
-              else out.push({ type: "suggest", engine: DEFAULT, query: p, label: p });
-            });
+            .forEach((p) => out.push(suggestionRow(p)));
         } catch (_) {}
       }
     }
     if (id !== seq) return;
-    rows = out.map((r) => (r.type === "suggest" ? (looksLikeUrl(r.query) ? { type: "url", url: toUrl(r.query), label: r.query, sub: "Open" } : { ...r, type: "search" }) : r));
+    rows = out.map((r) => (r.type === "suggest" ? { ...r, type: "search" } : r));
     selected = 0;
     render();
   };
@@ -435,6 +436,9 @@
     compute();
     window.dispatchEvent(new CustomEvent("vm-command-bar-opened"));
   };
+
+  window.__vm.commandBar = { suggestionRow };
+  if (!window.addEventListener || !window.__vm?.onShortcut) return;
 
   window.addEventListener("vm-open-command-bar", () => open(null));
   window.__vm.onShortcut((key) => { if (key === window.__vm.normalise(window.__vm.keys.commandBar)) open(null); });
