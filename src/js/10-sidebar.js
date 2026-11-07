@@ -131,7 +131,10 @@
 
   const bindTabs = () => {
     if (!state.space) { state.bound = new Map(); return; }
-    const pins = [...(state.favs ? leaves(state.favs) : []), ...(state.pinned ? leaves(state.pinned) : [])]
+    // Only links the sidebar shows can own a tab: the favorites grid shows the top level of Favorites, so a link in
+    // a folder inside Favorites (never drawn) must not take a tab, or that tab would be shown nowhere.
+    const favTiles = state.favs ? state.favs.children.filter((c) => !c.children) : [];
+    const pins = [...favTiles, ...(state.pinned ? leaves(state.pinned) : [])]
       .map((n) => ({ id: n.id, url: n.url }));
     const allIds = state.folders.flatMap((f) => leaves(f)).map((n) => n.id);
     const { bound, writes } = pinLinks.plan(state.tabs, pins, allIds);
