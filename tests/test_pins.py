@@ -124,10 +124,16 @@ class ExtData(unittest.TestCase):
         merged = json.loads(js("pins.patched(t, { vivarcPin: 'p1' })", t=t))
         self.assertEqual(merged, {"workspaceId": 7, "tiling": {"id": "t"}, "vivarcPin": "p1"})
 
-    def test_an_undefined_patch_value_removes_the_key(self):
+    def test_an_undefined_patch_value_is_written_as_null_so_vivaldi_removes_the_key(self):
+        # Vivaldi merges vivExtData: a key that is only left out stays on the tab.
         t = tab(1, "https://x.example.com/", ext={"workspaceId": 7, "vivarcPin": "p1"})
         merged = json.loads(js("pins.patched(t, { vivarcPin: undefined })", t=t))
-        self.assertEqual(merged, {"workspaceId": 7})
+        self.assertEqual(merged, {"workspaceId": 7, "vivarcPin": None})
+
+    def test_a_null_key_reads_as_absent(self):
+        t = tab(1, "https://x.example.com/", ext={"vivarcPin": None})
+        self.assertIsNone(js("pins.pinOf(t) ?? null", t=t))
+        self.assertFalse(js("pins.needsWrite(t, { vivarcPin: undefined })", t=t))
 
     def test_a_write_is_only_needed_when_something_changes(self):
         t = tab(1, "https://x.example.com/", ext={"vivarcPin": "p1"})
