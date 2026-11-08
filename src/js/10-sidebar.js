@@ -688,8 +688,8 @@
   // (or one with only Vivaldi's blank start page): Vivaldi's own workspace action, which opens its landing tab
   // there; then the command bar opens on it, ready for an address (#57). While the switch runs, the landing tab is
   // neither stamped with the old space nor taken by the command bar for a new-tab request.
-  const switchSpace = async (item) => {
-    if (item.id === state.active) return;
+  const switchSpace = async (item, { force = false } = {}) => {
+    if (item.id === state.active && !force) return;
     const tabs = await chrome.tabs.query({ currentWindow: true });
     const pages = spacesOf.tabsIn(tabs, item.id).filter((t) => !BLANK.test(t.pendingUrl || t.url || ""));
     const tab = spacesOf.recentTab(pages, item.id);
@@ -1074,6 +1074,33 @@
         if (data) chrome.tabs.update(tab.id, { vivExtData: data });
       }).catch(() => {});
     });
+    // Closing the active tab (or moving it to another window) can make Vivaldi activate a tab of another space;
+    // stay in the space instead, on its most recent tab, or in it empty (#75). The removals of one action (closing
+    // several tabs) are gathered first.
+    let leaving = null;
+    const leftSpace = (tabId) => {
+      const tab = state.allTabs.find((t) => t.id === tabId);
+      if (!tab || !state.workspaces?.length || window.__vm.switchingSpace) return;
+      leaving ||= { space: spacesOf.of(tab), removed: new Set(), wasActive: false };
+      leaving.removed.add(tabId);
+      leaving.wasActive ||= !!tab.active;
+      clearTimeout(leaving.timer);
+      leaving.timer = setTimeout(async () => {
+        const { space, removed, wasActive } = leaving;
+        leaving = null;
+        if (!wasActive || window.__vm.switchingSpace) return;
+        const next = spacesOf.stayIn(await chrome.tabs.query({ currentWindow: true }), space, removed);
+        if (next?.tab) {
+          await chrome.tabs.update(next.tab.id, { active: true });
+          if (BLANK.test(next.tab.pendingUrl || next.tab.url || "")) window.dispatchEvent(new CustomEvent("vm-open-command-bar"));
+        }
+        else if (next?.empty) await switchSpace({ id: space }, { force: true });
+      }, 150);
+    };
+    chrome.tabs.onRemoved.addListener((id, info) => {
+      if (info?.windowId === window.vivaldiWindowId && !info.isWindowClosing) leftSpace(id);
+    });
+    chrome.tabs.onDetached.addListener((id, info) => { if (info?.oldWindowId === window.vivaldiWindowId) leftSpace(id); });
     for (const ev of ["onCreated", "onRemoved", "onUpdated", "onMoved", "onActivated", "onAttached", "onDetached", "onReplaced"]) {
       // Every window runs its own sidebar and sees the tab events of all windows (a popup loading, another window's
       // titles): only this window's events, or ones that do not say, re-render it.
