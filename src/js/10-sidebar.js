@@ -139,10 +139,35 @@
     recordHome(tab.id, node.id);
   };
 
-  const focusOrOpen = (node) => {
+  // A favorite has one tab for every space, like Arc's: when its tab is in another space, it comes to this one
+  // instead of a second tab opening (a tab in a split view is left where it is, and Vivarc switches to it).
+  const isFavorite = (node) => !!state.favs && node.parentId === state.favs.id;
+  const favoriteTabElsewhere = (node) => isFavorite(node)
+    ? state.allTabs.find((t) => pinLinks.pinOf(t) === node.id && spacesOf.of(t) !== state.active) ?? null
+    : null;
+  const focusOrOpen = async (node) => {
     const tab = boundTab(node);
-    if (tab) chrome.tabs.update(tab.id, { active: true });
-    else openPin(node);
+    if (tab) { chrome.tabs.update(tab.id, { active: true }); return; }
+    const elsewhere = favoriteTabElsewhere(node);
+    if (elsewhere) {
+      try {
+        if (window.__vm.tilingOf(elsewhere)) await chrome.tabs.update(elsewhere.id, { active: true });
+        else await moveTabToSpace(elsewhere.id, state.active);
+        refresh(false);
+        return;
+      } catch (e) { console.warn("[vivarc] favorite tab:", e); }
+    }
+    openPin(node);
+  };
+
+  // Vivaldi 8.3 moves a tab between workspaces only with tabsPrivate.move (what its "Move to Workspace" menu does);
+  // writing workspaceId into vivExtData is ignored. The default space is "no workspace": workspaceId null (0 or
+  // "window" leave the tab where it is). The moved tab becomes active, in the space on screen.
+  const moveTabToSpace = async (tabId, id) => {
+    const tab = await chrome.tabs.get(tabId);
+    if (spacesOf.of(tab) === id) return;
+    await vivaldi.tabsPrivate.move({ tabIds: [tab.id], target: "last", tweaks: ["do-not-reparent"], workspaceId: id || null });
+    await chrome.tabs.update(tab.id, { active: true });
   };
 
   const backToPin = (tab, node) => chrome.tabs.update(tab.id, { url: node.url });
@@ -507,7 +532,7 @@
     const away = isAway(tab, node);
     if (tab?.active) tile.classList.add("active");
     if (away) tile.classList.add("away");
-    tile.append(iconEl(node.url, away ? undefined : tab?.favIconUrl), ...soundButton(tab));
+    tile.append(iconEl(node.url, away ? undefined : (tab || favoriteTabElsewhere(node))?.favIconUrl), ...soundButton(tab));
     tile.addEventListener("click", () => focusOrOpen(node));
     tile.addEventListener("contextmenu", bookmarkMenu(node, true));
     wireDrag(tile, { type: "bm", node, url: node.url });
