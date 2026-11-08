@@ -61,6 +61,8 @@
 /* With the sidebar auto-hidden (Cmd+S), Vivaldi makes the revealed bar a window drag region, which
    swallows every click. Vivarc's own UI opts out, including the menus and popovers that float over it. */
 #vm-panel, .vm-menu, .vm-theme-pop, #vm-cmd, .vm-rename-float { app-region: no-drag; }
+/* Under a menu or the theme editor: a click on the page closes them (40-theme.js, 10-sidebar.js). */
+.vm-menu-shield { position: fixed; inset: 0; z-index: 100000; background: transparent; app-region: no-drag; }
 #vm-panel .vm-scroll {
   flex: 1 1 auto;
   min-height: 0;
