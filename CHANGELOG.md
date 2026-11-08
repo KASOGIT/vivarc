@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.25 - 2026-11-08
+- **A favorite has one tab for every space, like Arc.** Clicking a favorite whose tab is in another space brings that tab to the space you are in instead of opening a second one, and clicking it back in the first space moves it back. A favorite in a split view stays where it is. Pinned links still belong to their space. Thanks @gulin-desigenr (#120).
+- Closing the active tab keeps you in its space, on the space's most recent tab, instead of jumping to another space. Closing the last page of a space leaves you in it with the command bar open. Vivaldi still switches space for a moment first, so you may see a brief flash. Thanks @gulin-desigenr (#118, #75).
+- Fix: closing the command bar in an empty space by clicking outside it no longer closes the space's only tab (which sent you to another space), and the click still reaches the space, tab or favorite you clicked. Thanks @gulin-desigenr (#119).
+- Fix: a click on the page now closes the sidebar's right-click menus and the theme editor; before, only Escape did. Thanks @gulin-desigenr (#116).
+- Fix: removing a pin or favorite now removes its link from the tab, so the tab can be archived and bound to a new pin again, and **Close Split View** works. Vivaldi keeps a key that is only left out of a tab's data; Vivarc now writes `null`, which removes it. Thanks @gulin-desigenr (#115).
+- Fix: a space folder in Vivaldi's bookmark trash is no longer a space, so a deleted space, or a new one with the same name, does not bring back the old pins. Thanks @gulin-desigenr (#117).
+- Fix: a suggestion that is a full web address (`https://...`) opens that page instead of searching for it. Thanks @groenroos (#111, reported in #108).
+
 ## 0.1.24 - 2026-11-08
 - Sidebar: *Clear* next to the divider is always visible, dimmed, instead of only on hover, like Arc. A new Cmd+T quick action **Clear All Tabs** does the same from the keyboard (type `clear` or `close`): it closes the open tabs below the divider, exactly like the button, and leaves favorites, pinned tabs and other spaces alone.
 - Docs: profiles on the same Vivaldi account share bookmarks, and so Vivarc's favorites and pinned folders. The README, the guide page and the technical notes now say to sign each profile into its own Vivaldi account to keep profiles apart and still sync each one.
