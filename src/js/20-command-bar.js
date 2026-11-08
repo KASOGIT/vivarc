@@ -172,7 +172,7 @@
   let selected = 0;
   let seq = 0;
   let autoCompleted = false;
-  let navigated = false;
+  let computedFor = null;
 
   const iconFor = (url, favicon) => {
     const wrap = el("span", "vm-cmd-ico");
@@ -201,7 +201,7 @@
     bar = input = list = chipHolder = targetTab = mode = null;
     rows = [];
     seq++;
-    navigated = false;
+    computedFor = null;
     if (removeBlank && blank != null) chrome.tabs.remove(blank).catch(() => {});
   };
 
@@ -268,7 +268,6 @@
       item.addEventListener("mousemove", () => {
         if (selected === i) return;
         selected = i;
-        navigated = true;
         list.querySelector(".sel")?.classList.remove("sel");
         item.classList.add("sel");
       });
@@ -299,7 +298,8 @@
 
   const compute = async () => {
     const id = ++seq;
-    const text = input.value.trim();
+    const value = input ? input.value : "";
+    const text = value.trim();
     const out = [];
     if (mode) {
       out.push({ type: "search", engine: mode, query: text, label: text || "%s" });
@@ -341,6 +341,7 @@
       if (id !== seq) return;
       rows = out.slice();
       selected = 0;
+      computedFor = value;
       render();
 
       const suggest = window.__vm.settings.get("searchSuggestions") && !looksLikeUrl(text) && text.length > 1
@@ -365,6 +366,7 @@
     if (id !== seq) return;
     rows = out.slice();
     selected = 0;
+    computedFor = value;
     render();
   };
 
@@ -378,7 +380,7 @@
     }
     input.placeholder = engine ? "Search…" : "Search or Enter URL…";
     input.value = "";
-    navigated = false;
+    computedFor = null;
     compute();
   };
 
@@ -403,43 +405,12 @@
       e.preventDefault();
       if (!rows.length) return;
       selected = (selected + (e.key === "ArrowDown" ? 1 : rows.length - 1)) % rows.length;
-      navigated = true;
       render();
       return;
     }
     if (e.key === "Enter") {
       e.preventDefault();
-      const text = input ? input.value.trim() : "";
-      if (!navigated && text) {
-        if (mode) {
-          if (mode === DEFAULT) defaultSearch(text);
-          else if (mode.guid) search.searchUrl(text, mode).then(go);
-          else go(engineUrl(mode, text));
-          return;
-        }
-        if (looksLikeUrl(text)) {
-          go(toUrl(text));
-          return;
-        }
-        const needle = text.toLowerCase();
-        const keyword = !/\s/.test(text) && engines.find((en) => en.keyword.toLowerCase() === needle);
-        if (keyword) {
-          input.value = "";
-          setMode(keyword);
-          return;
-        }
-        try {
-          const tabs = await allTabs();
-          const tab = tabs.find((t) => hostOf(t.url).startsWith(needle) || t.title?.toLowerCase().startsWith(needle));
-          if (tab) {
-            chrome.tabs.update(tab.id, { active: true });
-            close(true);
-            return;
-          }
-        } catch (_) {}
-        defaultSearch(text);
-        return;
-      }
+      if (computedFor !== (input ? input.value : "")) await compute();
       run(rows[selected]);
       return;
     }
@@ -459,7 +430,7 @@
     if (bar) { targetTab = tabId; return; }
     targetTab = tabId;
     mode = null;
-    navigated = false;
+    computedFor = null;
     bar = el("div");
     bar.id = "vm-cmd";
     const box = el("div", "vm-cmd-box");
@@ -478,7 +449,6 @@
     bar.addEventListener("mousedown", (e) => { if (e.target === bar) close(true); });
     input.addEventListener("keydown", onKey);
     input.addEventListener("input", async () => {
-      navigated = false;
       await compute();
       autocomplete();
     });
