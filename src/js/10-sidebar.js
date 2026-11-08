@@ -1055,7 +1055,10 @@
         leaving = null;
         if (!wasActive || window.__vm.switchingSpace) return;
         const next = spacesOf.stayIn(await chrome.tabs.query({ currentWindow: true }), space, removed);
-        if (next?.tab) await chrome.tabs.update(next.tab.id, { active: true });
+        if (next?.tab) {
+          await chrome.tabs.update(next.tab.id, { active: true });
+          if (BLANK.test(next.tab.pendingUrl || next.tab.url || "")) window.dispatchEvent(new CustomEvent("vm-open-command-bar"));
+        }
         else if (next?.empty) await switchSpace({ id: space }, { force: true });
       }, 150);
     };

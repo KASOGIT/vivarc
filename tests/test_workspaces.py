@@ -35,6 +35,18 @@ class WhichSpace(unittest.TestCase):
         tabs = [tab(3, 7, active=True)]
         self.assertEqual(js("workspaces.stayIn(tabs, 5, new Set([9]))", tabs=tabs), {"empty": True})
 
+    def test_closing_brings_back_a_page_of_the_space_before_its_blank_landing_tab(self):
+        blank = {**tab(2, 5, accessed=50), "url": "vivaldi://vivaldi-webui/startpage"}
+        tabs = [tab(1, 5, accessed=10), blank, tab(3, 7, active=True)]
+        out = js("workspaces.stayIn(tabs, 5, new Set([9]))", tabs=tabs)
+        self.assertEqual(out["tab"]["id"], 1)
+
+    def test_closing_with_only_the_blank_landing_tab_left_brings_it_back(self):
+        blank = {**tab(2, 5, accessed=50), "url": "vivaldi://vivaldi-webui/startpage"}
+        tabs = [blank, tab(3, 7, active=True)]
+        out = js("workspaces.stayIn(tabs, 5, new Set([9]))", tabs=tabs)
+        self.assertEqual(out["tab"]["id"], 2)
+
     def test_a_tab_belongs_to_the_workspace_vivaldi_stored_in_its_data(self):
         self.assertEqual(js("workspaces.of(t)", t=tab(1, WORK["id"])), WORK["id"])
 
