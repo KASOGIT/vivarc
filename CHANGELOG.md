@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.24 - 2026-11-08
 - Sidebar: *Clear* next to the divider is always visible, dimmed, instead of only on hover, like Arc. A new Cmd+T quick action **Clear All Tabs** does the same from the keyboard (type `clear` or `close`): it closes the open tabs below the divider, exactly like the button, and leaves favorites, pinned tabs and other spaces alone.
 - Docs: profiles on the same Vivaldi account share bookmarks, and so Vivarc's favorites and pinned folders. The README, the guide page and the technical notes now say to sign each profile into its own Vivaldi account to keep profiles apart and still sync each one.
 
