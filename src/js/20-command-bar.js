@@ -207,7 +207,19 @@
     bar = input = list = chipHolder = targetTab = mode = null;
     rows = [];
     seq++;
-    if (removeBlank && blank != null) chrome.tabs.remove(blank).catch(() => {});
+    if (removeBlank && blank != null) removeBlankTab(blank);
+  };
+  // The blank tab the bar was opened for is closed, unless it is all its space has: closing it would leave the space
+  // empty and Vivaldi would hand the window to another space's tab (an empty space opens the bar, #89).
+  const removeBlankTab = async (id) => {
+    try {
+      const tab = await chrome.tabs.get(id);
+      if (!isBlank(tab)) return;
+      const space = window.__vm.workspaces?.of(tab) ?? 0;
+      const others = (await chrome.tabs.query({ windowId: tab.windowId }))
+        .filter((t) => t.id !== id && (window.__vm.workspaces?.of(t) ?? 0) === space);
+      if (others.length) await chrome.tabs.remove(id);
+    } catch (_) {}
   };
 
   const go = (url) => {
@@ -428,7 +440,17 @@
     list = el("div", "vm-cmd-list");
     box.append(head, list);
     bar.append(box);
-    bar.addEventListener("mousedown", (e) => { if (e.target === bar) close(true); });
+    // A click outside the box closes the bar and still reaches what it was on in the sidebar (a space, a tab),
+    // instead of taking two clicks.
+    const PASS = "#vm-panel .vm-row, #vm-panel .vm-fav, .vm-space-bar .vm-space-pill";
+    bar.addEventListener("mousedown", (e) => {
+      if (e.target !== bar) return;
+      close(true);
+      document.addEventListener("mouseup", (up) => {
+        const target = document.elementFromPoint(up.clientX, up.clientY)?.closest?.(PASS);
+        if (target && target === document.elementFromPoint(e.clientX, e.clientY)?.closest?.(PASS)) target.click();
+      }, { once: true, capture: true });
+    });
     input.addEventListener("keydown", onKey);
     input.addEventListener("input", async () => { await compute(); autocomplete(); });
     (document.querySelector("#browser") || document.body).append(bar);
