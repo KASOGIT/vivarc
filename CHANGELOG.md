@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Fix: the space bar stays at the bottom of the sidebar, above the bottom bar, however few tabs the space has; before, it sat right under the last tab. Thanks @groenroos (#101).
 - Fix: updating Vivarc no longer resets the Auto-Hide choices you made in Vivaldi (for example Tab Bar, which Cmd+S toggles). The first install still starts with the sidebar visible. Thanks @groenroos (#99).
 
 ## 0.1.25 - 2026-11-08
