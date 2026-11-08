@@ -203,8 +203,9 @@ def swap_vpn_for_downloads(items):
     return out
 
 
-def patch_preferences(prefs, default_actions):
-    """Return (patched copy, snapshot of the original values of everything touched)."""
+def patch_preferences(prefs, default_actions, reapply=False):
+    """Return (patched copy, snapshot of the original values of everything touched).
+    On a re-apply (an update) the auto-hide choices the user made since are kept."""
     new = copy.deepcopy(prefs)
     snap = _snapshot(prefs)
     existing = _get(new, ("vivaldi", "actions"))
@@ -245,7 +246,8 @@ def patch_preferences(prefs, default_actions):
     _set(new, ("vivaldi", "auto_hide", "enabled"), True)
     for key, value in (("panel", True), ("tab_bar", False), ("address_bar", False), ("status_bar", False),
                        ("bookmarks_bar", False), ("show_introduction", False)):
-        _set(new, ("vivaldi", "auto_hide", key), value)
+        if not (reapply and _get(new, ("vivaldi", "auto_hide", key)) is not _MISSING):
+            _set(new, ("vivaldi", "auto_hide", key), value)
     _set(new, ("vivaldi", "status_bar", "display"), 2)  # overlay: only appears on hover
     if _get(new, ("vivaldi", "tabs", "bar", "width")) is _MISSING:
         _set(new, ("vivaldi", "tabs", "bar", "width"), SIDEBAR_WIDTH)
@@ -859,7 +861,7 @@ def cmd_install(args):
         os.makedirs(os.path.join(backup, directory), exist_ok=True)
         shutil.copy2(prefs_path, os.path.join(backup, directory, "Preferences"))
         prefs = read_json(prefs_path)
-        new, snap = patch_preferences(prefs, actions)
+        new, snap = patch_preferences(prefs, actions, reapply=directory in state["profiles"])
         state["profiles"].setdefault(directory, snap)
         write_json(prefs_path, new)
         say(f"  {name}: configured")
