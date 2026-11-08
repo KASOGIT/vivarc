@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Fix: updating Vivarc no longer resets the Auto-Hide choices you made in Vivaldi (for example Tab Bar, which Cmd+S toggles). The first install still starts with the sidebar visible. Thanks @groenroos (#99).
+
 ## 0.1.25 - 2026-11-08
 - **A favorite has one tab for every space, like Arc.** Clicking a favorite whose tab is in another space brings that tab to the space you are in instead of opening a second one, and clicking it back in the first space moves it back. A favorite in a split view stays where it is. Pinned links still belong to their space. Thanks @gulin-desigenr (#120).
 - Closing the active tab keeps you in its space, on the space's most recent tab, instead of jumping to another space. Closing the last page of a space leaves you in it with the command bar open. Vivaldi still switches space for a moment first, so you may see a brief flash. Thanks @gulin-desigenr (#118, #75).
