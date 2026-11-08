@@ -759,7 +759,7 @@
   const fitHeight = () => {
     if (!panel?.isConnected) return;
     const top = panel.getBoundingClientRect().top;
-    panel.style.maxHeight = `${Math.max(120, window.innerHeight - top - bottomToolbar())}px`;
+    panel.style.height = `${Math.max(120, window.innerHeight - top - bottomToolbar())}px`;
   };
 
   const isLoose = (t) => !BLANK.test(t.url || "") && ![...state.bound.values()].some((b) => b.id === t.id);
