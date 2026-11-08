@@ -93,7 +93,9 @@
     const fresh = await chrome.tabs.get(tab.id);
     let ext = {};
     try { ext = JSON.parse(fresh.vivExtData || "{}"); } catch (_) {}
-    await chrome.tabs.update(tab.id, { vivExtData: JSON.stringify({ ...ext, ...patch }) });
+    // Vivaldi merges vivExtData into what the tab has, so a key left out stays; null is what removes it.
+    const cleared = Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, v === undefined ? null : v]));
+    await chrome.tabs.update(tab.id, { vivExtData: JSON.stringify({ ...ext, ...cleared }) });
   };
   // Split view like Arc's: the page behind the bar and a new tab form a fresh Vivaldi tile group. "row" puts them
   // side by side, "column" one above the other (measured from the rendered panes in Vivaldi 8.2). If the page was
