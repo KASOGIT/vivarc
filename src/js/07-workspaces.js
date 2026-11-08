@@ -22,10 +22,9 @@
     return { active, tabs: tabsIn(tabs, active) };
   };
 
-  // Without any workspace there is only one space, so no bar.
+  // Home remains visible even before the first workspace is created.
   const items = (list, defaultName) => {
-    if (!list?.length) return [];
-    return [{ id: 0, name: defaultName, emoji: "" }, ...list.map((w) => ({ id: w.id, name: w.name, emoji: w.emoji || "" }))];
+    return [{ id: 0, name: defaultName, emoji: "" }, ...(list || []).map((w) => ({ id: w.id, name: w.name, emoji: w.emoji || "", icon: w.icon || "" }))];
   };
 
   // Where switching to a space lands: its most recently used tab (Vivaldi then switches the workspace by itself).
