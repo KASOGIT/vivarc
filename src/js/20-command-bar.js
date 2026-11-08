@@ -462,7 +462,7 @@
     window.dispatchEvent(new CustomEvent("vm-command-bar-opened"));
   };
 
-  window.__vm.commandBar = { suggestionRow };
+  window.__vm.commandBar = { suggestionRow, splitView, closeSplitView };
   if (!window.addEventListener || !window.__vm?.onShortcut) return;
 
   window.addEventListener("vm-open-command-bar", () => open(null));
