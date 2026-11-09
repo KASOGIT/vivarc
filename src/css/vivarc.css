@@ -534,8 +534,7 @@
 .vm-theme-reset:hover { opacity: 1; background: color-mix(in srgb, var(--vm-text) 10%, transparent); }
 
 #vm-panel .vm-space { display: flex; align-items: center; justify-content: space-between; }
-#vm-panel .vm-space .vm-act { display: flex; visibility: hidden; }
-#vm-panel .vm-space:hover .vm-act { visibility: visible; }
+#vm-panel .vm-space .vm-act { display: flex; opacity: 1; filter: brightness(1.25); }
 #vm-panel .vm-away-mark { flex: none; opacity: 0.5; margin: 0 -2px 0 -4px; }
 #vm-panel .vm-fav { position: relative; }
 #vm-panel .vm-fav.away::after {
