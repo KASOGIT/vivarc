@@ -163,12 +163,13 @@
   // Vivaldi 8.3 moves a tab between workspaces only with tabsPrivate.move (what its "Move to Workspace" menu does);
   // writing workspaceId into vivExtData is ignored. The default space is "no workspace": workspaceId null (0 or
   // "window" leave the tab where it is). The moved tab becomes active, in the space on screen.
-  const moveTabToSpace = async (tabId, id) => {
+  const moveTabToSpace = async (tabId, id, activate = true) => {
     const tab = await chrome.tabs.get(tabId);
     if (spacesOf.of(tab) === id) return;
     await vivaldi.tabsPrivate.move({ tabIds: [tab.id], target: "last", tweaks: ["do-not-reparent"], workspaceId: id || null });
-    await chrome.tabs.update(tab.id, { active: true });
+    if (activate) await chrome.tabs.update(tab.id, { active: true });
   };
+  const defaultSpaceName = () => (state.defaultSpace ? spacesOf.label(state.defaultSpace) : "Home");
 
   const backToPin = (tab, node) => chrome.tabs.update(tab.id, { url: node.url });
 
@@ -573,30 +574,41 @@
         await chrome.tabs.move(data.tab.id, { index });
       },
     });
-    row.addEventListener("contextmenu", (e) => showMenu(e, [
-      ...(state.space ? [
-        ["Pin Tab", async () => chrome.bookmarks.create({
-          parentId: (state.pinned || await ensureFolder("Pinned")).id, title: tab.title, url: tab.url })],
-        ["Add to Favorites", async () => chrome.bookmarks.create({
-          parentId: (await ensureFolder("Favorites")).id, title: tab.title, url: tab.url })],
+    // The menu waits for the other windows, so the browser's own menu is held back first.
+    row.addEventListener("contextmenu", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const windows = (await chrome.windows.getAll({ populate: true, windowTypes: ["normal"] }).catch(() => []))
+        .filter((w) => w.id !== tab.windowId);
+      const spaces = spacesOf.moveTargets(state.workspaces, defaultSpaceName(), tab);
+      showMenu(e, [
+        ...(state.space ? [
+          ["Pin Tab", async () => chrome.bookmarks.create({
+            parentId: (state.pinned || await ensureFolder("Pinned")).id, title: tab.title, url: tab.url })],
+          ["Add to Favorites", async () => chrome.bookmarks.create({
+            parentId: (await ensureFolder("Favorites")).id, title: tab.title, url: tab.url })],
+          [],
+        ] : []),
+        ["Reload Tab", () => chrome.tabs.reload(tab.id)],
+        ["Duplicate Tab", () => chrome.tabs.duplicate(tab.id)],
+        ["Copy Link", () => copy(tab.url)],
+        muteItem(tab),
         [],
-      ] : []),
-      ["Reload Tab", () => chrome.tabs.reload(tab.id)],
-      ["Duplicate Tab", () => chrome.tabs.duplicate(tab.id)],
-      ["Copy Link", () => copy(tab.url)],
-      muteItem(tab),
-      [],
-      ["Split View: Side by Side", () => window.__vm.commandBar.splitView(tab, "row")],
-      ["Split View: Top and Bottom", () => window.__vm.commandBar.splitView(tab, "column")],
-      ...(window.__vm.tilingOf(tab) ? [["Close Split View", () => window.__vm.commandBar.closeSplitView(tab)]] : []),
-      ["Move to New Window", () => chrome.windows.create({ tabId: tab.id })],
-      [],
-      ["Close Tab", () => chrome.tabs.remove(tab.id)],
-      ["Close Other Tabs", () => {
-        const ids = state.tabs.filter((t) => t.id !== tab.id && !t.pinned).map((t) => t.id);
-        if (ids.length) chrome.tabs.remove(ids);
-      }],
-    ]));
+        ["Split View: Side by Side", () => window.__vm.commandBar.splitView(tab, "row")],
+        ["Split View: Top and Bottom", () => window.__vm.commandBar.splitView(tab, "column")],
+        ...(window.__vm.tilingOf(tab) ? [["Close Split View", () => window.__vm.commandBar.closeSplitView(tab)]] : []),
+        ["Move to New Window", () => chrome.windows.create({ tabId: tab.id })],
+        ...windows.map((w) => [`Move to Window: ${w.tabs?.find((t) => t.active)?.title || "Window"}`,
+          () => chrome.tabs.move(tab.id, { windowId: w.id, index: -1 })]),
+        ...spaces.map((s) => [`Move to Space: ${s.emoji ? `${s.emoji} ` : ""}${s.name}`, () => moveTabToSpace(tab.id, s.id, false)]),
+        [],
+        ["Close Tab", () => chrome.tabs.remove(tab.id)],
+        ["Close Other Tabs", () => {
+          const ids = state.tabs.filter((t) => t.id !== tab.id && !t.pinned).map((t) => t.id);
+          if (ids.length) chrome.tabs.remove(ids);
+        }],
+      ]);
+    });
     return row;
   };
 
@@ -774,7 +786,7 @@
   };
 
   const spaceBar = () => {
-    const items = spacesOf.items(state.workspaces, state.defaultSpace ? spacesOf.label(state.defaultSpace) : "Home");
+    const items = spacesOf.items(state.workspaces, defaultSpaceName());
     if (!items.length) return null;
     const bar = el("div", "vm-space-bar");
     const plus = el("div", "vm-space-pill vm-space-plus", "+");
