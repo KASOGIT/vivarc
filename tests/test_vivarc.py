@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import vivarc  # noqa: E402
@@ -246,6 +247,13 @@ class Bundle(unittest.TestCase):
         self.assertTrue(out.startswith("window.__vmConfig = " + json.dumps({"suggestions": "off"})))
         self.assertLess(out.index("A();"), out.index("B();"))
         self.assertIn("P();", out)
+
+    def test_the_installed_version_is_in_the_config_for_the_update_pill(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(vivarc, "HOME_DIR", os.path.join(d, "home")):
+            vivarc.write_bundle(d, with_peek=False)
+            with open(os.path.join(d, "vivarc.js"), encoding="utf8") as f:
+                head = f.readline()
+        self.assertEqual(json.loads(head[len("window.__vmConfig = "):].rstrip(";\n"))["version"], vivarc.VERSION)
 
 
 class StyleScript(unittest.TestCase):

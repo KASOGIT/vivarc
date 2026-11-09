@@ -16,7 +16,7 @@ def resolve(config=None, saved=None):
 class Resolve(unittest.TestCase):
     def test_without_anything_saved_the_defaults_apply(self):
         self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "urlBar": False, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
-                                    "archive": False, "archiveHours": 12})
+                                    "archive": False, "archiveHours": 12, "updateCheck": True})
 
     def test_the_install_config_sets_the_starting_point(self):
         values = resolve(config={"compactBottomBar": False, "suggestions": "off"})

@@ -1,5 +1,6 @@
 import io
 import os
+import plistlib
 import shutil
 import stat
 import subprocess
@@ -103,6 +104,9 @@ class UpdateApp(unittest.TestCase):
         self.tmp = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.tmp, True)
         self.app = os.path.join(self.tmp, "Applications", "Update Vivarc.app")
+        p = mock.patch.object(vivarc, "LSREGISTER", "/usr/bin/true")  # a test app must not become the Mac's handler for vivarc://
+        p.start()
+        self.addCleanup(p.stop)
 
     def test_is_a_real_app_that_opens_the_update_script_in_terminal(self):
         vivarc.write_update_app(self.app, "/x/Update Vivarc.command")
@@ -111,6 +115,26 @@ class UpdateApp(unittest.TestCase):
                                 capture_output=True, text=True).stdout
         self.assertIn("open -a Terminal", source)
         self.assertIn("/x/Update Vivarc.command", source)
+
+    def test_the_update_app_answers_the_vivarc_update_link(self):
+        vivarc.write_update_app(self.app, "/x/Update Vivarc.command", scheme="vivarc")
+        with open(os.path.join(self.app, "Contents", "Info.plist"), "rb") as f:
+            schemes = [s for t in plistlib.load(f)["CFBundleURLTypes"] for s in t["CFBundleURLSchemes"]]
+        self.assertEqual(schemes, ["vivarc"])
+        source = subprocess.run(["osadecompile", os.path.join(self.app, "Contents", "Resources", "Scripts", "main.scpt")],
+                                capture_output=True, text=True).stdout
+        self.assertIn("open location", source)
+        self.assertIn("vivarc://update", source)
+        self.assertIn("open -a Terminal", source)
+
+    def test_editing_the_plist_leaves_a_valid_signature(self):
+        vivarc.write_update_app(self.app, "/x/Update Vivarc.command", scheme="vivarc")
+        self.assertEqual(subprocess.run(["codesign", "--verify", "--deep", self.app], capture_output=True).returncode, 0)
+
+    def test_an_app_without_a_scheme_answers_no_link(self):
+        vivarc.write_update_app(self.app, "/x/Uninstall Vivarc.command")
+        with open(os.path.join(self.app, "Contents", "Info.plist"), "rb") as f:
+            self.assertNotIn("CFBundleURLTypes", plistlib.load(f))
 
     def test_regenerating_replaces_the_old_app(self):
         vivarc.write_update_app(self.app, "/old.command")

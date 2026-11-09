@@ -116,6 +116,20 @@
 }
 #vm-panel .vm-space-pill:hover { opacity: 1; background-color: color-mix(in srgb, var(--colorFg) 16%, transparent); }
 #vm-panel .vm-space-pill.active { opacity: 1; cursor: default; background-color: color-mix(in srgb, var(--colorFg) 26%, transparent); }
+#vm-panel .vm-update {
+  flex: none;
+  margin: 8px 8px 0;
+  padding: 5px 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 9px;
+  cursor: pointer;
+  background-color: color-mix(in srgb, var(--colorHighlightBg, var(--colorFg)) 85%, transparent);
+  color: var(--colorHighlightFg, var(--colorBg));
+  transition: filter 120ms;
+}
+#vm-panel .vm-update:hover { filter: brightness(1.1); }
 #vm-panel .vm-space-plus { font-size: 17px; line-height: 1; opacity: 0.5; }
 #vm-panel .vm-space {
   padding: 8px 8px 6px;
@@ -708,6 +722,7 @@
 #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):hover { background: var(--vm-lozenge); transform: translateY(-1px) scale(1.04); }
 #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):active { transform: scale(0.96); }
 #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill).active { background: var(--vm-lozenge-strong); }
+#browser.vm-on.vm-glass #vm-panel .vm-update { box-shadow: var(--vm-lozenge-rim), 0 2px 8px rgba(0, 0, 0, 0.16); }
 #browser.vm-on.vm-glass #vm-panel .vm-row { transition: background 160ms, box-shadow 160ms; }
 #browser.vm-on.vm-glass #vm-panel .vm-row:hover { background: var(--vm-lozenge-soft); }
 #browser.vm-on.vm-glass #vm-panel .vm-row.active { background: var(--vm-lozenge); box-shadow: var(--vm-lozenge-rim); }

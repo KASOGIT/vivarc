@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **A quiet Update Vivarc button replaces the update dialog.** When a new release is out, a small button appears above the space bar in the sidebar, like Vivaldi's own update button. Click it to update, as the dialog's Update button did; right-click it for **Copy Update Command**, **What's New** or **Later**. macOS shows a Notification Center banner instead of the blocking dialog (Windows no longer asks). Vivarc checks GitHub at most every 12 hours; **Check for updates** in Vivarc Settings turns it off. Thanks @groenroos (#100).
 - A tab's right-click menu in the sidebar has more of Vivaldi's: **Reload Tab**, **Split View** (side by side or top and bottom, **Close Split View** when the tab is in one) and **Move to New Window**. Thanks @groenroos (#128).
 - Fix: the space bar stays at the bottom of the sidebar, above the bottom bar, however few tabs the space has; before, it sat right under the last tab. Thanks @groenroos (#101).
 - Fix: updating Vivarc no longer resets the Auto-Hide choices you made in Vivaldi (for example Tab Bar, which Cmd+S toggles). The first install still starts with the sidebar visible. Thanks @groenroos (#99).
