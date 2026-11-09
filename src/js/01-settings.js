@@ -18,6 +18,8 @@
       default: false },
     { key: "archiveHours", type: "range", min: 1, max: 168, step: 1, default: 12, unit: " h", needs: "archive",
       label: "Archive after", hint: "How long a tab can sit unopened before it is closed.", low: "1 hour", high: "7 days" },
+    { key: "updateCheck", label: "Check for updates", hint: "Ask GitHub now and then whether a new Vivarc release is out, and show an Update Vivarc button in the sidebar when it is. Off, nothing is requested.",
+      default: true },
   ];
 
   const resolve = (schema, config, saved) => Object.fromEntries(schema.map((s) => {

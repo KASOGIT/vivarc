@@ -65,6 +65,8 @@ else:
     UNINSTALL_COMMAND = os.path.join(HOME_DIR, "Uninstall Vivarc.command")
     UNINSTALL_APP = os.path.join(HOME, "Applications", "Uninstall Vivarc.app")
 UPDATE_MARK = "# Created by Vivarc"
+LSREGISTER = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+UPDATE_SCHEME = "vivarc"  # the sidebar button opens vivarc://update, which the Update Vivarc app answers
 RELEASES_LATEST = "https://github.com/KASOGIT/vivarc/releases/latest"
 INSTALL_PS1 = "https://raw.githubusercontent.com/KASOGIT/vivarc/main/install.ps1"
 REMINDER_LABEL = "com.vivarc.reminder"
@@ -574,7 +576,7 @@ def write_bundle(resources, with_peek):
         extras.append(("VividPeek.css", style_script("vivarc-peek-css", read_text(os.path.join(peek_dir, "VividPeek.css")))))
     start_page = pathlib.Path(HOME_DIR, "start", "index.html").as_uri()
     config = {**load_config(), "startUrl": start_page, "platform": PLATFORM,
-              "keys": KEYS[PLATFORM], "keyLabels": KEY_LABELS[PLATFORM]}
+              "keys": KEYS[PLATFORM], "keyLabels": KEY_LABELS[PLATFORM], "version": VERSION}
     bundle = build_bundle(os.path.join(HERE, "src/js"), config, extras, pre)
     write_atomic(os.path.join(resources, "vivarc.js"), bundle)
 
@@ -666,7 +668,23 @@ def powershell(script, env=None):
                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
 
-def write_update_app(app, command):
+def register_protocol(scheme, command):
+    script = ("$k = \"HKCU:\\Software\\Classes\\$env:VIVARC_PROTOCOL\"; New-Item -Path \"$k\\shell\\open\\command\" -Force | Out-Null; "
+              "Set-ItemProperty -Path $k -Name '(default)' -Value \"URL:$env:VIVARC_PROTOCOL\"; "
+              "New-ItemProperty -Path $k -Name 'URL Protocol' -Value '' -Force | Out-Null; "
+              "Set-ItemProperty -Path \"$k\\shell\\open\\command\" -Name '(default)' -Value \"`\"$env:VIVARC_TARGET`\"\"")
+    powershell(script, {"VIVARC_PROTOCOL": scheme, "VIVARC_TARGET": command})
+
+
+def unregister_protocol(scheme, command):
+    """Only a link that runs our own update script goes."""
+    script = ("$k = \"HKCU:\\Software\\Classes\\$env:VIVARC_PROTOCOL\"; "
+              "$run = (Get-ItemProperty -Path \"$k\\shell\\open\\command\" -ErrorAction SilentlyContinue).'(default)'; "
+              "if ($run -like \"*$env:VIVARC_TARGET*\") { Remove-Item -Path $k -Recurse -Force }")
+    powershell(script, {"VIVARC_PROTOCOL": scheme, "VIVARC_TARGET": command})
+
+
+def write_update_app(app, command, scheme=None):
     if IS_WIN:
         # A Start Menu shortcut to the .cmd, so "Update Vivarc" can be found by typing it in Start.
         os.makedirs(os.path.dirname(app), exist_ok=True)
@@ -678,11 +696,26 @@ def write_update_app(app, command):
                                   "VIVARC_MARK": UPDATE_MARK, "VIVARC_ICON": vivaldi_exe(DEFAULT_APP)})
         if out.returncode != 0:
             say(f"Could not create the Start Menu shortcut {os.path.basename(app)}: {out.stderr.strip()}")
+        if scheme:
+            register_protocol(scheme, command)
         return
     shutil.rmtree(app, ignore_errors=True)
     os.makedirs(os.path.dirname(app), exist_ok=True)
-    script = f'do shell script "open -a Terminal " & quoted form of {json.dumps(command, ensure_ascii=False)} & " {UPDATE_MARK}"'
-    subprocess.run(["osacompile", "-o", app, "-e", script], check=True, capture_output=True)
+    run = f'do shell script "open -a Terminal " & quoted form of {json.dumps(command, ensure_ascii=False)} & " {UPDATE_MARK}"'
+    lines = [run]
+    if scheme:
+        lines = ["on openUpdate()", run, "end openUpdate", "on run", "openUpdate()", "end run",
+                 "on open location theURL", f'if theURL is "{scheme}://update" then openUpdate()', "end open location"]
+    subprocess.run(["osacompile", "-o", app, *[a for line in lines for a in ("-e", line)]], check=True, capture_output=True)
+    if scheme:
+        plist = os.path.join(app, "Contents", "Info.plist")
+        with open(plist, "rb") as f:
+            info = plistlib.load(f)
+        info["CFBundleURLTypes"] = [{"CFBundleURLName": "Vivarc", "CFBundleURLSchemes": [scheme]}]
+        with open(plist, "wb") as f:
+            plistlib.dump(info, f)
+        subprocess.run(["codesign", "--force", "--deep", "--sign", "-", app], check=False, capture_output=True)
+        subprocess.run([LSREGISTER, "-f", app], check=False, capture_output=True)
 
 
 def _ours_lnk(path):
@@ -695,8 +728,10 @@ def _ours_lnk(path):
     return UPDATE_MARK.encode("utf-16-le") in data or UPDATE_MARK.encode() in data
 
 
-def remove_update_app(app):
+def remove_update_app(app, scheme=None):
     if IS_WIN:
+        if scheme:
+            unregister_protocol(scheme, UPDATE_COMMAND)
         if os.path.exists(app) and _ours_lnk(app):
             os.remove(app)
             try:
@@ -743,6 +778,11 @@ def prompt_update(message):
               'default button "Update Vivarc" giving up after 300')
     out = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
     return "button returned:Update Vivarc" in out.stdout
+
+
+def notify_quiet(message):
+    if not IS_WIN:
+        subprocess.run(["osascript", "-e", f'display notification "{message}" with title "Vivarc"'], capture_output=True)
 
 
 def notify(message):
@@ -874,7 +914,7 @@ def cmd_install(args):
     except PermissionError as error:
         permission_hint(error)
     write_update_command(UPDATE_COMMAND, app, data)
-    write_update_app(UPDATE_APP, UPDATE_COMMAND)
+    write_update_app(UPDATE_APP, UPDATE_COMMAND, scheme=UPDATE_SCHEME)
     write_uninstall_command(UNINSTALL_COMMAND, app, data)
     write_update_app(UNINSTALL_APP, UNINSTALL_COMMAND)
     remove_update_command(LEGACY_UPDATE_COMMAND)
@@ -976,8 +1016,10 @@ def cmd_remind(args):
         offered = os.path.join(HOME_DIR, "offered")
         if not is_newer(latest, VERSION) or (os.path.exists(offered) and read_text(offered) == latest):
             return
-        stamp, value = offered, latest
-        message = f"Vivarc {latest.lstrip('v')} is available. Update now? Vivaldi will close and reopen."
+        os.makedirs(HOME_DIR, exist_ok=True)
+        write_atomic(offered, latest)
+        notify_quiet(f"Vivarc {latest.lstrip('v')} is available. Open Vivaldi's sidebar to update.")
+        return
     os.makedirs(HOME_DIR, exist_ok=True)
     write_atomic(stamp, value)
     if prompt_update(message):
@@ -1028,7 +1070,7 @@ def cmd_uninstall(args):
         permission_hint(error)
     remove_update_command(UPDATE_COMMAND)
     remove_update_command(LEGACY_UPDATE_COMMAND)
-    remove_update_app(UPDATE_APP)
+    remove_update_app(UPDATE_APP, scheme=UPDATE_SCHEME)
     remove_update_command(UNINSTALL_COMMAND)
     remove_update_app(UNINSTALL_APP)
     disable_reminder()

@@ -182,6 +182,28 @@ class Launchers(WinCase):
         self.assertFalse(os.path.exists(os.path.dirname(ours)))  # the empty Vivarc folder goes too
         self.assertTrue(os.path.exists(theirs))
 
+    def test_the_update_shortcut_also_registers_the_vivarc_link_for_the_update_script(self):
+        with mock.patch.object(vivarc, "powershell", return_value=mock.Mock(returncode=0, stderr="")) as ps:
+            vivarc.write_update_app(os.path.join(self.tmp, "Update Vivarc.lnk"), r"C:\H\Update Vivarc.cmd", scheme="vivarc")
+        registered = [c for c in ps.call_args_list if "VIVARC_PROTOCOL" in c.args[1]]
+        self.assertEqual(len(registered), 1)
+        self.assertIn(r"Software\Classes", registered[0].args[0])
+        self.assertEqual(registered[0].args[1]["VIVARC_PROTOCOL"], "vivarc")
+        self.assertEqual(registered[0].args[1]["VIVARC_TARGET"], r"C:\H\Update Vivarc.cmd")
+
+    def test_the_uninstall_shortcut_registers_no_link(self):
+        with mock.patch.object(vivarc, "powershell", return_value=mock.Mock(returncode=0, stderr="")) as ps:
+            vivarc.write_update_app(os.path.join(self.tmp, "Uninstall Vivarc.lnk"), r"C:\H\Uninstall Vivarc.cmd")
+        self.assertFalse([c for c in ps.call_args_list if "VIVARC_PROTOCOL" in c.args[1]])
+
+    def test_removing_the_update_shortcut_removes_the_link_only_when_it_runs_our_script(self):
+        with mock.patch.object(vivarc, "powershell", return_value=mock.Mock(returncode=0, stderr="")) as ps:
+            vivarc.remove_update_app(os.path.join(self.tmp, "Update Vivarc.lnk"), scheme="vivarc")
+        call = ps.call_args_list[0]
+        self.assertEqual(call.args[1]["VIVARC_PROTOCOL"], "vivarc")
+        self.assertEqual(call.args[1]["VIVARC_TARGET"], vivarc.UPDATE_COMMAND)
+        self.assertIn("-like", call.args[0])
+
     @windows_only
     def test_the_cmd_really_runs_and_keeps_the_exit_code(self):
         fake = os.path.join(self.tmp, "app dir")

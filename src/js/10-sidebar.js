@@ -750,6 +750,29 @@
     refresh(false);
   };
 
+  // The update pill (46-update.js): a click opens vivarc://update, which the Update Vivarc app answers by running the
+  // update in Terminal (vivarc.py write_update_app); a right-click has the manual ways.
+  const UPDATE_COMMANDS = {
+    mac: "python3 ~/.vivarc/app/vivarc.py update",
+    win: "irm https://raw.githubusercontent.com/KASOGIT/vivarc/main/install.ps1 | iex",
+  };
+  const updatePill = () => {
+    const note = window.__vm.update?.state?.();
+    if (!note?.show) return null;
+    const pill = el("div", "vm-update", "Update Vivarc");
+    pill.addEventListener("click", () => chrome.tabs.create({ url: "vivarc://update", active: false }));
+    pill.addEventListener("contextmenu", (event) => showMenu(event, [
+      ["Copy Update Command", () => {
+        copy(UPDATE_COMMANDS[window.__vm.platform] || UPDATE_COMMANDS.mac);
+        window.dispatchEvent(new CustomEvent("vm-toast", { detail: "Copied. Paste it in a terminal." }));
+      }],
+      ["What's New", () => chrome.tabs.create({ url: note.url })],
+      [],
+      ["Later", () => window.__vm.update.dismiss()],
+    ]));
+    return pill;
+  };
+
   const spaceBar = () => {
     const items = spacesOf.items(state.workspaces, state.defaultSpace ? spacesOf.label(state.defaultSpace) : "Home");
     if (!items.length) return null;
@@ -817,8 +840,9 @@
     body.append(fresh);
     open.sort((a, b) => b.index - a.index).forEach((t) => body.append(tabRow(t)));
 
+    const pill = updatePill();
     const bar = spaceBar();
-    panel.replaceChildren(...(grid ? [grid] : []), body, ...(bar ? [bar] : []));
+    panel.replaceChildren(...(grid ? [grid] : []), body, ...(pill ? [pill] : []), ...(bar ? [bar] : []));
     body.scrollTop = scroll;
     fitHeight();
     if (renderedSpace !== null && renderedSpace !== state.active) animateSpaceChange();
@@ -1053,6 +1077,7 @@
     render();
   });
   window.addEventListener("vm-clear-tabs", clearTabs);
+  window.addEventListener("vm-update", render);
   window.addEventListener("vm-command-bar-opened", () => {
     const scroller = panel?.querySelector(".vm-scroll");
     scroller?.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" });
