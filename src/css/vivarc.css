@@ -63,9 +63,12 @@
 #vm-panel, .vm-menu, .vm-theme-pop, #vm-cmd, .vm-rename-float { app-region: no-drag; }
 /* Under a menu or the theme editor: a click on the page closes them (40-theme.js, 10-sidebar.js). */
 .vm-menu-shield { position: fixed; inset: 0; z-index: 100000; background: transparent; app-region: no-drag; }
+/* The scroll box clips what overflows it, so the margin and padding leave room for a hovered tile that grows (glass). */
 #vm-panel .vm-scroll {
   flex: 1 1 auto;
   min-height: 0;
+  margin: 0 -4px;
+  padding: 0 4px;
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: none;
@@ -77,7 +80,7 @@
   grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
   gap: 8px;
   margin: 0;
-  padding: 0 0 8px;
+  padding: 3px 0 8px;
 }
 #vm-panel .vm-fav {
   display: flex;
