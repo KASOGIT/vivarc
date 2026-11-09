@@ -105,6 +105,16 @@ class SpaceList(unittest.TestCase):
     def test_each_space_keeps_its_emoji_and_the_default_has_none(self):
         self.assertEqual([i["emoji"] for i in self.items([WORK])], ["", "📚"])
 
+    def targets(self, workspaces, moving):
+        return js("workspaces.moveTargets(list, 'Home', moving).map((i) => i.id)", list=workspaces, moving=moving)
+
+    def test_a_tab_can_move_to_every_space_but_its_own(self):
+        self.assertEqual(self.targets([WORK, SIDE], tab(1, WORK["id"])), [0, SIDE["id"]])
+        self.assertEqual(self.targets([WORK, SIDE], tab(2)), [WORK["id"], SIDE["id"]])
+
+    def test_without_workspaces_there_is_nowhere_to_move_a_tab(self):
+        self.assertEqual(self.targets([], tab(1)), [])
+
     def test_the_most_recently_used_tab_of_a_space_is_where_switching_goes(self):
         tabs = [tab(1, WORK["id"], accessed=100), tab(2, WORK["id"], accessed=300), tab(3, WORK["id"], accessed=200), tab(4, accessed=900)]
         self.assertEqual(js("workspaces.recentTab(tabs, id).id", tabs=tabs, id=WORK["id"]), 2)

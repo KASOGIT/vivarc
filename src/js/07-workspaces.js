@@ -29,6 +29,9 @@
     return [{ id: 0, name: defaultName, emoji: "" }, ...list.map((w) => ({ id: w.id, name: w.name, emoji: w.emoji || "" }))];
   };
 
+  // Where a tab's "Move to Space" menu entries go: every space but the one it is in.
+  const moveTargets = (list, defaultName, tab) => items(list, defaultName).filter((i) => i.id !== of(tab));
+
   // Where switching to a space lands: its most recently used tab (Vivaldi then switches the workspace by itself).
   const recentTab = (tabs, id) => {
     const own = tabsIn(tabs, id);
@@ -131,5 +134,5 @@
     return null;
   };
 
-  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, recentTab, stayIn, label, assign, stamp, findRemover, findSwitcher, removalLabel, CREATE_HINT, CREATE_LABEL };
+  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, moveTargets, recentTab, stayIn, label, assign, stamp, findRemover, findSwitcher, removalLabel, CREATE_HINT, CREATE_LABEL };
 })();
