@@ -332,7 +332,7 @@
       const zone = zoneOf(e), payload = drag;
       drag = null;
       clearDrop();
-      try { await onDrop(zone, payload); } catch (err) { console.warn("[vivarc] drop:", err); }
+      try { await onDrop(zone, payload, e); } catch (err) { console.warn("[vivarc] drop:", err); }
     });
   };
 
@@ -823,7 +823,15 @@
       wireDrop(grid, {
         horizontal: true,
         accept: (d) => !(d.type === "bm" && d.node.children),
-        onDrop: async (_zone, data) => insertPinned(data, (await ensureFolder("Favorites")).id, null),
+        // A drop in the gap between tiles lands next to the closest tile instead of at the end of the grid.
+        onDrop: async (_zone, data, e) => {
+          const centers = [...grid.children].map((t) => { const r = t.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+          const nearest = centers.reduce((best, [x, y], i) => (Math.hypot(x - e.clientX, y - e.clientY) < Math.hypot(centers[best][0] - e.clientX, centers[best][1] - e.clientY) ? i : best), 0);
+          const target = favLeaves[nearest];
+          if (!target) return insertPinned(data, (await ensureFolder("Favorites")).id, null);
+          if (data.type === "bm" && data.node.id === target.id) return;
+          await insertPinned(data, target.parentId, target.index + (e.clientX > centers[nearest][0] ? 1 : 0));
+        },
       });
     }
     if (state.space) {

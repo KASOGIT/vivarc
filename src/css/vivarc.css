@@ -722,6 +722,11 @@
 #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):hover { background: var(--vm-lozenge); transform: translateY(-1px) scale(1.04); }
 #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):active { transform: scale(0.96); }
 #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill).active { background: var(--vm-lozenge-strong); }
+/* While a favorite is dragged, tiles stay put (a tile that grows under the pointer moves the drop zones) and the drop
+   marker shows over the glass rim. */
+#browser.vm-on.vm-dragging #vm-panel .vm-fav:is(:hover, :active) { transform: none; }
+#browser.vm-on.vm-glass #vm-panel .vm-fav.drop-before { box-shadow: var(--vm-lozenge-rim), inset 3px 0 0 0 var(--colorHighlightBg, #7b8cff); }
+#browser.vm-on.vm-glass #vm-panel .vm-fav.drop-after { box-shadow: var(--vm-lozenge-rim), inset -3px 0 0 0 var(--colorHighlightBg, #7b8cff); }
 #browser.vm-on.vm-glass #vm-panel .vm-update { box-shadow: var(--vm-lozenge-rim), 0 2px 8px rgba(0, 0, 0, 0.16); }
 #browser.vm-on.vm-glass #vm-panel .vm-row { transition: background 160ms, box-shadow 160ms; }
 #browser.vm-on.vm-glass #vm-panel .vm-row:hover { background: var(--vm-lozenge-soft); }
