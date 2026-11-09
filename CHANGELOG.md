@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.27 - 2026-11-09
+- Fix: dragging a favorite to a new place in the grid is reliable. A drop in the gap between tiles lands next to the closest tile instead of at the end of the grid, the drop marker shows on the glass theme, and tiles no longer grow under the pointer while you drag.
+- Fix: a hovered favorite in the top row is no longer cut off at the top of the sidebar on the glass theme.
+- The palette icon that opens the theme editor, next to the space name, is always shown and a little brighter, instead of appearing only on hover.
+
 ## 0.1.26 - 2026-11-09
 - **A quiet Update Vivarc button replaces the update dialog.** When a new release is out, a small button appears above the space bar in the sidebar, like Vivaldi's own update button. Click it to update, as the dialog's Update button did; right-click it for **Copy Update Command**, **What's New** or **Later**. macOS shows a Notification Center banner instead of the blocking dialog (Windows no longer asks). Vivarc checks GitHub at most every 12 hours; **Check for updates** in Vivarc Settings turns it off. Thanks @groenroos (#100).
 - A tab's right-click menu in the sidebar has more of Vivaldi's: **Reload Tab**, **Split View** (side by side or top and bottom, **Close Split View** when the tab is in one), **Move to New Window**, **Move to Window** (one entry per other window) and **Move to Space** (one per other space, without switching to it). Thanks @groenroos (#128).
