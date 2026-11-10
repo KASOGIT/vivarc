@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.28 - 2026-11-10
+- Fix: the update reminder works when you installed from a checkout in Documents, Desktop or Downloads. macOS hides those folders from background jobs, so the reminder never ran and no popup appeared after a Vivaldi update. It now runs the copy in `~/.vivarc/app`. Run `./vivarc.py reminder on` once to switch an existing reminder over.
+
 ## 0.1.27 - 2026-11-09
 - Fix: dragging a favorite to a new place in the grid is reliable. A drop in the gap between tiles lands next to the closest tile instead of at the end of the grid, the drop marker shows on the glass theme, and tiles no longer grow under the pointer while you drag.
 - Fix: a hovered favorite in the top row is no longer cut off at the top of the sidebar on the glass theme.
