@@ -170,6 +170,24 @@
     if (activate) await chrome.tabs.update(tab.id, { active: true });
   };
   const defaultSpaceName = () => (state.defaultSpace ? spacesOf.label(state.defaultSpace) : "Home");
+  // The command bar's Move Tab to Space (#125): like Arc, you go with the tab. Vivaldi moves a tab only into a
+  // workspace that is open in the window, so an empty space is opened first and the blank tab it gets is closed.
+  window.__vm.moveTargets = (tab) => spacesOf.moveTargets(state.workspaces, defaultSpaceName(), tab);
+  window.__vm.moveTabToSpaceAndGo = async (tabId, id) => {
+    const tab = await chrome.tabs.get(tabId);
+    if (spacesOf.of(tab) === id) return;
+    let blank = null;
+    if (!spacesOf.tabsIn(await chrome.tabs.query({ windowId: tab.windowId }), id).length) {
+      const activate = spacesOf.findSwitcher(chrome.extension.getBackgroundPage?.()?.webpackChunkgapp_browser_react);
+      if (!activate) throw new Error("no workspace switcher");
+      window.__vm.switchingSpace = true;
+      try { await activate(tab.windowId, id); } finally { window.__vm.switchingSpace = false; }
+      const [active] = await chrome.tabs.query({ active: true, windowId: tab.windowId });
+      if (active && active.id !== tab.id && spacesOf.of(active) === id && BLANK.test(active.pendingUrl || active.url || "")) blank = active;
+    }
+    await moveTabToSpace(tab.id, id, true);
+    if (blank) await chrome.tabs.remove(blank.id).catch(() => {});
+  };
 
   const backToPin = (tab, node) => chrome.tabs.update(tab.id, { url: node.url });
 
