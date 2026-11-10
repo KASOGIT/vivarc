@@ -827,13 +827,18 @@ def enable_reminder(app):
         if out.returncode != 0:
             say(f"Could not create the scheduled task: {(out.stderr or out.stdout).strip()}")
         return
+    script = os.path.join(HERE, "vivarc.py")
     for folder in ("Documents", "Desktop", "Downloads"):
         if HERE.startswith(os.path.join(HOME, folder) + os.sep):
-            say(f"Note: macOS does not let background jobs read ~/{folder}, so the reminder cannot run from this copy. "
-                "Use the copy the one-line install puts in ~/.vivarc/app.")
+            installed = os.path.join(HOME_DIR, "app", "vivarc.py")
+            if os.path.exists(installed):
+                script = installed
+            else:
+                say(f"Note: macOS does not let background jobs read ~/{folder}, so the reminder cannot run from this copy. "
+                    "Use the copy the one-line install puts in ~/.vivarc/app.")
     agent = {
         "Label": REMINDER_LABEL,
-        "ProgramArguments": ["/usr/bin/python3", os.path.join(HERE, "vivarc.py"), "--app", app, "remind"],
+        "ProgramArguments": ["/usr/bin/python3", script, "--app", app, "remind"],
         "RunAtLoad": True,
         "StartInterval": 3600,
         "WatchPaths": [os.path.join(app, "Contents", "Info.plist")],
