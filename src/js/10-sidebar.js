@@ -170,6 +170,10 @@
     if (activate) await chrome.tabs.update(tab.id, { active: true });
   };
   const defaultSpaceName = () => (state.defaultSpace ? spacesOf.label(state.defaultSpace) : "Home");
+  // For the archive (12-archive.js): the name of a space when a tab is archived, and whether a space still exists
+  // when an archived page is restored into it.
+  window.__vm.spaceNameOf = (id) => spacesOf.items(state.workspaces, defaultSpaceName()).find((i) => i.id === id)?.name || "";
+  window.__vm.spaceExists = (id) => !id || !state.workspaces?.length || state.workspaces.some((w) => w.id === id);
 
   const backToPin = (tab, node) => chrome.tabs.update(tab.id, { url: node.url });
 
@@ -602,6 +606,7 @@
           () => chrome.tabs.move(tab.id, { windowId: w.id, index: -1 })]),
         ...spaces.map((s) => [`Move to Space: ${s.emoji ? `${s.emoji} ` : ""}${s.name}`, () => moveTabToSpace(tab.id, s.id, false)]),
         [],
+        ["Archive Tab", () => window.__vm.archive.archiveTabs([tab])],
         ["Close Tab", () => chrome.tabs.remove(tab.id)],
         ["Close Other Tabs", () => {
           const ids = state.tabs.filter((t) => t.id !== tab.id && !t.pinned).map((t) => t.id);
@@ -1118,7 +1123,8 @@
       chrome.bookmarks[ev]?.addListener(() => refresh(true));
     }
     chrome.tabs.onCreated.addListener((tab) => {
-      if (window.__vm.switchingSpace) return; // the landing tab of a space switch belongs to the new space
+      // The landing tab of a space switch belongs to the new space; a restored archived page brings its own.
+      if (window.__vm.switchingSpace || window.__vm.archive?.busy) return;
       const active = state.active;
       chrome.windows.getCurrent().then((win) => {
         const data = spacesOf.stamp(tab, active, win.id);
