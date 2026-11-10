@@ -9,6 +9,8 @@
       label: "Glass opacity", hint: "From clear to frosted: how much of the surface colour shows through the glass.", low: "Clear", high: "Frosted" },
     { key: "urlBar", label: "URL bar", hint: "Always show the address bar at the top of the sidebar, like Arc. Off, it appears when you edit the address (Cmd+L, or Ctrl+L on Windows).",
       default: false, onClass: "vm-url-bar" },
+    { key: "commandBarAddress", label: "Edit the address in the command bar", hint: "Cmd+L (Ctrl+L on Windows) opens the page's address in the command bar, centred and selected, like Arc; Enter loads it in the same tab. Off, it is edited in the sidebar.",
+      default: false },
     { key: "spaceBar", label: "Space bar", hint: "The row of space tiles under the sidebar.", default: true, offClass: "vm-no-space-bar" },
     { key: "compactBottomBar", label: "Compact bottom bar", hint: "A tighter row for the profile avatars and downloads.", default: true,
       fromConfig: (c) => c.compactBottomBar, onClass: "vm-compact-bottom" },

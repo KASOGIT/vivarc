@@ -420,7 +420,9 @@
     autoCompleted = e.key.length === 1 && !e.metaKey && !e.ctrlKey;
   };
 
-  const open = (tabId) => {
+  // edit: the page's address to edit (Cmd+L). The target is then the page itself: Enter loads into it, and closing
+  // the bar never closes it (only a blank tab is closed, see removeBlankTab).
+  const open = (tabId, { edit = null } = {}) => {
     if (!window.__vm.cssLoaded) return;
     if (bar) { targetTab = tabId; return; }
     targetTab = tabId;
@@ -454,7 +456,12 @@
     input.addEventListener("keydown", onKey);
     input.addEventListener("input", async () => { await compute(); autocomplete(); });
     (document.querySelector("#browser") || document.body).append(bar);
-    const focus = () => input?.focus();
+    if (edit != null) {
+      input.value = edit;
+      input.placeholder = "Search or Enter URL…";
+    }
+    // Vivaldi may focus its own address field right after (Cmd+L is also its shortcut): the bar takes the focus back.
+    const focus = () => { if (!input) return; input.focus(); if (edit && input.value === edit) input.select(); };
     focus();
     setTimeout(focus, 60);
     setTimeout(focus, 250);
@@ -467,6 +474,17 @@
 
   window.addEventListener("vm-open-command-bar", () => open(null));
   window.__vm.onShortcut((key) => { if (key === window.__vm.normalise(window.__vm.keys.commandBar)) open(null); });
+  // Cmd+L (Ctrl+L on Windows), with "Edit the address in the command bar" on: like Arc, the page's address opens in
+  // the bar, centred and selected, to edit or replace; Enter loads it in this tab, Escape leaves the page as it was.
+  window.__vm.onShortcut(async (key) => {
+    if (!window.__vm.keys.editAddress || key !== window.__vm.normalise(window.__vm.keys.editAddress)) return;
+    if (!window.__vm.settings?.get?.("commandBarAddress")) return;
+    const [tab] = await chrome.tabs.query({ active: true, windowId: window.vivaldiWindowId });
+    if (!tab) return;
+    if (bar) close(false);
+    open(tab.id, { edit: isBlank(tab) ? "" : (tab.url || "") });
+    document.querySelector("#tabs-tabbar-container .UrlBar-UrlField")?.blur();
+  });
 
   const activeHistory = [];
   chrome.tabs.onActivated.addListener(({ tabId }) => {
