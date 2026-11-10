@@ -147,6 +147,8 @@
     { label: "Mute / Unmute Tab", words: "sound audio silence", tab: true, run: (tab) =>
       chrome.tabs.update(tab.id, { muted: !tab.mutedInfo?.muted }) },
     { label: "Close Tab", words: "quit remove", tab: true, run: (tab) => chrome.tabs.remove(tab.id) },
+    { label: "Archive Tab", words: "archive close keep", tab: true, run: (tab) => window.__vm.archive.archiveTabs([tab]) },
+    { label: "View Archived Tabs", words: "archive archived restore closed", stay: true, run: () => setMode(ARCHIVE) },
     { label: "Reopen Closed Tab", words: "restore undo", run: () => chrome.sessions.restore() },
     { label: "New Window", words: "open window", run: () => chrome.windows.create({}) },
     { label: "New Private Window", words: "incognito private", run: () => chrome.windows.create({ incognito: true }) },
@@ -166,6 +168,9 @@
     { label: "Vivarc Settings", words: "preferences options configure features toggle glass", run: () => window.dispatchEvent(new CustomEvent("vm-open-settings")) },
     { label: "Edit Theme", words: "color appearance sidebar", run: () => window.dispatchEvent(new CustomEvent("vm-open-theme")) },
   ];
+  // "View Archived Tabs" (#121): a mode of the bar that searches the archive; Enter restores the page into its space,
+  // Cmd+Backspace (Ctrl+Backspace on Windows) removes it from the archive.
+  const ARCHIVE = { archive: true, name: "Archived Tabs", placeholder: "Search archived tabs…" };
   const ACTION_SVG =
     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg>';
 
@@ -250,6 +255,12 @@
     } else if (row.type === "engine") {
       input.value = "";
       setMode(row.engine);
+    } else if (row.type === "archived") {
+      close(true);
+      window.__vm.archive.restore(row.entry).catch((e) => console.warn("[vivarc] restore:", e));
+    } else if (row.type === "action" && row.action.stay) {
+      input.value = "";
+      row.action.run(row.tab);
     } else if (row.type === "action") {
       close(true);
       Promise.resolve(row.action.run(row.tab)).catch((e) => console.warn("[vivarc] action:", e));
@@ -274,9 +285,9 @@
         item.append(iconFor(row.url, row.favicon), el("span", "vm-cmd-title", row.label));
         if (row.sub) item.append(el("span", "vm-cmd-sub", `— ${row.sub}`));
       }
-      if (row.type === "tab" || row.type === "action" || row.type === "engine") {
+      if (row.type === "tab" || row.type === "action" || row.type === "engine" || row.type === "archived") {
         const hint = el("span", "vm-cmd-hint");
-        hint.append(el("span", null, { tab: "Switch to Tab", action: "Run Action", engine: "Tab" }[row.type]));
+        hint.append(el("span", null, { tab: "Switch to Tab", action: "Run Action", engine: "Tab", archived: "Restore" }[row.type]));
         const arrow = el("span", "vm-cmd-arrow");
         arrow.innerHTML = ARROW_SVG;
         hint.append(arrow);
@@ -317,7 +328,12 @@
     const id = ++seq;
     const text = input.value.trim();
     const out = [];
-    if (mode) {
+    if (mode?.archive) {
+      const found = window.__vm.archive.search(await window.__vm.archive.load(), text, 50);
+      if (id !== seq) return;
+      out.push(...found.map((entry) => ({ type: "archived", entry, url: entry.url, favicon: entry.favicon, label: entry.title,
+        sub: window.__vm.archive.describe(entry) })));
+    } else if (mode) {
       out.push({ type: "search", engine: mode, query: text, label: text || "%s" });
     } else if (!text) {
       (await allTabs()).slice(0, 7).forEach((tab) =>
@@ -379,7 +395,7 @@
       chip.style.backgroundColor = CHIP_COLORS[engine.keyword] || "#5b5670";
       chipHolder.append(chip);
     }
-    input.placeholder = engine ? "Search…" : "Search or Enter URL…";
+    input.placeholder = engine?.placeholder || (engine ? "Search…" : "Search or Enter URL…");
     input.value = "";
     compute();
   };
@@ -414,6 +430,11 @@
       const keyword = input.value.trim().toLowerCase();
       const engine = !mode && keyword && engines.find((en) => en.keyword.toLowerCase() === keyword);
       if (engine) setMode(engine);
+      return;
+    }
+    if (e.key === "Backspace" && (e.metaKey || e.ctrlKey) && mode?.archive && rows[selected]?.type === "archived") {
+      e.preventDefault();
+      window.__vm.archive.forget(rows[selected].entry.id).then(compute);
       return;
     }
     if (e.key === "Backspace" && mode && !input.value) { e.preventDefault(); setMode(null); return; }
