@@ -1,7 +1,7 @@
 # Changelog
 
-## Unreleased
-- Fix: **Copy Link** in the sidebar menu (pinned tabs, favorites, tabs) and **Copy Current URL** in the command bar copy the link again. They silently did nothing while the page had focus.
+## 0.1.30 - 2026-11-11
+- Fix: **Copy Link** in the sidebar menu (pinned tabs, favorites, tabs) and **Copy Current URL** in the command bar copy the link again. They silently did nothing while the page had focus (#153).
 
 ## 0.1.29 - 2026-11-11
 - **Peek, the link preview, behaves like Arc's and can be turned off.** A plain click on Google results now opens the page normally; a plain click opens a preview only for a link to another site from a pinned tab, as in Arc. **Vivarc Settings** has a **Link preview (Peek)** switch (off, every link opens in its tab, at once, even on pages already open), plus **Preview links from pinned tabs**, the **Preview shortcut** (Option+click, Shift+click or none; Cmd+click always opens a new tab) and **Dim the page behind**. The tabs Peek opens behind a preview no longer show up in the sidebar, a space, the tab switcher or tab search, and the preview keeps Arc's controls only: close, open in a tab, split view, copy link. The first preview says what it is and where to turn it off. Thanks u/yapesochek on Reddit for the report (#150).
