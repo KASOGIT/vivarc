@@ -416,6 +416,8 @@
     if (host && input.value === text) {
       input.value = host;
       input.setSelectionRange(text.length, host.length);
+      // The rows still match what was typed, so Enter must not recompute them for the completed host.
+      if (computedFor === text) computedFor = host;
     }
   };
 
@@ -430,7 +432,10 @@
     }
     if (e.key === "Enter") {
       e.preventDefault();
-      if (computedFor !== (input ? input.value : "")) await compute();
+      if (computedFor !== (input ? input.value : "")) {
+        await compute();
+        if (!bar) return;
+      }
       run(rows[selected]);
       return;
     }
