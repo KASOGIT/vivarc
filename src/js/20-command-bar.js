@@ -295,7 +295,7 @@
   };
 
   const allTabs = async () =>
-    (await chrome.tabs.query({ currentWindow: true })).filter((t) => !isBlank(t) && t.id !== targetTab);
+    window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true })).filter((t) => !isBlank(t) && t.id !== targetTab);
 
   const pageBehindBar = async () => {
     const [active] = await chrome.tabs.query({ active: true, currentWindow: true });

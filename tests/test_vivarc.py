@@ -255,6 +255,24 @@ class Bundle(unittest.TestCase):
                 head = f.readline()
         self.assertEqual(json.loads(head[len("window.__vmConfig = "):].rstrip(";\n"))["version"], vivarc.VERSION)
 
+    def read_config(self, d):
+        with open(os.path.join(d, "vivarc.js"), encoding="utf8") as f:
+            head = f.readline()
+        return json.loads(head[len("window.__vmConfig = "):].rstrip(";\n"))
+
+    def test_the_config_says_whether_peek_is_in_the_bundle(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(vivarc, "HOME_DIR", os.path.join(d, "home")):
+            vivarc.write_bundle(d, with_peek=True)
+            self.assertFalse(self.read_config(d)["peekInstalled"])
+            os.makedirs(os.path.join(d, "home", "peek"))
+            for name in ("VividPeek.js", "VividPeek.css"):
+                with open(os.path.join(d, "home", "peek", name), "w") as f:
+                    f.write("/* peek */")
+            vivarc.write_bundle(d, with_peek=True)
+            self.assertTrue(self.read_config(d)["peekInstalled"])
+            vivarc.write_bundle(d, with_peek=False)
+            self.assertFalse(self.read_config(d)["peekInstalled"])
+
 
 class StyleScript(unittest.TestCase):
     def test_embeds_the_css_as_a_style_element_with_the_text_intact(self):

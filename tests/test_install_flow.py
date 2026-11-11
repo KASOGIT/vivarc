@@ -149,7 +149,8 @@ class InstallFlow(unittest.TestCase):
         with mock.patch.object(vivarc, "can_write", return_value=False):
             with self.assertRaises(SystemExit):
                 self.run_cli("install", "--no-peek")
-        vivarc.open_settings.assert_called_once_with()
+        # Windows refuses with an administrator hint instead of opening System Settings.
+        self.assertEqual(vivarc.open_settings.call_count, 0 if vivarc.IS_WIN else 1)
         self.assertEqual(self.prefs("Default"), before)
         self.assertFalse(os.path.exists(os.path.join(self.home, "state.json")))
         self.assertFalse(os.path.exists(os.path.join(self.home, "peek")))
