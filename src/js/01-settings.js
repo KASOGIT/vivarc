@@ -16,6 +16,8 @@
     { key: "commandBarAddress", section: "Sidebar", label: "Edit the address in the command bar", hint: { mac: "Cmd+L opens the address in the command bar, like Arc. Off, it is edited in the sidebar.", win: "Ctrl+L opens the address in the command bar, like Arc. Off, it is edited in the sidebar." },
       default: false },
     { key: "spaceBar", section: "Sidebar", label: "Space bar", hint: "The row of space tiles at the bottom.", default: true, offClass: "vm-no-space-bar" },
+    { key: "hideDelay", section: "Sidebar", type: "range", min: 100, max: 1500, step: 50, default: 150, unit: " ms",
+      label: "Auto-hide after", low: "Quick", high: "Slow" }, // applied to Vivaldi's own auto-hide by 11-autohide.js
     { key: "compactBottomBar", section: "Sidebar", label: "Compact bottom bar", hint: "A tighter row for profiles and downloads.", default: true,
       fromConfig: (c) => c.compactBottomBar, onClass: "vm-compact-bottom" },
     { key: "archive", section: "Tabs", label: "Archive inactive tabs", hint: "Close tabs left unopened, like Arc. Pins, favorites and tabs playing sound stay.",
