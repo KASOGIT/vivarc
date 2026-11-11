@@ -48,7 +48,9 @@
    and drop the buttons on its right (feed, translate, install, bookmark) except a pending site permission request. */
 #browser.vm-on.vm-url-bar #tabs-tabbar-container .UrlBar-AddressField:focus-within { min-width: 100% !important; }
 #browser.vm-on.vm-url-bar #tabs-tabbar-container .UrlBar-UrlFieldWrapper + .toolbar
-  .button-toolbar:not(.permission-popup.is-undecided, .permission-popup.is-allowing) { display: none; }
+  > :not(.pageload, .permission-popup.is-undecided, .permission-popup.is-allowing) { display: none; }
+/* Vivaldi fades the last 16px of the address out, which reads as an empty gap at the end of the field */
+#browser.vm-on.vm-url-bar #tabs-tabbar-container .UrlBar-UrlFieldWrapper { mask-image: none !important; }
 
 #vm-panel {
   flex: 0 1 auto;
