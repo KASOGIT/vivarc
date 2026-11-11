@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Vivarc demo: split view, the command bar and a YouTube search shortcut in Vivaldi" width="860">
+  <img src="docs/demo.gif" alt="Vivarc demo in Vivaldi: add a tab to Favorites, pin a tab, Liquid glass and the URL bar in Vivarc Settings, a theme colour, split view from the command bar, a YouTube search shortcut and Copy URL" width="860">
 </p>
 
 > **Arc is being discontinued on December 22, 2026**, according to the announcement email The Browser Company sent. If you want to keep the sidebar and command bar workflow somewhere else, Vivarc gives you most of it in Vivaldi, free and open source.
@@ -91,9 +91,11 @@ python3 ~/.vivarc/app/vivarc.py uninstall   # same as Uninstall Vivarc (add --pu
 python3 ~/.vivarc/app/vivarc.py status      # what is installed
 ```
 
-**Update reminder (optional).** The installer offers it. When a Vivaldi update removes Vivarc, or a new Vivarc release is out, a small dialog asks whether to update. Switch it on or off with `python3 ~/.vivarc/app/vivarc.py reminder on` (or `off`).
+**Update button.** When a new Vivarc release is out, a small **Update Vivarc** button appears above the space bar. Click it to update: Vivarc runs the same update as **Update Vivarc** (the first time, Vivaldi asks to open it: allow it). Right-click it for **Copy Update Command**, **What's New** (the release notes) or **Later** (hides it until a newer release). Vivarc asks GitHub at most every 12 hours; switch **Check for updates** off in Vivarc Settings to stop that and hide the button.
 
-**On Windows**, **Update Vivarc** and **Uninstall Vivarc** are in the Start Menu (type their name). They work as above. From PowerShell: `python ~\.vivarc\app\vivarc.py update` (or `uninstall`, `status`). After a Vivaldi update you normally do nothing: the scheduled task re-applies Vivarc and asks you to restart Vivaldi. It also asks before updating when a new Vivarc release is out.
+**Update reminder (optional).** The installer offers it. When a Vivaldi update removes Vivarc, a small dialog asks whether to bring it back. When a new Vivarc release is out you get a quiet notification, never a dialog. Switch it on or off with `python3 ~/.vivarc/app/vivarc.py reminder on` (or `off`).
+
+**On Windows**, **Update Vivarc** and **Uninstall Vivarc** are in the Start Menu (type their name). They work as above. From PowerShell: `python ~\.vivarc\app\vivarc.py update` (or `uninstall`, `status`). After a Vivaldi update you normally do nothing: the scheduled task re-applies Vivarc and asks you to restart Vivaldi. When a new Vivarc release is out, an **Update Vivarc** button shows in the sidebar (see below).
 
 ## What you get
 
@@ -136,7 +138,9 @@ python3 ~/.vivarc/app/vivarc.py status      # what is installed
 
 On Windows, Win+Ctrl+arrows belong to virtual desktops, so the profile keys add Shift instead. Ctrl+T, Ctrl+S and Ctrl+Shift+C take over New Tab, Save Page and Copy to Note (the command bar opens a new tab; Save Page stays in Vivaldi's menu).
 
-**Also:** an optional link preview (Peek, by [PaRr0tBoY](https://github.com/PaRr0tBoY/Awesome-Vivaldi), downloaded from upstream and verified at install), and an importer for your Arc spaces and site icons.
+**Also:** an importer for your Arc spaces and site icons, and a link preview like Arc's Peek (VividPeek, by [PaRr0tBoY](https://github.com/PaRr0tBoY/Awesome-Vivaldi), downloaded from upstream and verified at install).
+
+**Link preview (Peek).** A link to another site, clicked in a pinned tab, opens in a floating window over the page; so does a link clicked with Option held (Alt on Windows) or held down with the middle mouse button. Esc or a click outside closes it, and the buttons on its right open it in a tab or in split view. Cmd+click (Ctrl+click) always opens a new tab. If links open in a small window and you did not want that, turn off **Link preview (Peek)** in **Vivarc Settings**, or change its shortcut there. `--no-peek` at install leaves it out entirely.
 
 ## Coming from Arc or Chrome
 

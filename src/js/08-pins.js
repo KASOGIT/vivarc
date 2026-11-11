@@ -6,14 +6,19 @@
   const PIN = "vivarcPin";
   const HOME = "vivarcHome";
 
+  // A null value counts as no key (see patched).
   const read = (tab) => {
-    try { return JSON.parse(tab?.vivExtData || "{}") || {}; } catch (_) { return {}; }
+    try {
+      return Object.fromEntries(Object.entries(JSON.parse(tab?.vivExtData || "{}") || {}).filter(([, v]) => v !== null));
+    } catch (_) { return {}; }
   };
   const pinOf = (tab) => read(tab)[PIN];
   const homeOf = (tab) => read(tab)[HOME];
 
-  // A patch value of undefined removes the key.
-  const patched = (tab, patch) => JSON.stringify({ ...read(tab), ...patch });
+  // A patch value of undefined removes the key. Vivaldi merges what is written into the tab's vivExtData, so a key
+  // that is only left out stays: it has to be written as null, which Vivaldi takes as "remove".
+  const patched = (tab, patch) => JSON.stringify({ ...read(tab),
+    ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, v === undefined ? null : v])) });
   const needsWrite = (tab, patch) => {
     const current = read(tab);
     return Object.keys(patch).some((k) => (current[k] === undefined ? undefined : current[k]) !== patch[k]);

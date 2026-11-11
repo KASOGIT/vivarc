@@ -144,7 +144,7 @@
   const open = async (dir) => {
     if (opening) return;
     opening = true;
-    const tabs = recent.order(await chrome.tabs.query({ currentWindow: true }));
+    const tabs = recent.order(window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true })));
     opening = false;
     if (bar) return;
     const start = recent.first(dir, tabs.length);

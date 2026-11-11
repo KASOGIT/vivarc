@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import vivarc  # noqa: E402
@@ -142,6 +143,24 @@ class PatchPreferences(unittest.TestCase):
             self.assertIs(hide[bar], False)
         self.assertIs(hide["show_introduction"], False)
 
+    def test_an_update_keeps_the_auto_hide_choices_the_user_made(self):
+        mine = {"vivaldi": {"auto_hide": {"tab_bar": True, "address_bar": True}}}
+        new, _ = vivarc.patch_preferences(mine, [DEFAULTS], reapply=True)
+        hide = new["vivaldi"]["auto_hide"]
+        self.assertIs(hide["tab_bar"], True)
+        self.assertIs(hide["address_bar"], True)
+        self.assertIs(hide["enabled"], True)
+        self.assertIs(hide["panel"], True)
+
+    def test_an_update_still_fills_in_auto_hide_settings_the_profile_does_not_have(self):
+        new, _ = vivarc.patch_preferences({}, [DEFAULTS], reapply=True)
+        self.assertIs(new["vivaldi"]["auto_hide"]["tab_bar"], False)
+
+    def test_a_first_install_starts_with_the_sidebar_visible_whatever_auto_hide_was(self):
+        mine = {"vivaldi": {"auto_hide": {"tab_bar": True}}}
+        new, _ = vivarc.patch_preferences(mine, [DEFAULTS])
+        self.assertIs(new["vivaldi"]["auto_hide"]["tab_bar"], False)
+
     def test_the_status_bar_only_overlays(self):
         new, _ = vivarc.patch_preferences({}, [DEFAULTS])
         self.assertEqual(new["vivaldi"]["status_bar"]["display"], 2)
@@ -228,6 +247,31 @@ class Bundle(unittest.TestCase):
         self.assertTrue(out.startswith("window.__vmConfig = " + json.dumps({"suggestions": "off"})))
         self.assertLess(out.index("A();"), out.index("B();"))
         self.assertIn("P();", out)
+
+    def test_the_installed_version_is_in_the_config_for_the_update_pill(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(vivarc, "HOME_DIR", os.path.join(d, "home")):
+            vivarc.write_bundle(d, with_peek=False)
+            with open(os.path.join(d, "vivarc.js"), encoding="utf8") as f:
+                head = f.readline()
+        self.assertEqual(json.loads(head[len("window.__vmConfig = "):].rstrip(";\n"))["version"], vivarc.VERSION)
+
+    def read_config(self, d):
+        with open(os.path.join(d, "vivarc.js"), encoding="utf8") as f:
+            head = f.readline()
+        return json.loads(head[len("window.__vmConfig = "):].rstrip(";\n"))
+
+    def test_the_config_says_whether_peek_is_in_the_bundle(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(vivarc, "HOME_DIR", os.path.join(d, "home")):
+            vivarc.write_bundle(d, with_peek=True)
+            self.assertFalse(self.read_config(d)["peekInstalled"])
+            os.makedirs(os.path.join(d, "home", "peek"))
+            for name in ("VividPeek.js", "VividPeek.css"):
+                with open(os.path.join(d, "home", "peek", name), "w") as f:
+                    f.write("/* peek */")
+            vivarc.write_bundle(d, with_peek=True)
+            self.assertTrue(self.read_config(d)["peekInstalled"])
+            vivarc.write_bundle(d, with_peek=False)
+            self.assertFalse(self.read_config(d)["peekInstalled"])
 
 
 class StyleScript(unittest.TestCase):

@@ -65,6 +65,10 @@
     /^(https?:\/\/|chrome:\/\/|vivaldi:\/\/)/i.test(text) || (/^[^\s]+\.[a-z]{2,}(\/\S*)?$/i.test(text) && !text.includes(" "));
   const toUrl = (text) => (/^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `https://${text}`);
   const engineUrl = (engine, query) => engine.url.replace(/\{searchTerms\}|%s/, encodeURIComponent(query));
+  const suggestionRow = (p) =>
+    /^https?:\/\//i.test(p)
+      ? { type: "url", url: toUrl(p), label: p, sub: "Open" }
+      : { type: "suggest", engine: DEFAULT, query: p, label: p };
 
   const toast = (message) => window.dispatchEvent(new CustomEvent("vm-toast", { detail: message }));
   const openPage = (url) => chrome.tabs.create({ url });
@@ -89,7 +93,9 @@
     const fresh = await chrome.tabs.get(tab.id);
     let ext = {};
     try { ext = JSON.parse(fresh.vivExtData || "{}"); } catch (_) {}
-    await chrome.tabs.update(tab.id, { vivExtData: JSON.stringify({ ...ext, ...patch }) });
+    // Vivaldi merges vivExtData into what the tab has, so a key left out stays; null is what removes it.
+    const cleared = Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, v === undefined ? null : v]));
+    await chrome.tabs.update(tab.id, { vivExtData: JSON.stringify({ ...ext, ...cleared }) });
   };
   // Split view like Arc's: the page behind the bar and a new tab form a fresh Vivaldi tile group. "row" puts them
   // side by side, "column" one above the other (measured from the rendered panes in Vivaldi 8.2). If the page was
@@ -130,8 +136,8 @@
     { label: "Add This Tab to Favorites", words: "favorite pin", tab: true, run: async (tab) => {
       if (await window.__vm.pinTab?.(tab, "Favorites")) toast("Added to Favorites");
     } },
-    { label: "Copy Current URL", words: "copy link address share", tab: true, run: async (tab) => {
-      await navigator.clipboard?.writeText(tab.url).catch(() => {});
+    { label: "Copy Current URL", words: "copy link address share", tab: true, run: (tab) => {
+      window.__vm.copyText(tab.url);
       toast("Copied Current URL");
     } },
     { label: "Split View: Side by Side", words: "split tile vertical columns", tab: true, run: (tab) => splitView(tab, "row") },
@@ -156,6 +162,7 @@
       window.dispatchEvent(new CustomEvent("vm-folders", { detail: "expand" }));
       toast("Expanded all folders");
     } },
+    { label: "Clear All Tabs", words: "clear close tabs sidebar today", run: () => window.dispatchEvent(new CustomEvent("vm-clear-tabs")) },
     { label: "Vivarc Settings", words: "preferences options configure features toggle glass", run: () => window.dispatchEvent(new CustomEvent("vm-open-settings")) },
     { label: "Edit Theme", words: "color appearance sidebar", run: () => window.dispatchEvent(new CustomEvent("vm-open-theme")) },
   ];
@@ -202,7 +209,19 @@
     rows = [];
     seq++;
     computedFor = null;
-    if (removeBlank && blank != null) chrome.tabs.remove(blank).catch(() => {});
+    if (removeBlank && blank != null) removeBlankTab(blank);
+  };
+  // The blank tab the bar was opened for is closed, unless it is all its space has: closing it would leave the space
+  // empty and Vivaldi would hand the window to another space's tab (an empty space opens the bar, #89).
+  const removeBlankTab = async (id) => {
+    try {
+      const tab = await chrome.tabs.get(id);
+      if (!isBlank(tab)) return;
+      const space = window.__vm.workspaces?.of(tab) ?? 0;
+      const others = (await chrome.tabs.query({ windowId: tab.windowId }))
+        .filter((t) => t.id !== id && (window.__vm.workspaces?.of(t) ?? 0) === space);
+      if (others.length) await chrome.tabs.remove(id);
+    } catch (_) {}
   };
 
   const go = (url) => {
@@ -278,7 +297,7 @@
   };
 
   const allTabs = async () =>
-    (await chrome.tabs.query({ currentWindow: true })).filter((t) => !isBlank(t) && t.id !== targetTab);
+    window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true })).filter((t) => !isBlank(t) && t.id !== targetTab);
 
   const pageBehindBar = async () => {
     const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -353,7 +372,8 @@
             if (id !== seq) return;
             const phrases = search.parseSuggestions(body);
             const suggestions = phrases.filter((p) => p && p.toLowerCase() !== needle).slice(0, 4)
-              .map((p) => ({ type: "search", engine: DEFAULT, query: p, label: p }));
+              .map(suggestionRow)
+              .map((r) => (r.type === "suggest" ? { ...r, type: "search" } : r));
             if (suggestions.length) {
               rows = [...out, ...suggestions];
               render();
@@ -446,7 +466,17 @@
     list = el("div", "vm-cmd-list");
     box.append(head, list);
     bar.append(box);
-    bar.addEventListener("mousedown", (e) => { if (e.target === bar) close(true); });
+    // A click outside the box closes the bar and still reaches what it was on in the sidebar (a space, a tab),
+    // instead of taking two clicks.
+    const PASS = "#vm-panel .vm-row, #vm-panel .vm-fav, .vm-space-bar .vm-space-pill";
+    bar.addEventListener("mousedown", (e) => {
+      if (e.target !== bar) return;
+      close(true);
+      document.addEventListener("mouseup", (up) => {
+        const target = document.elementFromPoint(up.clientX, up.clientY)?.closest?.(PASS);
+        if (target && target === document.elementFromPoint(e.clientX, e.clientY)?.closest?.(PASS)) target.click();
+      }, { once: true, capture: true });
+    });
     input.addEventListener("keydown", onKey);
     input.addEventListener("input", async () => {
       await compute();
@@ -460,6 +490,9 @@
     compute();
     window.dispatchEvent(new CustomEvent("vm-command-bar-opened"));
   };
+
+  window.__vm.commandBar = { suggestionRow, splitView, closeSplitView };
+  if (!window.addEventListener || !window.__vm?.onShortcut) return;
 
   window.addEventListener("vm-open-command-bar", () => open(null));
   window.__vm.onShortcut((key) => { if (key === window.__vm.normalise(window.__vm.keys.commandBar)) open(null); });

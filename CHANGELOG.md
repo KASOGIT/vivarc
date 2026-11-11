@@ -1,6 +1,39 @@
 # Changelog
 
-## Unreleased
+## 0.1.31 - 2026-11-11
+- Fix: with the **URL bar** setting on, the address bar no longer spills past a narrow sidebar when you click into it, and the buttons on its right (feed, translate, install, bookmark) are hidden to leave the room to the address, which now runs to the end of the field instead of fading out before it. A site asking for the camera or microphone still shows its button there (#155, #156).
+
+## 0.1.30 - 2026-11-11
+- Fix: **Copy Link** in the sidebar menu (pinned tabs, favorites, tabs) and **Copy Current URL** in the command bar copy the link again. They silently did nothing while the page had focus (#153).
+
+## 0.1.29 - 2026-11-11
+- **Peek, the link preview, behaves like Arc's and can be turned off.** A plain click on Google results now opens the page normally; a plain click opens a preview only for a link to another site from a pinned tab, as in Arc. **Vivarc Settings** has a **Link preview (Peek)** switch (off, every link opens in its tab, at once, even on pages already open), plus **Preview links from pinned tabs**, the **Preview shortcut** (Option+click, Shift+click or none; Cmd+click always opens a new tab) and **Dim the page behind**. The tabs Peek opens behind a preview no longer show up in the sidebar, a space, the tab switcher or tab search, and the preview keeps Arc's controls only: close, open in a tab, split view, copy link. The first preview says what it is and where to turn it off. Thanks u/yapesochek on Reddit for the report (#150).
+
+## 0.1.28 - 2026-11-10
+- Fix: the update reminder works when you installed from a checkout in Documents, Desktop or Downloads. macOS hides those folders from background jobs, so the reminder never ran and no popup appeared after a Vivaldi update. It now runs the copy in `~/.vivarc/app`. Run `./vivarc.py reminder on` once to switch an existing reminder over.
+
+## 0.1.27 - 2026-11-09
+- Fix: dragging a favorite to a new place in the grid is reliable. A drop in the gap between tiles lands next to the closest tile instead of at the end of the grid, the drop marker shows on the glass theme, and tiles no longer grow under the pointer while you drag.
+- Fix: a hovered favorite in the top row is no longer cut off at the top of the sidebar on the glass theme.
+- The palette icon that opens the theme editor, next to the space name, is always shown and a little brighter, instead of appearing only on hover.
+
+## 0.1.26 - 2026-11-09
+- **A quiet Update Vivarc button replaces the update dialog.** When a new release is out, a small button appears above the space bar in the sidebar, like Vivaldi's own update button. Click it to update, as the dialog's Update button did; right-click it for **Copy Update Command**, **What's New** or **Later**. macOS shows a Notification Center banner instead of the blocking dialog (Windows no longer asks). Vivarc checks GitHub at most every 12 hours; **Check for updates** in Vivarc Settings turns it off. Thanks @groenroos (#100).
+- A tab's right-click menu in the sidebar has more of Vivaldi's: **Reload Tab**, **Split View** (side by side or top and bottom, **Close Split View** when the tab is in one), **Move to New Window**, **Move to Window** (one entry per other window) and **Move to Space** (one per other space, without switching to it). Thanks @groenroos (#128).
+- Fix: the space bar stays at the bottom of the sidebar, above the bottom bar, however few tabs the space has; before, it sat right under the last tab. Thanks @groenroos (#101).
+- Fix: updating Vivarc no longer resets the Auto-Hide choices you made in Vivaldi (for example Tab Bar, which Cmd+S toggles). The first install still starts with the sidebar visible. Thanks @groenroos (#99).
+
+## 0.1.25 - 2026-11-08
+- **A favorite has one tab for every space, like Arc.** Clicking a favorite whose tab is in another space brings that tab to the space you are in instead of opening a second one, and clicking it back in the first space moves it back. A favorite in a split view stays where it is. Pinned links still belong to their space. Thanks @gulin-desigenr (#120).
+- Closing the active tab keeps you in its space, on the space's most recent tab, instead of jumping to another space. Closing the last page of a space leaves you in it with the command bar open. Vivaldi still switches space for a moment first, so you may see a brief flash. Thanks @gulin-desigenr (#118, #75).
+- Fix: closing the command bar in an empty space by clicking outside it no longer closes the space's only tab (which sent you to another space), and the click still reaches the space, tab or favorite you clicked. Thanks @gulin-desigenr (#119).
+- Fix: a click on the page now closes the sidebar's right-click menus and the theme editor; before, only Escape did. Thanks @gulin-desigenr (#116).
+- Fix: removing a pin or favorite now removes its link from the tab, so the tab can be archived and bound to a new pin again, and **Close Split View** works. Vivaldi keeps a key that is only left out of a tab's data; Vivarc now writes `null`, which removes it. Thanks @gulin-desigenr (#115).
+- Fix: a space folder in Vivaldi's bookmark trash is no longer a space, so a deleted space, or a new one with the same name, does not bring back the old pins. Thanks @gulin-desigenr (#117).
+- Fix: a suggestion that is a full web address (`https://...`) opens that page instead of searching for it. Thanks @groenroos (#111, reported in #108).
+
+## 0.1.24 - 2026-11-08
+- Sidebar: *Clear* next to the divider is always visible, dimmed, instead of only on hover, like Arc. A new Cmd+T quick action **Clear All Tabs** does the same from the keyboard (type `clear` or `close`): it closes the open tabs below the divider, exactly like the button, and leaves favorites, pinned tabs and other spaces alone.
 - Docs: profiles on the same Vivaldi account share bookmarks, and so Vivarc's favorites and pinned folders. The README, the guide page and the technical notes now say to sign each profile into its own Vivaldi account to keep profiles apart and still sync each one.
 
 ## 0.1.23 - 2026-11-07

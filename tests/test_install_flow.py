@@ -49,6 +49,7 @@ class InstallFlow(unittest.TestCase):
             mock.patch.object(vivarc, "REMINDER_PLIST", os.path.join(self.tmp, "LaunchAgents", "reminder.plist")),
             mock.patch.object(vivarc, "launchctl"),
             mock.patch.object(vivarc, "UPDATE_COMMAND", os.path.join(self.tmp, "home", "Update Vivarc" + LAUNCHER)),
+            mock.patch.object(vivarc, "LSREGISTER", "/usr/bin/true"),
             mock.patch.object(vivarc, "UPDATE_APP", os.path.join(self.tmp, "Applications", "Update Vivarc.app")),
             mock.patch.object(vivarc, "LEGACY_UPDATE_COMMAND", os.path.join(self.tmp, "Applications", "Update Vivarc.command")),
             mock.patch.object(vivarc, "UNINSTALL_COMMAND", os.path.join(self.tmp, "home", "Uninstall Vivarc" + LAUNCHER)),
@@ -59,6 +60,8 @@ class InstallFlow(unittest.TestCase):
             mock.patch.object(vivarc, "vivaldi_running", return_value=False),
             mock.patch.object(vivarc, "app_version", return_value="9.9.9"),
             mock.patch.object(vivarc, "ask", return_value=None),
+            # never open the real System Settings pane from a test
+            mock.patch.object(vivarc, "open_settings"),
         ]
         for p in patches:
             p.start()
@@ -146,6 +149,8 @@ class InstallFlow(unittest.TestCase):
         with mock.patch.object(vivarc, "can_write", return_value=False):
             with self.assertRaises(SystemExit):
                 self.run_cli("install", "--no-peek")
+        # Windows refuses with an administrator hint instead of opening System Settings.
+        self.assertEqual(vivarc.open_settings.call_count, 0 if vivarc.IS_WIN else 1)
         self.assertEqual(self.prefs("Default"), before)
         self.assertFalse(os.path.exists(os.path.join(self.home, "state.json")))
         self.assertFalse(os.path.exists(os.path.join(self.home, "peek")))
@@ -210,7 +215,7 @@ class InstallFlow(unittest.TestCase):
         script = self.read(vivarc.UNINSTALL_COMMAND)
         self.assertTrue(script.startswith("@echo off"))
         self.assertIn(" uninstall", script)
-        shortcuts = [c.args[1]["VIVARC_LNK"] for c in vivarc.powershell.call_args_list]
+        shortcuts = [c.args[1]["VIVARC_LNK"] for c in vivarc.powershell.call_args_list if "VIVARC_LNK" in c.args[1]]
         self.assertEqual(shortcuts, [vivarc.UPDATE_APP, vivarc.UNINSTALL_APP])
         created = [c.args for c in vivarc.schtasks.call_args_list if c.args[0] == "/Create"]
         self.assertEqual(len(created), 1)

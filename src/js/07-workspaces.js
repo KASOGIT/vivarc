@@ -3,6 +3,7 @@
 // A workspace is not a login: all of them share the profile's cookies (profiles are the isolation boundary).
 (() => {
   const ARC_PREFIX = "Arc - ";
+  const BLANK = /^(chrome|vivaldi):\/\/(newtab|vivaldi-webui\/startpage)/;
 
   // Vivaldi keeps the workspace id in the tab's vivExtData JSON; no key means the default space (id 0).
   const of = (tab) => {
@@ -28,12 +29,28 @@
     return [{ id: 0, name: defaultName, emoji: "" }, ...list.map((w) => ({ id: w.id, name: w.name, emoji: w.emoji || "" }))];
   };
 
+  // Where a tab's "Move to Space" menu entries go: every space but the one it is in.
+  const moveTargets = (list, defaultName, tab) => items(list, defaultName).filter((i) => i.id !== of(tab));
+
   // Where switching to a space lands: its most recently used tab (Vivaldi then switches the workspace by itself).
   const recentTab = (tabs, id) => {
     const own = tabsIn(tabs, id);
     if (!own.length) return null;
     return own.reduce((best, t) => ((t.lastAccessed ?? 0) > (best.lastAccessed ?? 0) ||
       ((t.lastAccessed ?? 0) === (best.lastAccessed ?? 0) && t.index > best.index) ? t : best));
+  };
+
+  // After the active tab of space `closed` closes or leaves the window, Vivaldi may activate a tab of another space
+  // (and the sidebar follows it there). Arc stays in the space: returns the tab to bring back, { empty: true } when
+  // the space has no tab left, or null when nothing needs doing. A page wins over the blank landing tab an empty
+  // space keeps; with only that left, the caller opens the command bar on it.
+  const stayIn = (tabs, closed, removedIds = new Set()) => {
+    const active = tabs.find((t) => t.active);
+    if (!active || of(active) === closed) return null;
+    const left = tabs.filter((t) => !removedIds.has(t.id));
+    const pages = left.filter((t) => !BLANK.test(t.pendingUrl || t.url || ""));
+    const tab = recentTab(pages, closed) ?? recentTab(left, closed);
+    return tab ? { tab } : { empty: true };
   };
 
   const label = (folder) => folder.title.startsWith(ARC_PREFIX) ? folder.title.slice(ARC_PREFIX.length) : folder.title;
@@ -117,5 +134,5 @@
     return null;
   };
 
-  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, recentTab, label, assign, stamp, findRemover, findSwitcher, removalLabel, CREATE_HINT, CREATE_LABEL };
+  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, moveTargets, recentTab, stayIn, label, assign, stamp, findRemover, findSwitcher, removalLabel, CREATE_HINT, CREATE_LABEL };
 })();

@@ -99,7 +99,8 @@
     node.children ? node.children.flatMap(leaves) : [node];
 
   const hasPinnedChild = (n) => n.children?.some((c) => c.children && c.title === "Pinned");
-  const findSpaces = (nodes) => nodes.flatMap((n) => hasPinnedChild(n) ? [n] : n.children ? findSpaces(n.children) : []);
+  // A space folder in the trash is not a space: a deleted space, or a new one with the same name, would find it again.
+  const findSpaces = (nodes) => nodes.flatMap((n) => n.trash === true ? [] : hasPinnedChild(n) ? [n] : n.children ? findSpaces(n.children) : []);
 
   // The tab that belongs to a pin or favorite stays bound to it wherever it navigates (see 08-pins.js).
   const boundTab = (node) => state.bound.get(node.id);
@@ -138,11 +139,37 @@
     recordHome(tab.id, node.id);
   };
 
-  const focusOrOpen = (node) => {
+  // A favorite has one tab for every space, like Arc's: when its tab is in another space, it comes to this one
+  // instead of a second tab opening (a tab in a split view is left where it is, and Vivarc switches to it).
+  const isFavorite = (node) => !!state.favs && node.parentId === state.favs.id;
+  const favoriteTabElsewhere = (node) => isFavorite(node)
+    ? state.allTabs.find((t) => pinLinks.pinOf(t) === node.id && spacesOf.of(t) !== state.active) ?? null
+    : null;
+  const focusOrOpen = async (node) => {
     const tab = boundTab(node);
-    if (tab) chrome.tabs.update(tab.id, { active: true });
-    else openPin(node);
+    if (tab) { chrome.tabs.update(tab.id, { active: true }); return; }
+    const elsewhere = favoriteTabElsewhere(node);
+    if (elsewhere) {
+      try {
+        if (window.__vm.tilingOf(elsewhere)) await chrome.tabs.update(elsewhere.id, { active: true });
+        else await moveTabToSpace(elsewhere.id, state.active);
+        refresh(false);
+        return;
+      } catch (e) { console.warn("[vivarc] favorite tab:", e); }
+    }
+    openPin(node);
   };
+
+  // Vivaldi 8.3 moves a tab between workspaces only with tabsPrivate.move (what its "Move to Workspace" menu does);
+  // writing workspaceId into vivExtData is ignored. The default space is "no workspace": workspaceId null (0 or
+  // "window" leave the tab where it is). The moved tab becomes active, in the space on screen.
+  const moveTabToSpace = async (tabId, id, activate = true) => {
+    const tab = await chrome.tabs.get(tabId);
+    if (spacesOf.of(tab) === id) return;
+    await vivaldi.tabsPrivate.move({ tabIds: [tab.id], target: "last", tweaks: ["do-not-reparent"], workspaceId: id || null });
+    if (activate) await chrome.tabs.update(tab.id, { active: true });
+  };
+  const defaultSpaceName = () => (state.defaultSpace ? spacesOf.label(state.defaultSpace) : "Home");
 
   const backToPin = (tab, node) => chrome.tabs.update(tab.id, { url: node.url });
 
@@ -180,7 +207,7 @@
     return true;
   };
 
-  const copy = (text) => navigator.clipboard?.writeText(text).catch(() => {});
+  const copy = window.__vm.copyText;
 
   // Removing goes to Vivaldi's bookmark trash, so it can be undone from there.
   const discard = (node) => {
@@ -205,8 +232,11 @@
   };
 
   // ---- context menu ----
+  // A click on the page goes to the page, never to this document: a clear shield under the menu catches it, so a
+  // click anywhere closes the menu.
   let menu = null;
-  const closeMenu = () => { menu?.remove(); menu = null; };
+  let shield = null;
+  const closeMenu = () => { menu?.remove(); menu = null; shield?.remove(); shield = null; };
   const showMenu = (event, items) => {
     event.preventDefault();
     event.stopPropagation();
@@ -218,7 +248,10 @@
       item.addEventListener("click", () => { closeMenu(); action(); });
       menu.append(item);
     }
-    (document.querySelector("#browser") || document.body).append(menu);
+    shield = el("div", "vm-menu-shield");
+    shield.addEventListener("mousedown", (e) => { e.preventDefault(); closeMenu(); });
+    shield.addEventListener("contextmenu", (e) => { e.preventDefault(); closeMenu(); });
+    (document.querySelector("#browser") || document.body).append(shield, menu);
     const { width, height } = menu.getBoundingClientRect();
     menu.style.left = `${Math.min(event.clientX, window.innerWidth - width - 8)}px`;
     menu.style.top = `${Math.min(event.clientY, window.innerHeight - height - 8)}px`;
@@ -299,7 +332,7 @@
       const zone = zoneOf(e), payload = drag;
       drag = null;
       clearDrop();
-      try { await onDrop(zone, payload); } catch (err) { console.warn("[vivarc] drop:", err); }
+      try { await onDrop(zone, payload, e); } catch (err) { console.warn("[vivarc] drop:", err); }
     });
   };
 
@@ -500,7 +533,7 @@
     const away = isAway(tab, node);
     if (tab?.active) tile.classList.add("active");
     if (away) tile.classList.add("away");
-    tile.append(iconEl(node.url, away ? undefined : tab?.favIconUrl), ...soundButton(tab));
+    tile.append(iconEl(node.url, away ? undefined : (tab || favoriteTabElsewhere(node))?.favIconUrl), ...soundButton(tab));
     tile.addEventListener("click", () => focusOrOpen(node));
     tile.addEventListener("contextmenu", bookmarkMenu(node, true));
     wireDrag(tile, { type: "bm", node, url: node.url });
@@ -541,24 +574,41 @@
         await chrome.tabs.move(data.tab.id, { index });
       },
     });
-    row.addEventListener("contextmenu", (e) => showMenu(e, [
-      ...(state.space ? [
-        ["Pin Tab", async () => chrome.bookmarks.create({
-          parentId: (state.pinned || await ensureFolder("Pinned")).id, title: tab.title, url: tab.url })],
-        ["Add to Favorites", async () => chrome.bookmarks.create({
-          parentId: (await ensureFolder("Favorites")).id, title: tab.title, url: tab.url })],
+    // The menu waits for the other windows, so the browser's own menu is held back first.
+    row.addEventListener("contextmenu", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const windows = (await chrome.windows.getAll({ populate: true, windowTypes: ["normal"] }).catch(() => []))
+        .filter((w) => w.id !== tab.windowId);
+      const spaces = spacesOf.moveTargets(state.workspaces, defaultSpaceName(), tab);
+      showMenu(e, [
+        ...(state.space ? [
+          ["Pin Tab", async () => chrome.bookmarks.create({
+            parentId: (state.pinned || await ensureFolder("Pinned")).id, title: tab.title, url: tab.url })],
+          ["Add to Favorites", async () => chrome.bookmarks.create({
+            parentId: (await ensureFolder("Favorites")).id, title: tab.title, url: tab.url })],
+          [],
+        ] : []),
+        ["Reload Tab", () => chrome.tabs.reload(tab.id)],
+        ["Duplicate Tab", () => chrome.tabs.duplicate(tab.id)],
+        ["Copy Link", () => copy(tab.url)],
+        muteItem(tab),
         [],
-      ] : []),
-      ["Duplicate Tab", () => chrome.tabs.duplicate(tab.id)],
-      ["Copy Link", () => copy(tab.url)],
-      muteItem(tab),
-      [],
-      ["Close Tab", () => chrome.tabs.remove(tab.id)],
-      ["Close Other Tabs", () => {
-        const ids = state.tabs.filter((t) => t.id !== tab.id && !t.pinned).map((t) => t.id);
-        if (ids.length) chrome.tabs.remove(ids);
-      }],
-    ]));
+        ["Split View: Side by Side", () => window.__vm.commandBar.splitView(tab, "row")],
+        ["Split View: Top and Bottom", () => window.__vm.commandBar.splitView(tab, "column")],
+        ...(window.__vm.tilingOf(tab) ? [["Close Split View", () => window.__vm.commandBar.closeSplitView(tab)]] : []),
+        ["Move to New Window", () => chrome.windows.create({ tabId: tab.id })],
+        ...windows.map((w) => [`Move to Window: ${w.tabs?.find((t) => t.active)?.title || "Window"}`,
+          () => chrome.tabs.move(tab.id, { windowId: w.id, index: -1 })]),
+        ...spaces.map((s) => [`Move to Space: ${s.emoji ? `${s.emoji} ` : ""}${s.name}`, () => moveTabToSpace(tab.id, s.id, false)]),
+        [],
+        ["Close Tab", () => chrome.tabs.remove(tab.id)],
+        ["Close Other Tabs", () => {
+          const ids = state.tabs.filter((t) => t.id !== tab.id && !t.pinned).map((t) => t.id);
+          if (ids.length) chrome.tabs.remove(ids);
+        }],
+      ]);
+    });
     return row;
   };
 
@@ -656,9 +706,9 @@
   // (or one with only Vivaldi's blank start page): Vivaldi's own workspace action, which opens its landing tab
   // there; then the command bar opens on it, ready for an address (#57). While the switch runs, the landing tab is
   // neither stamped with the old space nor taken by the command bar for a new-tab request.
-  const switchSpace = async (item) => {
-    if (item.id === state.active) return;
-    const tabs = await chrome.tabs.query({ currentWindow: true });
+  const switchSpace = async (item, { force = false } = {}) => {
+    if (item.id === state.active && !force) return;
+    const tabs = window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true }));
     const pages = spacesOf.tabsIn(tabs, item.id).filter((t) => !BLANK.test(t.pendingUrl || t.url || ""));
     const tab = spacesOf.recentTab(pages, item.id);
     if (tab) { await chrome.tabs.update(tab.id, { active: true }); return; }
@@ -676,7 +726,7 @@
       // land on that tab ourselves.
       const [after] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (after && spacesOf.of(after) !== item.id) {
-        const landing = spacesOf.recentTab(await chrome.tabs.query({ currentWindow: true }), item.id);
+        const landing = spacesOf.recentTab(window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true })), item.id);
         if (landing) await chrome.tabs.update(landing.id, { active: true });
       }
     } finally { window.__vm.switchingSpace = false; }
@@ -712,8 +762,31 @@
     refresh(false);
   };
 
+  // The update pill (46-update.js): a click opens vivarc://update, which the Update Vivarc app answers by running the
+  // update in Terminal (vivarc.py write_update_app); a right-click has the manual ways.
+  const UPDATE_COMMANDS = {
+    mac: "python3 ~/.vivarc/app/vivarc.py update",
+    win: "irm https://raw.githubusercontent.com/KASOGIT/vivarc/main/install.ps1 | iex",
+  };
+  const updatePill = () => {
+    const note = window.__vm.update?.state?.();
+    if (!note?.show) return null;
+    const pill = el("div", "vm-update", "Update Vivarc");
+    pill.addEventListener("click", () => chrome.tabs.create({ url: "vivarc://update", active: false }));
+    pill.addEventListener("contextmenu", (event) => showMenu(event, [
+      ["Copy Update Command", () => {
+        copy(UPDATE_COMMANDS[window.__vm.platform] || UPDATE_COMMANDS.mac);
+        window.dispatchEvent(new CustomEvent("vm-toast", { detail: "Copied. Paste it in a terminal." }));
+      }],
+      ["What's New", () => chrome.tabs.create({ url: note.url })],
+      [],
+      ["Later", () => window.__vm.update.dismiss()],
+    ]));
+    return pill;
+  };
+
   const spaceBar = () => {
-    const items = spacesOf.items(state.workspaces, state.defaultSpace ? spacesOf.label(state.defaultSpace) : "Home");
+    const items = spacesOf.items(state.workspaces, defaultSpaceName());
     if (!items.length) return null;
     const bar = el("div", "vm-space-bar");
     const plus = el("div", "vm-space-pill vm-space-plus", "+");
@@ -727,7 +800,15 @@
   const fitHeight = () => {
     if (!panel?.isConnected) return;
     const top = panel.getBoundingClientRect().top;
-    panel.style.maxHeight = `${Math.max(120, window.innerHeight - top - bottomToolbar())}px`;
+    panel.style.height = `${Math.max(120, window.innerHeight - top - bottomToolbar())}px`;
+  };
+
+  const isLoose = (t) => !BLANK.test(t.url || "") && ![...state.bound.values()].some((b) => b.id === t.id);
+  const clearTabs = async () => {
+    const loose = state.tabs.filter(isLoose);
+    if (!loose.length) return;
+    if (loose.length + state.tabs.filter((t) => BLANK.test(t.url || "")).length === state.tabs.length) await chrome.tabs.create({});
+    chrome.tabs.remove(loose.map((t) => t.id));
   };
 
   const render = () => {
@@ -742,7 +823,15 @@
       wireDrop(grid, {
         horizontal: true,
         accept: (d) => !(d.type === "bm" && d.node.children),
-        onDrop: async (_zone, data) => insertPinned(data, (await ensureFolder("Favorites")).id, null),
+        // A drop in the gap between tiles lands next to the closest tile instead of at the end of the grid.
+        onDrop: async (_zone, data, e) => {
+          const centers = [...grid.children].map((t) => { const r = t.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+          const nearest = centers.reduce((best, [x, y], i) => (Math.hypot(x - e.clientX, y - e.clientY) < Math.hypot(centers[best][0] - e.clientX, centers[best][1] - e.clientY) ? i : best), 0);
+          const target = favLeaves[nearest];
+          if (!target) return insertPinned(data, (await ensureFolder("Favorites")).id, null);
+          if (data.type === "bm" && data.node.id === target.id) return;
+          await insertPinned(data, target.parentId, target.index + (e.clientX > centers[nearest][0] ? 1 : 0));
+        },
       });
     }
     if (state.space) {
@@ -756,16 +845,10 @@
     }
     if (state.pinned) state.pinned.children.forEach((c) => body.append(pinnedNode(c, 0)));
 
-    const taken = new Set([...state.bound.values()].map((t) => t.id));
-    const blank = state.tabs.filter((t) => BLANK.test(t.url || ""));
-    const open = state.tabs.filter((t) => !BLANK.test(t.url || "") && !taken.has(t.id));
+    const open = state.tabs.filter(isLoose);
     const divider = el("div", "vm-divider");
     const clear = el("span", "vm-clear", "Clear");
-    clear.addEventListener("click", async () => {
-      if (!open.length) return;
-      if (open.length + blank.length === state.tabs.length) await chrome.tabs.create({});
-      chrome.tabs.remove(open.map((t) => t.id));
-    });
+    clear.addEventListener("click", clearTabs);
     divider.append(clear);
     wireDrop(divider, { accept: isBookmark, onDrop: (_zone, data) => unpin(data) });
     body.append(divider);
@@ -777,8 +860,9 @@
     body.append(fresh);
     open.sort((a, b) => b.index - a.index).forEach((t) => body.append(tabRow(t)));
 
+    const pill = updatePill();
     const bar = spaceBar();
-    panel.replaceChildren(...(grid ? [grid] : []), body, ...(bar ? [bar] : []));
+    panel.replaceChildren(...(grid ? [grid] : []), body, ...(pill ? [pill] : []), ...(bar ? [bar] : []));
     body.scrollTop = scroll;
     fitHeight();
     if (renderedSpace !== null && renderedSpace !== state.active) animateSpaceChange();
@@ -935,7 +1019,7 @@
     try { return (await vivaldi.prefs.get("vivaldi.workspaces.list"))?.value || []; } catch (_) { return []; }
   };
   const loadTabs = async () => {
-    state.allTabs = await chrome.tabs.query({ currentWindow: true });
+    state.allTabs = window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true }));
     state.workspaces = await readWorkspaces();
     ({ active: state.active, tabs: state.tabs } = spacesOf.scope(state.allTabs, state.workspaces));
   };
@@ -1012,6 +1096,8 @@
     saveOpen();
     render();
   });
+  window.addEventListener("vm-clear-tabs", clearTabs);
+  window.addEventListener("vm-update", render);
   window.addEventListener("vm-command-bar-opened", () => {
     const scroller = panel?.querySelector(".vm-scroll");
     scroller?.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" });
@@ -1033,12 +1119,40 @@
     }
     chrome.tabs.onCreated.addListener((tab) => {
       if (window.__vm.switchingSpace) return; // the landing tab of a space switch belongs to the new space
+      if (window.__vm.peek.creatingTab() || window.__vm.peek.isPeekTab(tab, window.__vm.peek.tabIds())) return; // Peek keeps its tabs out of the space
       const active = state.active;
       chrome.windows.getCurrent().then((win) => {
         const data = spacesOf.stamp(tab, active, win.id);
         if (data) chrome.tabs.update(tab.id, { vivExtData: data });
       }).catch(() => {});
     });
+    // Closing the active tab (or moving it to another window) can make Vivaldi activate a tab of another space;
+    // stay in the space instead, on its most recent tab, or in it empty (#75). The removals of one action (closing
+    // several tabs) are gathered first.
+    let leaving = null;
+    const leftSpace = (tabId) => {
+      const tab = state.allTabs.find((t) => t.id === tabId);
+      if (!tab || !state.workspaces?.length || window.__vm.switchingSpace) return;
+      leaving ||= { space: spacesOf.of(tab), removed: new Set(), wasActive: false };
+      leaving.removed.add(tabId);
+      leaving.wasActive ||= !!tab.active;
+      clearTimeout(leaving.timer);
+      leaving.timer = setTimeout(async () => {
+        const { space, removed, wasActive } = leaving;
+        leaving = null;
+        if (!wasActive || window.__vm.switchingSpace) return;
+        const next = spacesOf.stayIn(window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true })), space, removed);
+        if (next?.tab) {
+          await chrome.tabs.update(next.tab.id, { active: true });
+          if (BLANK.test(next.tab.pendingUrl || next.tab.url || "")) window.dispatchEvent(new CustomEvent("vm-open-command-bar"));
+        }
+        else if (next?.empty) await switchSpace({ id: space }, { force: true });
+      }, 150);
+    };
+    chrome.tabs.onRemoved.addListener((id, info) => {
+      if (info?.windowId === window.vivaldiWindowId && !info.isWindowClosing) leftSpace(id);
+    });
+    chrome.tabs.onDetached.addListener((id, info) => { if (info?.oldWindowId === window.vivaldiWindowId) leftSpace(id); });
     for (const ev of ["onCreated", "onRemoved", "onUpdated", "onMoved", "onActivated", "onAttached", "onDetached", "onReplaced"]) {
       // Every window runs its own sidebar and sees the tab events of all windows (a popup loading, another window's
       // titles): only this window's events, or ones that do not say, re-render it.

@@ -22,6 +22,31 @@ SIDE = {"id": 1792856044277, "name": "Side", "emoji": "🎁", "icon": "<svg/>"}
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class WhichSpace(unittest.TestCase):
+    def test_closing_a_tab_that_handed_focus_to_another_space_brings_back_its_space(self):
+        tabs = [tab(1, 5, accessed=10), tab(2, 5, accessed=30), tab(3, 7, active=True), tab(4, 5, accessed=40)]
+        out = js("workspaces.stayIn(tabs, 5, new Set([4]))", tabs=tabs)
+        self.assertEqual(out["tab"]["id"], 2)
+
+    def test_closing_stays_put_when_vivaldi_kept_the_space(self):
+        tabs = [tab(1, 5, active=True), tab(3, 7)]
+        self.assertIsNone(js("workspaces.stayIn(tabs, 5, new Set())", tabs=tabs))
+
+    def test_closing_the_last_tab_of_a_space_asks_for_the_empty_space(self):
+        tabs = [tab(3, 7, active=True)]
+        self.assertEqual(js("workspaces.stayIn(tabs, 5, new Set([9]))", tabs=tabs), {"empty": True})
+
+    def test_closing_brings_back_a_page_of_the_space_before_its_blank_landing_tab(self):
+        blank = {**tab(2, 5, accessed=50), "url": "vivaldi://vivaldi-webui/startpage"}
+        tabs = [tab(1, 5, accessed=10), blank, tab(3, 7, active=True)]
+        out = js("workspaces.stayIn(tabs, 5, new Set([9]))", tabs=tabs)
+        self.assertEqual(out["tab"]["id"], 1)
+
+    def test_closing_with_only_the_blank_landing_tab_left_brings_it_back(self):
+        blank = {**tab(2, 5, accessed=50), "url": "vivaldi://vivaldi-webui/startpage"}
+        tabs = [blank, tab(3, 7, active=True)]
+        out = js("workspaces.stayIn(tabs, 5, new Set([9]))", tabs=tabs)
+        self.assertEqual(out["tab"]["id"], 2)
+
     def test_a_tab_belongs_to_the_workspace_vivaldi_stored_in_its_data(self):
         self.assertEqual(js("workspaces.of(t)", t=tab(1, WORK["id"])), WORK["id"])
 
@@ -79,6 +104,16 @@ class SpaceList(unittest.TestCase):
 
     def test_each_space_keeps_its_emoji_and_the_default_has_none(self):
         self.assertEqual([i["emoji"] for i in self.items([WORK])], ["", "📚"])
+
+    def targets(self, workspaces, moving):
+        return js("workspaces.moveTargets(list, 'Home', moving).map((i) => i.id)", list=workspaces, moving=moving)
+
+    def test_a_tab_can_move_to_every_space_but_its_own(self):
+        self.assertEqual(self.targets([WORK, SIDE], tab(1, WORK["id"])), [0, SIDE["id"]])
+        self.assertEqual(self.targets([WORK, SIDE], tab(2)), [WORK["id"], SIDE["id"]])
+
+    def test_without_workspaces_there_is_nowhere_to_move_a_tab(self):
+        self.assertEqual(self.targets([], tab(1)), [])
 
     def test_the_most_recently_used_tab_of_a_space_is_where_switching_goes(self):
         tabs = [tab(1, WORK["id"], accessed=100), tab(2, WORK["id"], accessed=300), tab(3, WORK["id"], accessed=200), tab(4, accessed=900)]

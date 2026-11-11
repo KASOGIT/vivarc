@@ -36,7 +36,8 @@
     return e;
   };
 
-  const close = () => { pop?.remove(); pop = null; };
+  let shield = null; // catches a click on the page, which this document never sees (see the sidebar's menu)
+  const close = () => { pop?.remove(); pop = null; shield?.remove(); shield = null; };
 
   const open = () => {
     if (!window.__vm.cssLoaded) return;
@@ -107,7 +108,9 @@
     sync();
 
     pop.append(modes, pad, swatches, intensity.row, grain.row, reset);
-    (document.querySelector("#browser") || document.body).append(pop);
+    shield = el("div", "vm-menu-shield");
+    shield.addEventListener?.("mousedown", (e) => { e.preventDefault(); close(); });
+    (document.querySelector("#browser") || document.body).append(shield, pop);
   };
 
   const outside = (e) => { if (pop && !pop.contains(e.target)) close(); };

@@ -44,6 +44,13 @@
 }
 
 #browser.vm-on.vm-url-bar #tabs-tabbar-container .UrlBar-AddressField { margin-bottom: 8px; }
+/* Under 360px wide, Vivaldi stretches the focused field to 360px, past the sidebar edge: keep it at the sidebar width,
+   and drop the buttons on its right (feed, translate, install, bookmark) except a pending site permission request. */
+#browser.vm-on.vm-url-bar #tabs-tabbar-container .UrlBar-AddressField:focus-within { min-width: 100% !important; }
+#browser.vm-on.vm-url-bar #tabs-tabbar-container .UrlBar-UrlFieldWrapper + .toolbar
+  > :not(.pageload, .permission-popup.is-undecided, .permission-popup.is-allowing) { display: none; }
+/* Vivaldi fades the last 16px of the address out, which reads as an empty gap at the end of the field */
+#browser.vm-on.vm-url-bar #tabs-tabbar-container .UrlBar-UrlFieldWrapper { mask-image: none !important; }
 
 #vm-panel {
   flex: 0 1 auto;
@@ -61,9 +68,14 @@
 /* With the sidebar auto-hidden (Cmd+S), Vivaldi makes the revealed bar a window drag region, which
    swallows every click. Vivarc's own UI opts out, including the menus and popovers that float over it. */
 #vm-panel, .vm-menu, .vm-theme-pop, #vm-cmd, .vm-rename-float { app-region: no-drag; }
+/* Under a menu or the theme editor: a click on the page closes them (40-theme.js, 10-sidebar.js). */
+.vm-menu-shield { position: fixed; inset: 0; z-index: 100000; background: transparent; app-region: no-drag; }
+/* The scroll box clips what overflows it, so the margin and padding leave room for a hovered tile that grows (glass). */
 #vm-panel .vm-scroll {
   flex: 1 1 auto;
   min-height: 0;
+  margin: 0 -4px;
+  padding: 0 4px;
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: none;
@@ -75,7 +87,7 @@
   grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
   gap: 8px;
   margin: 0;
-  padding: 0 0 8px;
+  padding: 3px 0 8px;
 }
 #vm-panel .vm-fav {
   display: flex;
@@ -114,6 +126,20 @@
 }
 #vm-panel .vm-space-pill:hover { opacity: 1; background-color: color-mix(in srgb, var(--colorFg) 16%, transparent); }
 #vm-panel .vm-space-pill.active { opacity: 1; cursor: default; background-color: color-mix(in srgb, var(--colorFg) 26%, transparent); }
+#vm-panel .vm-update {
+  flex: none;
+  margin: 8px 8px 0;
+  padding: 5px 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 9px;
+  cursor: pointer;
+  background-color: color-mix(in srgb, var(--colorHighlightBg, var(--colorFg)) 85%, transparent);
+  color: var(--colorHighlightFg, var(--colorBg));
+  transition: filter 120ms;
+}
+#vm-panel .vm-update:hover { filter: brightness(1.1); }
 #vm-panel .vm-space-plus { font-size: 17px; line-height: 1; opacity: 0.5; }
 #vm-panel .vm-space {
   padding: 8px 8px 6px;
@@ -209,7 +235,7 @@
   border-radius: 6px;
   font-weight: 600;
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.5;
   transition: opacity 120ms;
 }
 #vm-panel .vm-divider:hover .vm-clear { opacity: 0.7; }
@@ -515,8 +541,7 @@
 .vm-theme-reset:hover { opacity: 1; background: color-mix(in srgb, var(--vm-text) 10%, transparent); }
 
 #vm-panel .vm-space { display: flex; align-items: center; justify-content: space-between; }
-#vm-panel .vm-space .vm-act { display: flex; visibility: hidden; }
-#vm-panel .vm-space:hover .vm-act { visibility: visible; }
+#vm-panel .vm-space .vm-act { display: flex; opacity: 1; filter: brightness(1.25); }
 #vm-panel .vm-away-mark { flex: none; opacity: 0.5; margin: 0 -2px 0 -4px; }
 #vm-panel .vm-fav { position: relative; }
 #vm-panel .vm-fav.away::after {
@@ -611,42 +636,59 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding-top: 12vh;
+  padding: 8vh 16px;
   background: rgba(0, 0, 0, 0.35);
   app-region: no-drag;
 }
 .vm-set-card {
-  width: min(480px, 92vw);
-  padding: 8px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  width: min(520px, 92vw);
+  max-height: 84vh;
   border-radius: 18px;
   color: var(--vm-text);
   background: var(--vm-surface);
   border: 1px solid color-mix(in srgb, var(--vm-text) 12%, transparent);
   box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
   font-size: 13.5px;
+  overflow: hidden;
 }
-.vm-set-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 8px 6px; }
+.vm-set-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 10px 18px; }
 .vm-set-title { font-size: 16px; font-weight: 650; }
+.vm-set-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 14px 6px;
+  border-block: 1px solid color-mix(in srgb, var(--vm-text) 8%, transparent);
+}
+.vm-set-section-title { margin: 16px 4px 6px; font-size: 11.5px; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.5; }
+.vm-set-group { border-radius: 12px; background: color-mix(in srgb, var(--vm-text) 5%, transparent); overflow: hidden; }
 .vm-set-close, .vm-set-reset { font: inherit; color: inherit; cursor: pointer; border: 0; background: transparent; opacity: 0.6; border-radius: 8px; padding: 4px 8px; }
 .vm-set-close:hover, .vm-set-reset:hover { opacity: 1; background: color-mix(in srgb, var(--vm-text) 10%, transparent); }
-.vm-set-row { display: flex; align-items: center; gap: 16px; padding: 10px 8px; border-radius: 12px; cursor: pointer; }
-.vm-set-row:hover { background: color-mix(in srgb, var(--vm-text) 7%, transparent); }
+.vm-set-row { display: flex; align-items: center; gap: 16px; padding: 10px 12px; cursor: pointer; }
+.vm-set-row[hidden] { display: none; }
+.vm-set-row + .vm-set-row { border-top: 1px solid color-mix(in srgb, var(--vm-text) 7%, transparent); }
+.vm-set-row:hover { background: color-mix(in srgb, var(--vm-text) 5%, transparent); }
+.vm-set-sub { padding-left: 28px; }
 .vm-set-text { flex: 1; min-width: 0; }
 .vm-set-label { font-weight: 600; }
 .vm-set-hint { margin-top: 2px; opacity: 0.6; font-size: 12.5px; }
-.vm-set-switch {
+/* Scoped to #browser: Vivaldi styles every checkbox and its rule wins over a bare class. */
+#browser.vm-on .vm-set-switch {
   appearance: none;
   flex: none;
   position: relative;
   width: 38px;
   height: 22px;
   margin: 0;
+  border: 0;
   border-radius: 11px;
   cursor: pointer;
   background: color-mix(in srgb, var(--vm-text) 22%, transparent);
   transition: background 150ms;
 }
-.vm-set-switch::after {
+#browser.vm-on .vm-set-switch::after {
   content: "";
   position: absolute;
   top: 2px;
@@ -658,9 +700,25 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   transition: transform 150ms;
 }
-.vm-set-switch:checked { background: var(--colorHighlightBg, #6b63a0); }
-.vm-set-switch:checked::after { transform: translateX(16px); }
-.vm-set-foot { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 0; }
+#browser.vm-on .vm-set-switch:checked { background: var(--colorHighlightBg, #6b63a0); }
+#browser.vm-on .vm-set-switch:checked::after { transform: translateX(16px); }
+.vm-set-range { display: block; cursor: default; }
+.vm-set-range:hover { background: none; }
+.vm-set-range-top { display: flex; justify-content: space-between; }
+.vm-set-value { font-weight: 500; opacity: 0.6; font-variant-numeric: tabular-nums; }
+.vm-set-slider { width: 100%; margin: 8px 0 0; accent-color: var(--colorHighlightBg, #6b63a0); }
+.vm-set-ends { display: flex; justify-content: space-between; margin-top: 2px; opacity: 0.5; font-size: 12px; }
+#browser.vm-on .vm-set-select {
+  flex: none;
+  max-width: 45%;
+  font: inherit;
+  color: inherit;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--vm-text) 18%, transparent);
+  background: color-mix(in srgb, var(--vm-text) 7%, transparent);
+}
+.vm-set-foot { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 12px 18px; }
 .vm-set-note { opacity: 0.5; font-size: 12.5px; }
 
 /* Liquid glass (setting "glass"), after Apple's Human Interface Guidelines, Materials: glass is for the layer of controls
@@ -706,6 +764,12 @@
 #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):hover { background: var(--vm-lozenge); transform: translateY(-1px) scale(1.04); }
 #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):active { transform: scale(0.96); }
 #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill).active { background: var(--vm-lozenge-strong); }
+/* While a favorite is dragged, tiles stay put (a tile that grows under the pointer moves the drop zones) and the drop
+   marker shows over the glass rim. */
+#browser.vm-on.vm-dragging #vm-panel .vm-fav:is(:hover, :active) { transform: none; }
+#browser.vm-on.vm-glass #vm-panel .vm-fav.drop-before { box-shadow: var(--vm-lozenge-rim), inset 3px 0 0 0 var(--colorHighlightBg, #7b8cff); }
+#browser.vm-on.vm-glass #vm-panel .vm-fav.drop-after { box-shadow: var(--vm-lozenge-rim), inset -3px 0 0 0 var(--colorHighlightBg, #7b8cff); }
+#browser.vm-on.vm-glass #vm-panel .vm-update { box-shadow: var(--vm-lozenge-rim), 0 2px 8px rgba(0, 0, 0, 0.16); }
 #browser.vm-on.vm-glass #vm-panel .vm-row { transition: background 160ms, box-shadow 160ms; }
 #browser.vm-on.vm-glass #vm-panel .vm-row:hover { background: var(--vm-lozenge-soft); }
 #browser.vm-on.vm-glass #vm-panel .vm-row.active { background: var(--vm-lozenge); box-shadow: var(--vm-lozenge-rim); }
@@ -729,9 +793,5 @@
   #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):hover { transform: none; }
 }
 
-.vm-set-range { display: block; cursor: default; }
-.vm-set-range:hover { background: none; }
-.vm-set-range.dim { opacity: 0.4; }
-.vm-set-value { margin-left: 4px; font-weight: 500; opacity: 0.6; font-variant-numeric: tabular-nums; }
-.vm-set-slider { width: 100%; margin: 8px 0 0; accent-color: var(--colorHighlightBg, #6b63a0); }
-.vm-set-ends { display: flex; justify-content: space-between; margin-top: 2px; opacity: 0.5; font-size: 12px; }
+/* Peek: keep Arc's controls (close, open in a tab, split view, copy link) and drop the extra menus. */
+#browser.vm-on .peek-sidebar-controls :is(.peek-open-actions-menu, .peek-navigation-actions, .peek-translate-actions) { display: none !important; }
