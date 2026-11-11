@@ -41,6 +41,8 @@ Steps:
 - A fresh profile has tab bar auto-hide on (the sidebar slides away when the pointer leaves); setup turns it off.
 - Positions shift as the story runs (a new favorites row, the URL bar). `take.mjs` reads each element's rect right before
   clicking it; never hard-code coordinates for Vivarc UI.
+- Cmd+S (hide the sidebar) only takes effect visually once the sidebar's URL field loses focus; blur it through CDP,
+  not Escape, which turns on tile ordering mode in a split view.
 - Turn off the update pill (`updateCheck`) or "Update Vivarc" shows in the sidebar.
 - GIF: one palette for the clip with `diff_mode=rectangle` gives ~14 MB at 1280 px; per-frame palettes weigh ~230 MB.
 - Cmd+Shift+C in the story overwrites the user's clipboard: say so.

@@ -24,7 +24,7 @@ const toggle = async (label, ms = 450) => {
   if (!p) throw new Error(`no setting ${label}`);
   input(`click ${p[0]} ${p[1]} ${ms}`);
 };
-// Key codes: 17 t, 8 c, 36 return, 48 tab, 53 escape, 125 down.
+// Key codes: 1 s, 17 t, 8 c, 36 return, 48 tab, 53 escape, 125 down.
 const commandBar = (text) => input(`move 760 420 500; wait 200; key 17 cmd; wait 600; type ${text}; wait 700`);
 
 // ---- STORY ----
@@ -48,6 +48,12 @@ input("key 53; wait 400");
 
 commandBar("split"); input("key 125; wait 350; key 36; wait 900");
 input("type apple.com; wait 400; key 36; wait 2600");
+
+// Cmd+S hides the sidebar; the left edge brings it back over the page; Cmd+S pins it again. While the sidebar's URL
+// field has focus Vivaldi keeps the hidden sidebar on screen, so blur it first (Escape would toggle tile ordering mode
+// in a split view).
+await evaluate("document.activeElement?.blur()");
+input("key 1 cmd; wait 1300; move 104 420 700; wait 1600; move 760 420 600; wait 1100; key 1 cmd; wait 1200");
 
 commandBar("yt"); input("key 48; wait 700; type rick astley never gonna give you up; wait 500; key 36; wait 3200");
 input("key 8 cmd,shift; wait 2500");

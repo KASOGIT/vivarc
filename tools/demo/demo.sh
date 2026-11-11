@@ -53,6 +53,10 @@ play() {
   cdp @"$HERE/reset.js" >/dev/null
   sleep 3
   front
+  # A take that stopped mid-way can leave the sidebar hidden (Cmd+S): show it before clicking where it should be.
+  if [ "$(cdp 'document.querySelector(".tabbar-wrapper").getBoundingClientRect().x < 0')" = true ]; then
+    "$DIR/input" "key 1 cmd; wait 800"
+  fi
   # An empty spot of the sidebar: the first click only focuses the window, so a right-click would be lost.
   "$DIR/input" "click $((X + 162)) $((Y + 640)) 300; wait 800"
 }

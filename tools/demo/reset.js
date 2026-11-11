@@ -38,7 +38,7 @@
   }
   await wait(500);
   const github = (await chrome.tabs.query({})).find((t) => urlOf(t).startsWith("https://github.com/KASOGIT/vivarc") && inDefault(t));
-  await chrome.tabs.update(github.id, { active: true });
+  await chrome.tabs.update(github.id, { active: true, ...(urlOf(github) === "https://github.com/KASOGIT/vivarc" ? {} : { url: "https://github.com/KASOGIT/vivarc" }) });
   await chrome.windows.update(win.id, { left: 100, top: 80, width: 1280, height: 800, focused: true });
   return "reset";
 })()
