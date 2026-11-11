@@ -21,6 +21,11 @@
   overflow: hidden;
 }
 
+/* "Back closes opened tabs" (13-back.js): a disabled button gets no clicks, so the click on a greyed-out Back
+   falls through to the toolbar, where the script picks it up by position. */
+#browser.vm-on.vm-back-closes [data-name="Back"]:disabled,
+#browser.vm-on.vm-back-closes [data-name="Back"] button:disabled { pointer-events: none; }
+
 /* URL bar: collapsed until focused (Cmd+L), then floats over the sidebar. It also floats while one of its
    popups is open: Vivaldi puts site permission requests (camera, microphone...) there, and they would be invisible.
    With the "URL bar" setting (vm-url-bar) it always shows at the top of the sidebar, under the navigation buttons. */

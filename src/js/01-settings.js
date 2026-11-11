@@ -19,6 +19,8 @@
       default: false },
     { key: "archiveHours", section: "Tabs", type: "range", min: 1, max: 168, step: 1, default: 12, unit: " h", needs: "archive",
       label: "Archive after", low: "1 hour", high: "7 days" },
+    { key: "backCloses", section: "Tabs", label: "Back closes opened tabs", hint: "Going back on a tab a link opened, with no page to go back to, closes it and returns to the page it came from, like Arc.",
+      default: true, onClass: "vm-back-closes" },
     { key: "peek", section: "Link preview", label: "Link preview (Peek)", hint: "Open some links in a floating window over the page. Esc closes it.",
       default: true, requires: "peekInstalled" },
     { key: "peekPinned", section: "Link preview", label: "From pinned tabs", hint: "A link to another site opens in the preview, like Arc.",
