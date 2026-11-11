@@ -207,7 +207,7 @@
     return true;
   };
 
-  const copy = (text) => navigator.clipboard?.writeText(text).catch(() => {});
+  const copy = window.__vm.copyText;
 
   // Removing goes to Vivaldi's bookmark trash, so it can be undone from there.
   const discard = (node) => {

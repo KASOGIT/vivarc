@@ -136,8 +136,8 @@
     { label: "Add This Tab to Favorites", words: "favorite pin", tab: true, run: async (tab) => {
       if (await window.__vm.pinTab?.(tab, "Favorites")) toast("Added to Favorites");
     } },
-    { label: "Copy Current URL", words: "copy link address share", tab: true, run: async (tab) => {
-      await navigator.clipboard?.writeText(tab.url).catch(() => {});
+    { label: "Copy Current URL", words: "copy link address share", tab: true, run: (tab) => {
+      window.__vm.copyText(tab.url);
       toast("Copied Current URL");
     } },
     { label: "Split View: Side by Side", words: "split tile vertical columns", tab: true, run: (tab) => splitView(tab, "row") },
