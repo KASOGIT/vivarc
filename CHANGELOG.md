@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Fix: with the **URL bar** setting on, the address bar no longer spills past a narrow sidebar when you click into it, and the buttons on its right (feed, translate, install, bookmark) are hidden to leave the room to the address. A site asking for the camera or microphone still shows its button there.
+
 ## 0.1.30 - 2026-11-11
 - Fix: **Copy Link** in the sidebar menu (pinned tabs, favorites, tabs) and **Copy Current URL** in the command bar copy the link again. They silently did nothing while the page had focus (#153).
 
