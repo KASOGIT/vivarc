@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Vivarc demo: split view, the command bar and a YouTube search shortcut in Vivaldi" width="860">
+  <img src="docs/demo.gif" alt="Vivarc demo in Vivaldi: add a tab to Favorites, pin a tab, Liquid glass and the URL bar in Vivarc Settings, a theme colour, split view from the command bar, a YouTube search shortcut and Copy URL" width="860">
 </p>
 
 > **Arc is being discontinued on December 22, 2026**, according to the announcement email The Browser Company sent. If you want to keep the sidebar and command bar workflow somewhere else, Vivarc gives you most of it in Vivaldi, free and open source.
