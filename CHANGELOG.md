@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Fix: the hidden sidebar (Cmd+S) slides away as soon as the pointer leaves it. It waited about a second, and after a click on back, reload, Downloads or a profile chip it often stayed open until you moved over it and out again. **Vivarc Settings** > **Sidebar** has an **Auto-hide after** slider (100 to 1500 ms, 150 by default; Vivaldi's own is 800). The sidebar still stays while you type in the address bar or a menu is open (#162).
+
 ## 0.1.31 - 2026-11-11
 - Fix: with the **URL bar** setting on, the address bar no longer spills past a narrow sidebar when you click into it, and the buttons on its right (feed, translate, install, bookmark) are hidden to leave the room to the address, which now runs to the end of the field instead of fading out before it. A site asking for the camera or microphone still shows its button there (#155, #156).
 
