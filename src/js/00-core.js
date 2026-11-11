@@ -72,7 +72,17 @@
     try { return JSON.parse(tab?.vivExtData || "{}").tiling; } catch (_) { return undefined; }
   };
 
-  window.__vm = { config, store, normalise, tilingOf, platform, keys, keyLabel, onShortcut: (fn) => subscribers.add(fn) };
+  // navigator.clipboard rejects while the page's webview holds focus, which it does after a click in the sidebar.
+  // A copy event fired by execCommand works regardless, as Vivaldi's own UI does it.
+  const copyText = (text) => {
+    const onCopy = (e) => { e.clipboardData.setData("text/plain", text); e.preventDefault(); e.stopPropagation(); };
+    document.addEventListener("copy", onCopy);
+    document.execCommand("copy");
+    document.removeEventListener("copy", onCopy);
+  };
+
+  window.__vm = { config, store, normalise, tilingOf, platform, keys, keyLabel, copyText,
+    onShortcut: (fn) => subscribers.add(fn) };
   document.documentElement.classList.add(`vm-platform-${platform}`);
 
   // Vivaldi re-renders #browser's class list, so the marker classes are re-applied whenever they go missing.
