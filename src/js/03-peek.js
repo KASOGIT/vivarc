@@ -38,7 +38,20 @@
       { get: () => window.__vmPeekPinned && !command, set: () => {}, configurable: true });
   })();`;
 
-  const api = { triggers, isPeekTab, previewTabIds, pinnedScript, tabIds: () => new Set(), creatingTab: () => false };
+  // Peek preloads its background tab in another workspace and, on "Open in New Tab", brings it back by writing
+  // workspaceId into vivExtData. Vivaldi 8.3 ignores that write (only tabsPrivate.move moves a tab between
+  // workspaces), so the tab stayed in the stash: the sidebar listed it in the space on screen, but Vivaldi kept it in
+  // the other workspace, where it hibernated (greyed out) and could be neither activated nor reached with
+  // Cmd+Shift+[ (#165). Vivaldi's own move goes first; Peek's write then agrees with it, and Peek places the tab.
+  // data is Peek's record of the preview; the target is the workspace of the active tab, as Peek reads it.
+  const adoptStashedTab = async (data, activeTab, move) => {
+    const tabId = data?.parallelTabId;
+    if (!tabId || !data._hiddenWorkspaceId) return false;
+    await move({ tabIds: [tabId], target: "last", tweaks: ["do-not-reparent"], workspaceId: Number(readExt(activeTab).workspaceId) || null });
+    return true;
+  };
+
+  const api = { triggers, isPeekTab, previewTabIds, pinnedScript, adoptStashedTab, tabIds: () => new Set(), creatingTab: () => false };
   api.withoutPeekTabs = (tabs) => { const ids = api.tabIds(); return tabs.filter((t) => !isPeekTab(t, ids)); };
   window.__vm.peek = api;
   const { config, settings, store } = window.__vm;
@@ -77,6 +90,17 @@
       if (fromPanel) return chrome.tabs.create({ url });
       chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => tab && chrome.tabs.update(tab.id, { url }));
     };
+
+    const moveBack = peek._moveParallelTabToMainWindow?.bind(peek);
+    if (moveBack) {
+      peek._moveParallelTabToMainWindow = async (webviewId) => {
+        try {
+          const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          await adoptStashedTab(peek.webviews?.get?.(webviewId), activeTab, (props) => vivaldi.tabsPrivate.move(props));
+        } catch (e) { console.warn("[vivarc] peek tab:", e); }
+        return moveBack(webviewId);
+      };
+    }
 
     let wasOn = settings.get("peek");
     settings.onChange((values) => {

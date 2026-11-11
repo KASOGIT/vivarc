@@ -10,8 +10,9 @@ globalThis.window = { __vm: JSON.parse(process.argv[3] || "{}") };
 vm.runInThisContext(fs.readFileSync(process.argv[1], "utf8"));
 const pins = window.__vm.pins, spaces = window.__vm.spaces, workspaces = window.__vm.workspaces, settings = window.__vm.settings, search = window.__vm.search, recent = window.__vm.recent, archive = window.__vm.archive, commandBar = window.__vm.commandBar, update = window.__vm.update, peek = window.__vm.peek;
 const input = JSON.parse(process.argv[2]);
-const out = (function () { return eval(input.expr); })();
-console.log(JSON.stringify(out === undefined ? null : out, (k, v) => (v === undefined ? null : v)));
+Promise.resolve((function () { return eval(input.expr); })()).then((out) => {
+  console.log(JSON.stringify(out === undefined ? null : out, (k, v) => (v === undefined ? null : v)));
+});
 """
 
 
