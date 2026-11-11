@@ -28,7 +28,7 @@ import sys
 import time
 import urllib.request
 
-VERSION = "0.1.30"
+VERSION = "0.1.31"
 IS_WIN = os.name == "nt"
 HOME = os.path.expanduser("~")
 HERE = os.path.dirname(os.path.abspath(__file__))
