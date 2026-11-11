@@ -629,42 +629,59 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding-top: 12vh;
+  padding: 8vh 16px;
   background: rgba(0, 0, 0, 0.35);
   app-region: no-drag;
 }
 .vm-set-card {
-  width: min(480px, 92vw);
-  padding: 8px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  width: min(520px, 92vw);
+  max-height: 84vh;
   border-radius: 18px;
   color: var(--vm-text);
   background: var(--vm-surface);
   border: 1px solid color-mix(in srgb, var(--vm-text) 12%, transparent);
   box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
   font-size: 13.5px;
+  overflow: hidden;
 }
-.vm-set-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 8px 6px; }
+.vm-set-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 10px 18px; }
 .vm-set-title { font-size: 16px; font-weight: 650; }
+.vm-set-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 14px 6px;
+  border-block: 1px solid color-mix(in srgb, var(--vm-text) 8%, transparent);
+}
+.vm-set-section-title { margin: 16px 4px 6px; font-size: 11.5px; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.5; }
+.vm-set-group { border-radius: 12px; background: color-mix(in srgb, var(--vm-text) 5%, transparent); overflow: hidden; }
 .vm-set-close, .vm-set-reset { font: inherit; color: inherit; cursor: pointer; border: 0; background: transparent; opacity: 0.6; border-radius: 8px; padding: 4px 8px; }
 .vm-set-close:hover, .vm-set-reset:hover { opacity: 1; background: color-mix(in srgb, var(--vm-text) 10%, transparent); }
-.vm-set-row { display: flex; align-items: center; gap: 16px; padding: 10px 8px; border-radius: 12px; cursor: pointer; }
-.vm-set-row:hover { background: color-mix(in srgb, var(--vm-text) 7%, transparent); }
+.vm-set-row { display: flex; align-items: center; gap: 16px; padding: 10px 12px; cursor: pointer; }
+.vm-set-row[hidden] { display: none; }
+.vm-set-row + .vm-set-row { border-top: 1px solid color-mix(in srgb, var(--vm-text) 7%, transparent); }
+.vm-set-row:hover { background: color-mix(in srgb, var(--vm-text) 5%, transparent); }
+.vm-set-sub { padding-left: 28px; }
 .vm-set-text { flex: 1; min-width: 0; }
 .vm-set-label { font-weight: 600; }
 .vm-set-hint { margin-top: 2px; opacity: 0.6; font-size: 12.5px; }
-.vm-set-switch {
+/* Scoped to #browser: Vivaldi styles every checkbox and its rule wins over a bare class. */
+#browser.vm-on .vm-set-switch {
   appearance: none;
   flex: none;
   position: relative;
   width: 38px;
   height: 22px;
   margin: 0;
+  border: 0;
   border-radius: 11px;
   cursor: pointer;
   background: color-mix(in srgb, var(--vm-text) 22%, transparent);
   transition: background 150ms;
 }
-.vm-set-switch::after {
+#browser.vm-on .vm-set-switch::after {
   content: "";
   position: absolute;
   top: 2px;
@@ -676,9 +693,25 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   transition: transform 150ms;
 }
-.vm-set-switch:checked { background: var(--colorHighlightBg, #6b63a0); }
-.vm-set-switch:checked::after { transform: translateX(16px); }
-.vm-set-foot { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 0; }
+#browser.vm-on .vm-set-switch:checked { background: var(--colorHighlightBg, #6b63a0); }
+#browser.vm-on .vm-set-switch:checked::after { transform: translateX(16px); }
+.vm-set-range { display: block; cursor: default; }
+.vm-set-range:hover { background: none; }
+.vm-set-range-top { display: flex; justify-content: space-between; }
+.vm-set-value { font-weight: 500; opacity: 0.6; font-variant-numeric: tabular-nums; }
+.vm-set-slider { width: 100%; margin: 8px 0 0; accent-color: var(--colorHighlightBg, #6b63a0); }
+.vm-set-ends { display: flex; justify-content: space-between; margin-top: 2px; opacity: 0.5; font-size: 12px; }
+#browser.vm-on .vm-set-select {
+  flex: none;
+  max-width: 45%;
+  font: inherit;
+  color: inherit;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--vm-text) 18%, transparent);
+  background: color-mix(in srgb, var(--vm-text) 7%, transparent);
+}
+.vm-set-foot { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 12px 18px; }
 .vm-set-note { opacity: 0.5; font-size: 12.5px; }
 
 /* Liquid glass (setting "glass"), after Apple's Human Interface Guidelines, Materials: glass is for the layer of controls
@@ -753,9 +786,5 @@
   #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):hover { transform: none; }
 }
 
-.vm-set-range { display: block; cursor: default; }
-.vm-set-range:hover { background: none; }
-.vm-set-range.dim { opacity: 0.4; }
-.vm-set-value { margin-left: 4px; font-weight: 500; opacity: 0.6; font-variant-numeric: tabular-nums; }
-.vm-set-slider { width: 100%; margin: 8px 0 0; accent-color: var(--colorHighlightBg, #6b63a0); }
-.vm-set-ends { display: flex; justify-content: space-between; margin-top: 2px; opacity: 0.5; font-size: 12px; }
+/* Peek: keep Arc's controls (close, open in a tab, split view, copy link) and drop the extra menus. */
+#browser.vm-on .peek-sidebar-controls :is(.peek-open-actions-menu, .peek-navigation-actions, .peek-translate-actions) { display: none !important; }

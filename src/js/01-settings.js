@@ -2,28 +2,40 @@
 // Precedence: what the user saved, then the install config (~/.vivarc/config.json), then the default.
 (() => {
   // onClass / offClass: a marker class on #browser while the setting is on / off (the stylesheet reacts to it).
+  // needs: the row shows only while that other setting is on. requires: the row shows only when the install config
+  // has that flag (Peek is optional, see 03-peek.js). section: the heading it sits under, in SECTIONS order.
+  const SECTIONS = ["Appearance", "Sidebar", "Tabs", "Link preview", "General"];
   const SCHEMA = [
-    { key: "glass", label: "Liquid glass", hint: "Translucent, blurred sidebar, menus, command bar and dialogs, after Apple's Liquid Glass. Follows Reduce Transparency and Increase Contrast.",
+    { key: "glass", section: "Appearance", label: "Liquid glass", hint: "Translucent, blurred sidebar, menus and dialogs. Follows Reduce Transparency.",
       default: false, onClass: "vm-glass" },
-    { key: "glassOpacity", type: "range", min: 15, max: 95, step: 1, default: 55, unit: "%", needs: "glass", cssVar: "--vm-glass-opacity",
-      label: "Glass opacity", hint: "From clear to frosted: how much of the surface colour shows through the glass.", low: "Clear", high: "Frosted" },
-    { key: "urlBar", label: "URL bar", hint: "Always show the address bar at the top of the sidebar, like Arc. Off, it appears when you edit the address (Cmd+L, or Ctrl+L on Windows).",
+    { key: "glassOpacity", section: "Appearance", type: "range", min: 15, max: 95, step: 1, default: 55, unit: "%", needs: "glass", cssVar: "--vm-glass-opacity",
+      label: "Glass opacity", low: "Clear", high: "Frosted" },
+    { key: "urlBar", section: "Sidebar", label: "URL bar", hint: "Always show the address bar. Off, it appears when you edit the address.",
       default: false, onClass: "vm-url-bar" },
-    { key: "spaceBar", label: "Space bar", hint: "The row of space tiles under the sidebar.", default: true, offClass: "vm-no-space-bar" },
-    { key: "compactBottomBar", label: "Compact bottom bar", hint: "A tighter row for the profile avatars and downloads.", default: true,
+    { key: "spaceBar", section: "Sidebar", label: "Space bar", hint: "The row of space tiles at the bottom.", default: true, offClass: "vm-no-space-bar" },
+    { key: "compactBottomBar", section: "Sidebar", label: "Compact bottom bar", hint: "A tighter row for profiles and downloads.", default: true,
       fromConfig: (c) => c.compactBottomBar, onClass: "vm-compact-bottom" },
-    { key: "searchSuggestions", label: "Search suggestions", hint: "Show suggestions from your default search engine (Vivaldi settings) in the command bar while you type.",
-      default: true, fromConfig: (c) => (c.suggestions === undefined ? undefined : c.suggestions !== "off" && c.suggestions !== false) },
-    { key: "archive", label: "Archive inactive tabs", hint: "Close tabs you have not opened for a while, like Arc. Pinned links, favorites, split views and tabs playing sound stay. Bring one back with Reopen Closed Tab.",
+    { key: "archive", section: "Tabs", label: "Archive inactive tabs", hint: "Close tabs left unopened, like Arc. Pins, favorites and tabs playing sound stay.",
       default: false },
-    { key: "archiveHours", type: "range", min: 1, max: 168, step: 1, default: 12, unit: " h", needs: "archive",
-      label: "Archive after", hint: "How long a tab can sit unopened before it is closed.", low: "1 hour", high: "7 days" },
-    { key: "updateCheck", label: "Check for updates", hint: "Ask GitHub now and then whether a new Vivarc release is out, and show an Update Vivarc button in the sidebar when it is. Off, nothing is requested.",
+    { key: "archiveHours", section: "Tabs", type: "range", min: 1, max: 168, step: 1, default: 12, unit: " h", needs: "archive",
+      label: "Archive after", low: "1 hour", high: "7 days" },
+    { key: "peek", section: "Link preview", label: "Link preview (Peek)", hint: "Open some links in a floating window over the page. Esc closes it.",
+      default: true, requires: "peekInstalled" },
+    { key: "peekPinned", section: "Link preview", label: "From pinned tabs", hint: "A link to another site opens in the preview, like Arc.",
+      default: true, needs: "peek", requires: "peekInstalled" },
+    { key: "peekShortcut", section: "Link preview", type: "choice", default: "alt", needs: "peek", requires: "peekInstalled",
+      options: [["alt", null], ["shift", null], ["none", "Off"]],
+      label: "Shortcut", hint: "Click a link with this key held. Cmd+click still opens a new tab." },
+    { key: "peekDim", section: "Link preview", label: "Dim the page behind", default: true, needs: "peek", requires: "peekInstalled" },
+    { key: "searchSuggestions", section: "General", label: "Search suggestions", hint: "From your default search engine, in the command bar.",
+      default: true, fromConfig: (c) => (c.suggestions === undefined ? undefined : c.suggestions !== "off" && c.suggestions !== false) },
+    { key: "updateCheck", section: "General", label: "Check for updates", hint: "Ask GitHub now and then for a new Vivarc release. Off, nothing is requested.",
       default: true },
   ];
 
   const resolve = (schema, config, saved) => Object.fromEntries(schema.map((s) => {
     const mine = saved?.[s.key];
+    if (s.type === "choice") return [s.key, s.options.some(([value]) => value === mine) ? mine : s.default];
     if (s.type === "range") {
       return [s.key, typeof mine === "number" && Number.isFinite(mine) ? Math.min(s.max, Math.max(s.min, Math.round(mine))) : s.default];
     }
@@ -40,7 +52,15 @@
     ...(s.offClass ? [[s.offClass, !values[s.key]]] : []),
   ]));
 
-  const api = { SCHEMA, resolve, classes, vars };
+  const visible = (schema, config) => schema.filter((s) => !s.requires || !!config?.[s.requires]);
+
+  const sections = (schema, config) => SECTIONS
+    .map((title) => ({ title, items: visible(schema, config).filter((s) => s.section === title) }))
+    .filter((section) => section.items.length);
+
+  const shownRows = (schema, values) => schema.filter((s) => !s.needs || !!values[s.needs]);
+
+  const api = { SCHEMA, resolve, classes, vars, visible, sections, shownRows };
   window.__vm.settings = api;
   if (!window.__vm.store) return;
 

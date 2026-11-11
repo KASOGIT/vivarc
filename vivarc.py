@@ -570,13 +570,15 @@ def write_bundle(resources, with_peek):
     if os.path.exists(icons):
         pre.append(("icons.js", read_text(icons)))
     peek_dir = os.path.join(HOME_DIR, "peek")
-    if with_peek and os.path.exists(os.path.join(peek_dir, "VividPeek.js")):
+    peek_installed = with_peek and os.path.exists(os.path.join(peek_dir, "VividPeek.js"))
+    if peek_installed:
         extras.append(("peek-stubs.js", read_text(os.path.join(HERE, "src/optional/peek-stubs.js"))))
         extras.append(("VividPeek.js", read_text(os.path.join(peek_dir, "VividPeek.js"))))
         extras.append(("VividPeek.css", style_script("vivarc-peek-css", read_text(os.path.join(peek_dir, "VividPeek.css")))))
     start_page = pathlib.Path(HOME_DIR, "start", "index.html").as_uri()
     config = {**load_config(), "startUrl": start_page, "platform": PLATFORM,
-              "keys": KEYS[PLATFORM], "keyLabels": KEY_LABELS[PLATFORM], "version": VERSION}
+              "keys": KEYS[PLATFORM], "keyLabels": KEY_LABELS[PLATFORM], "version": VERSION,
+              "peekInstalled": peek_installed}
     bundle = build_bundle(os.path.join(HERE, "src/js"), config, extras, pre)
     write_atomic(os.path.join(resources, "vivarc.js"), bundle)
 

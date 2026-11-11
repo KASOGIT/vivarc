@@ -1019,7 +1019,7 @@
     try { return (await vivaldi.prefs.get("vivaldi.workspaces.list"))?.value || []; } catch (_) { return []; }
   };
   const loadTabs = async () => {
-    state.allTabs = await chrome.tabs.query({ currentWindow: true });
+    state.allTabs = window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true }));
     state.workspaces = await readWorkspaces();
     ({ active: state.active, tabs: state.tabs } = spacesOf.scope(state.allTabs, state.workspaces));
   };
@@ -1119,6 +1119,7 @@
     }
     chrome.tabs.onCreated.addListener((tab) => {
       if (window.__vm.switchingSpace) return; // the landing tab of a space switch belongs to the new space
+      if (window.__vm.peek.isPeekTab(tab, window.__vm.peek.tabIds())) return;
       const active = state.active;
       chrome.windows.getCurrent().then((win) => {
         const data = spacesOf.stamp(tab, active, win.id);

@@ -138,7 +138,9 @@ python3 ~/.vivarc/app/vivarc.py status      # what is installed
 
 On Windows, Win+Ctrl+arrows belong to virtual desktops, so the profile keys add Shift instead. Ctrl+T, Ctrl+S and Ctrl+Shift+C take over New Tab, Save Page and Copy to Note (the command bar opens a new tab; Save Page stays in Vivaldi's menu).
 
-**Also:** an optional link preview (Peek, by [PaRr0tBoY](https://github.com/PaRr0tBoY/Awesome-Vivaldi), downloaded from upstream and verified at install), and an importer for your Arc spaces and site icons.
+**Also:** an importer for your Arc spaces and site icons, and a link preview like Arc's Peek (VividPeek, by [PaRr0tBoY](https://github.com/PaRr0tBoY/Awesome-Vivaldi), downloaded from upstream and verified at install).
+
+**Link preview (Peek).** A link to another site, clicked in a pinned tab, opens in a floating window over the page; so does a link clicked with Option held (Alt on Windows) or held down with the middle mouse button. Esc or a click outside closes it, and the buttons on its right open it in a tab or in split view. Cmd+click (Ctrl+click) always opens a new tab. If links open in a small window and you did not want that, turn off **Link preview (Peek)** in **Vivarc Settings**, or change its shortcut there. `--no-peek` at install leaves it out entirely.
 
 ## Coming from Arc or Chrome
 
