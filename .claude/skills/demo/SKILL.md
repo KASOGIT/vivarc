@@ -34,7 +34,8 @@ Steps:
   (webpack module exposing `addWorkspace`) and opens tabs while the space is active.
 - New tabs report their URL in `pendingUrl` until they load; match `pendingUrl || url`.
 - Synthetic CDP input shows no cursor, so `input.swift` posts real CGEvents with an eased pointer. Vivaldi drops key events
-  that only carry a unicode string, so `type` uses real key codes (US layout; add keys to `codes` when a word needs them).
+  that only carry a unicode string, so `type` uses real key codes (US layout; add keys to `codes` when a word needs them). Set `flags` to none on every typed key, or a Cmd held by the
+  previous shortcut leaks into the letters and they vanish.
 - The first click into a background window only focuses it: a right-click sent then just selects the tab. `play()` clicks
   an empty part of the sidebar first.
 - A fresh profile has tab bar auto-hide on (the sidebar slides away when the pointer leaves); setup turns it off.

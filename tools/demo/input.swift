@@ -44,8 +44,12 @@ let codes: [Character: UInt16] = ["a": 0, "s": 1, "d": 2, "f": 3, "h": 4, "g": 5
   "j": 38, "k": 40, "n": 45, "m": 46, " ": 49, ".": 47, "1": 18, "2": 19]
 func type(_ text: String) {
   for ch in text {
-    key(codes[ch]!, CGEventFlags())
-    usleep(UInt32(35000 + Int.random(in: 0...25000)))
+    for down in [true, false] {
+      let e = CGEvent(keyboardEventSource: src, virtualKey: codes[ch]!, keyDown: down)!
+      e.flags = CGEventFlags(); e.post(tap: .cghidEventTap)
+      usleep(12000)
+    }
+    usleep(UInt32(25000 + Int.random(in: 0...20000)))
   }
 }
 for cmd in CommandLine.arguments.dropFirst().joined(separator: " ").split(separator: ";") {
