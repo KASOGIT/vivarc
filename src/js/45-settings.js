@@ -67,7 +67,7 @@
     const line = item.type === "range" ? rangeRow(item) : item.type === "choice" ? choiceRow(item) : switchRow(item);
     if (item.needs) {
       line.classList.add("vm-set-sub");
-      const sync = () => { line.hidden = !settings.get(item.needs); };
+      const sync = () => { line.hidden = !settings.shownRows([item], settings.all()).length; };
       unsubs.push(settings.onChange(sync));
       sync();
     }

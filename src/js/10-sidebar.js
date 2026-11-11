@@ -708,7 +708,7 @@
   // neither stamped with the old space nor taken by the command bar for a new-tab request.
   const switchSpace = async (item, { force = false } = {}) => {
     if (item.id === state.active && !force) return;
-    const tabs = await chrome.tabs.query({ currentWindow: true });
+    const tabs = window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true }));
     const pages = spacesOf.tabsIn(tabs, item.id).filter((t) => !BLANK.test(t.pendingUrl || t.url || ""));
     const tab = spacesOf.recentTab(pages, item.id);
     if (tab) { await chrome.tabs.update(tab.id, { active: true }); return; }
@@ -726,7 +726,7 @@
       // land on that tab ourselves.
       const [after] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (after && spacesOf.of(after) !== item.id) {
-        const landing = spacesOf.recentTab(await chrome.tabs.query({ currentWindow: true }), item.id);
+        const landing = spacesOf.recentTab(window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true })), item.id);
         if (landing) await chrome.tabs.update(landing.id, { active: true });
       }
     } finally { window.__vm.switchingSpace = false; }
@@ -1119,7 +1119,7 @@
     }
     chrome.tabs.onCreated.addListener((tab) => {
       if (window.__vm.switchingSpace) return; // the landing tab of a space switch belongs to the new space
-      if (window.__vm.peek.isPeekTab(tab, window.__vm.peek.tabIds())) return;
+      if (window.__vm.peek.creatingTab() || window.__vm.peek.isPeekTab(tab, window.__vm.peek.tabIds())) return; // Peek keeps its tabs out of the space
       const active = state.active;
       chrome.windows.getCurrent().then((win) => {
         const data = spacesOf.stamp(tab, active, win.id);
@@ -1141,7 +1141,7 @@
         const { space, removed, wasActive } = leaving;
         leaving = null;
         if (!wasActive || window.__vm.switchingSpace) return;
-        const next = spacesOf.stayIn(await chrome.tabs.query({ currentWindow: true }), space, removed);
+        const next = spacesOf.stayIn(window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true })), space, removed);
         if (next?.tab) {
           await chrome.tabs.update(next.tab.id, { active: true });
           if (BLANK.test(next.tab.pendingUrl || next.tab.url || "")) window.dispatchEvent(new CustomEvent("vm-open-command-bar"));

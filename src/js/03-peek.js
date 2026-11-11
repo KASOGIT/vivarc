@@ -19,9 +19,26 @@
 
   // The tabs Peek opens behind a preview: a background copy it preloads (often stashed in another workspace, which
   // Vivarc shows as a space) and the tab that backs the floating window. Neither belongs in the sidebar.
+  // Only the open previews count: Peek's own list of preloaded tabs keeps an id after "Open in New Tab" turns that
+  // tab into a real one, which would then stay hidden.
   const isPeekTab = (tab, ids) => ids.has(tab.id) || !!readExt(tab).arcPeekRuntime;
+  const previewTabIds = (webviews) => new Set([...webviews].flatMap((d) => [d?.parallelTabId, d?.relatedTabId]).filter(Boolean));
 
-  const api = { triggers, isPeekTab, tabIds: () => new Set() };
+  // Injected in every page. Peek's "pin" rule reads window.__arcpeekCurrentTabIsPinned, which Peek fills from
+  // Vivaldi's tab strip; Vivarc pins live in vivExtData, so the flag becomes a read-only getter Vivarc sets. Peek
+  // listens on document in the capture phase and never looks at Cmd/Ctrl: a listener on window runs first and
+  // makes a Cmd/Ctrl+click not count as a pinned click, so it keeps opening a new tab.
+  const pinnedScript = (pinned) => `(() => {
+    window.__vmPeekPinned = ${pinned ? "true" : "false"};
+    if (window.__vmPeekWatch) return;
+    window.__vmPeekWatch = true;
+    let command = false;
+    window.addEventListener("pointerdown", (e) => { command = !!(e.metaKey || e.ctrlKey); }, true);
+    Object.defineProperty(window, "__arcpeekCurrentTabIsPinned",
+      { get: () => window.__vmPeekPinned && !command, set: () => {}, configurable: true });
+  })();`;
+
+  const api = { triggers, isPeekTab, previewTabIds, pinnedScript, tabIds: () => new Set(), creatingTab: () => false };
   api.withoutPeekTabs = (tabs) => { const ids = api.tabIds(); return tabs.filter((t) => !isPeekTab(t, ids)); };
   window.__vm.peek = api;
   const { config, settings, store } = window.__vm;
@@ -38,15 +55,11 @@
   });
 
   const attach = (peek) => {
-    api.tabIds = () => {
-      const ids = new Set();
-      for (const data of peek.webviews?.values?.() || []) {
-        if (data?.parallelTabId) ids.add(data.parallelTabId);
-        if (data?.relatedTabId) ids.add(data.relatedTabId);
-      }
-      try { (JSON.parse(localStorage.getItem("arcpeek_parallel_tabs") || "[]") || []).forEach((id) => ids.add(id)); } catch (_) {}
-      return ids;
-    };
+    api.tabIds = () => previewTabIds(peek.webviews?.values?.() || []);
+    // Peek raises this flag around the creation of its preloaded tab, whose id it only learns afterwards.
+    let creating = false;
+    window.addEventListener("vmod-suppress-tab-toast", (e) => { creating = !!e.detail?.suppress; });
+    api.creatingTab = () => creating;
 
     const push = () => window.dispatchEvent(new CustomEvent("vivaldi-mod-config-updated",
       { detail: { mods: { arcPeek: triggers(settings.all()) } } }));
@@ -55,12 +68,13 @@
     // A page keeps the triggers it was loaded with, so with Peek just turned off a click on an already open page
     // still asks for a preview: open the link in that tab instead, which is what turning Peek off means.
     const openPeek = peek.openPeek.bind(peek);
-    // Peek's message handler passes no source tab, so the link opens in the active tab.
+    // Peek's message handler passes no source tab: the link opens in the active tab, or a new one from a web panel.
     peek.openPeek = (url, fromPanel, rect, meta) => {
       if (settings.get("peek")) {
         firstPreviewHint();
         return openPeek(url, fromPanel, rect, meta);
       }
+      if (fromPanel) return chrome.tabs.create({ url });
       chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => tab && chrome.tabs.update(tab.id, { url }));
     };
 
@@ -71,24 +85,30 @@
       wasOn = values.peek;
     });
 
-    // Peek's "pin" rule asks Vivaldi's tab strip whether a tab is pinned; Vivarc pins live in vivExtData instead.
-    // Peek resets the page flag on every navigation, so it is made read-only (true) in pinned pages.
-    const PINNED = 'Object.defineProperty(window, "__arcpeekCurrentTabIsPinned", { get: () => true, set: () => {}, configurable: true });';
-    const markPinned = ({ tabId, frameId }) => {
-      if (frameId !== 0) return;
-      chrome.tabs.get(tabId, (tab) => {
-        if (chrome.runtime.lastError || !readExt(tab).vivarcPin) return;
-        const webview = document.querySelector(`webview[tab_id="${tabId}"]`);
-        webview?.executeScript?.({ code: PINNED, runAt: "document_start" }, () => void chrome.runtime.lastError);
-      });
+    const mark = (tab) => {
+      const webview = document.querySelector(`webview[tab_id="${tab.id}"]`);
+      webview?.executeScript?.({ code: pinnedScript(!!readExt(tab).vivarcPin), runAt: "document_start" }, () => void chrome.runtime.lastError);
     };
-    for (const ev of ["onCommitted", "onDOMContentLoaded", "onCompleted"]) chrome.webNavigation[ev].addListener(markPinned);
-    setTimeout(() => chrome.tabs.query({ currentWindow: true }, (tabs) => tabs.forEach((t) => markPinned({ tabId: t.id, frameId: 0 }))), 1000);
+    const markTab = ({ tabId, frameId }) => {
+      if (frameId !== 0) return;
+      chrome.tabs.get(tabId, (tab) => { if (!chrome.runtime.lastError && tab) mark(tab); });
+    };
+    // onCommitted reaches the new document; onCompleted covers a page whose first injection came too early.
+    chrome.webNavigation.onCommitted.addListener(markTab);
+    chrome.webNavigation.onCompleted.addListener(markTab);
+    chrome.tabs.onUpdated.addListener((_id, change, tab) => { if (change.vivExtData !== undefined) mark(tab); }); // pinned or unpinned
+    setTimeout(() => chrome.tabs.query({ currentWindow: true }, (tabs) => tabs.forEach(mark)), 1000);
   };
 
-  const firstPreviewHint = () => store.get("peekHintShown", false).then((shown) => {
-    if (shown) return;
-    store.set("peekHintShown", true);
-    window.dispatchEvent(new CustomEvent("vm-toast", { detail: "Link preview: Esc closes it. Turn it off in Vivarc Settings." }));
-  });
+  // One read per window: two previews opened at once must not both show the hint.
+  let hintChecked = false;
+  const firstPreviewHint = () => {
+    if (hintChecked) return;
+    hintChecked = true;
+    store.get("peekHintShown", false).then((shown) => {
+      if (shown) return;
+      store.set("peekHintShown", true);
+      window.dispatchEvent(new CustomEvent("vm-toast", { detail: "Link preview: Esc closes it. Turn it off in Vivarc Settings." }));
+    });
+  };
 })();

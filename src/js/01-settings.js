@@ -67,7 +67,11 @@
   const { store, config } = window.__vm;
   const listeners = new Set();
   const channel = new BroadcastChannel("vivarc-settings");
-  let saved = {};
+  // A copy of the saved values in localStorage is read synchronously, so the first modules to start (Peek injects
+  // into the restored pages right away) see the user's settings rather than the defaults until IndexedDB answers.
+  const CACHE = "vivarc-settings";
+  const cached = () => { try { return JSON.parse(localStorage.getItem(CACHE) || "{}") || {}; } catch (_) { return {}; } };
+  let saved = cached();
   let values = resolve(SCHEMA, config, saved);
 
   const apply = (browser) => {
@@ -76,6 +80,7 @@
   };
   const update = (next) => {
     saved = next || {};
+    try { localStorage.setItem(CACHE, JSON.stringify(saved)); } catch (_) {}
     values = resolve(SCHEMA, config, saved);
     const browser = document.querySelector("#browser");
     if (browser) apply(browser);
