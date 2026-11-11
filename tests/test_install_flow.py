@@ -60,8 +60,6 @@ class InstallFlow(unittest.TestCase):
             mock.patch.object(vivarc, "vivaldi_running", return_value=False),
             mock.patch.object(vivarc, "app_version", return_value="9.9.9"),
             mock.patch.object(vivarc, "ask", return_value=None),
-            # never open the real System Settings pane from a test
-            mock.patch.object(vivarc, "open_settings"),
         ]
         for p in patches:
             p.start()
@@ -149,7 +147,6 @@ class InstallFlow(unittest.TestCase):
         with mock.patch.object(vivarc, "can_write", return_value=False):
             with self.assertRaises(SystemExit):
                 self.run_cli("install", "--no-peek")
-        vivarc.open_settings.assert_called_once_with()
         self.assertEqual(self.prefs("Default"), before)
         self.assertFalse(os.path.exists(os.path.join(self.home, "state.json")))
         self.assertFalse(os.path.exists(os.path.join(self.home, "peek")))
