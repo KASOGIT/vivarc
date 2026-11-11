@@ -35,7 +35,7 @@ The mod itself is plain JavaScript and CSS in `src/` (no build step). To try a c
 
 - Branch from `main`, and keep each pull request about one thing.
 - Use [Conventional Commits](https://www.conventionalcommits.org/) for messages (`feat:`, `fix:`, `docs:`...).
-- Add or update a Python test when you change the installer or the preference patching. For the JavaScript, describe how you checked it in a real Vivaldi window.
+- Add or update a Python test when you change the installer or the preference patching. Tests must mock anything that reaches the real machine (`open_settings`, `launchctl`, `ask`, `vivaldi_running`): an unmocked `open_settings` pops System Settings > App Management on every run. For the JavaScript, describe how you checked it in a real Vivaldi window.
 - Match the style of the surrounding code, and keep comments for things that are not obvious.
 - Update the README or `CHANGELOG.md` when behaviour changes.
 
