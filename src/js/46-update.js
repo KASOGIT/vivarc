@@ -1,6 +1,6 @@
 // Vivarc update check: asks GitHub for the latest release now and then, and tells the sidebar (vm-update) when it is newer than this install.
 (() => {
-  const CHECK_EVERY = 12 * 3600 * 1000;
+  const CHECK_EVERY = 3600 * 1000;
   const LATEST = "https://api.github.com/repos/KASOGIT/vivarc/releases/latest";
 
   const parse = (version) => (/^\d+(\.\d+)*$/.test(version) ? version.split(".").map(Number) : null);
@@ -48,6 +48,6 @@
     cache = saved;
     changed();
     setTimeout(check, 5000);
-    setInterval(check, 3600 * 1000);
+    setInterval(check, 5 * 60 * 1000);
   });
 })();
