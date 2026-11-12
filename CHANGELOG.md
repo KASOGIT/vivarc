@@ -1,7 +1,12 @@
 # Changelog
 
-## Unreleased
-- Fix: a tab opened from a **Peek** preview (open in a tab) now really joins the space on screen. With more than one space it could stay behind in another space, shown greyed out in the sidebar but impossible to switch to, even with Cmd+Shift+[ (#165).
+## 0.1.33 - 2026-11-12
+- **One theme per space**, like Arc. The theme editor (the palette next to the space name) saves the colour, intensity and grain of the space on screen, and switching spaces switches the theme. Spaces you have not edited keep the theme you had, and Reset only resets the space on screen. Thanks @gulin-desigenr (#145).
+- **Tab stacks in the sidebar.** Vivaldi's tab stacks show as a group you can fold, with their name and number of tabs, instead of loose tabs, and Vivaldi's own second tab strip no longer covers the sidebar. Cmd+click (Ctrl+click on Windows) picks several tabs and Shift+click a range; right-click them for **Stack N Tabs** or **Close N Tabs**. A stacked tab's menu has **Remove from Stack**, and a stack's menu **Ungroup Stack** and **Close Stack**. Thanks @gulin-desigenr (#147).
+- The **command bar** grows with large windows: above 1920 x 1080 it gets up to 20% bigger, text and rows included. Thanks @gulin-desigenr (#142).
+- Fix: in the **command bar**, pressing Enter right after typing runs the result for what you typed, not for the text of a moment before, and search suggestions no longer hold back the other results on a slow network. Thanks @groenroos (#109, #110).
+- Fix: a tab opened from a **Peek** preview (open in a tab) now really joins the space on screen. With more than one space it could stay behind in another space, shown greyed out in the sidebar but impossible to switch to, even with Cmd+Shift+[. Thanks @groenroos (#165, #166).
+- Fix: the **Update Vivarc** button shows in every profile within about an hour of a release. Each profile checks GitHub at most once an hour, instead of every 12 hours (#172).
 
 ## 0.1.32 - 2026-11-12
 - Fix: **pinned links and new tabs open in the space on screen.** After switching spaces with the space tiles, Vivaldi kept opening them in the space you came from. Vivarc now tells Vivaldi about every switch, including the ones made through a favorite or the tab switcher.

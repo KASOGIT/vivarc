@@ -116,7 +116,7 @@ python3 ~/.vivarc/app/vivarc.py status      # what is installed
 
 **Settings.** Cmd+T, type `settings` (or right-click the sidebar, *Vivarc Settings…*) to switch features on and off live, per profile, including a **URL bar** always shown at the top of the sidebar like Arc (otherwise it appears with Cmd+L), **Archive inactive tabs** (closes tabs you have not opened for 1 hour to 7 days, like Arc; off by default; pinned links, favorites, split views and tabs playing sound are kept) and an optional **Liquid Glass** look (translucent sidebar, menus and command bar with an opacity slider from clear to frosted, following Apple's guidance; it falls back to solid surfaces with Reduce Transparency or Increase Contrast).
 
-**A theme editor.** Hover the space name and click the palette: pick a colour, intensity and grain. Saved per profile, so each one gets its own look.
+**A theme editor.** Hover the space name and click the palette: pick a colour, intensity and grain. Each space keeps its own theme, like Arc, and switching spaces switches it.
 
 <p align="center">
   <img src="docs/screenshots/theme.png" alt="Theme editor with colour pad, swatches, intensity and grain" width="760">
