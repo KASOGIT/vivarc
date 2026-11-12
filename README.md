@@ -91,7 +91,7 @@ python3 ~/.vivarc/app/vivarc.py uninstall   # same as Uninstall Vivarc (add --pu
 python3 ~/.vivarc/app/vivarc.py status      # what is installed
 ```
 
-**Update button.** When a new Vivarc release is out, a small **Update Vivarc** button appears above the space bar. Click it to update: Vivarc runs the same update as **Update Vivarc** (the first time, Vivaldi asks to open it: allow it). Right-click it for **Copy Update Command**, **What's New** (the release notes) or **Later** (hides it until a newer release). Vivarc asks GitHub at most every 12 hours; switch **Check for updates** off in Vivarc Settings to stop that and hide the button.
+**Update button.** When a new Vivarc release is out, a small **Update Vivarc** button appears above the space bar. Click it to update: Vivarc runs the same update as **Update Vivarc** (the first time, Vivaldi asks to open it: allow it). Right-click it for **Copy Update Command**, **What's New** (the release notes) or **Later** (hides it until a newer release). Each Vivaldi profile asks GitHub at most once an hour; switch **Check for updates** off in Vivarc Settings to stop that and hide the button.
 
 **Update reminder (optional).** The installer offers it. When a Vivaldi update removes Vivarc, a small dialog asks whether to bring it back. When a new Vivarc release is out you get a quiet notification, never a dialog. Switch it on or off with `python3 ~/.vivarc/app/vivarc.py reminder on` (or `off`).
 

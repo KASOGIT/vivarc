@@ -33,9 +33,9 @@ class ShouldCheck(unittest.TestCase):
     def test_checks_when_it_never_did(self):
         self.assertTrue(js("update.shouldCheck(now, undefined)", now=self.NOW))
 
-    def test_waits_twelve_hours_between_checks(self):
-        self.assertFalse(js("update.shouldCheck(now, now - 11 * h)", now=self.NOW, h=HOUR_MS))
-        self.assertTrue(js("update.shouldCheck(now, now - 13 * h)", now=self.NOW, h=HOUR_MS))
+    def test_waits_an_hour_between_checks(self):
+        self.assertFalse(js("update.shouldCheck(now, now - 59 * m)", now=self.NOW, m=HOUR_MS // 60))
+        self.assertTrue(js("update.shouldCheck(now, now - h)", now=self.NOW, h=HOUR_MS))
 
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
