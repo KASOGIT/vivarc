@@ -706,6 +706,8 @@
   // (or one with only Vivaldi's blank start page): Vivaldi's own workspace action, which opens its landing tab
   // there; then the command bar opens on it, ready for an address (#57). While the switch runs, the landing tab is
   // neither stamped with the old space nor taken by the command bar for a new-tab request.
+  // The space Vivaldi's own switch action was last told, which is where Vivaldi opens new tabs (see workspaces.follow).
+  let toldSpace = null;
   const switchSpace = async (item, { force = false } = {}) => {
     if (item.id === state.active && !force) return;
     const tabs = window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true }));
@@ -722,6 +724,7 @@
     window.__vm.switchingSpace = true;
     try {
       await activate(window.vivaldiWindowId, item.id);
+      toldSpace = item.id;
       // A space left with only its blank landing tab from an earlier visit: Vivaldi may not switch to it again, so
       // land on that tab ourselves.
       const [after] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -739,7 +742,9 @@
   };
 
   const spacePill = (item) => {
-    const pill = el("div", `vm-space-pill${item.id === state.active ? " active" : ""}`, item.emoji || item.name.trim().charAt(0).toUpperCase() || "?");
+    const pill = el("div", `vm-space-pill${item.id === state.active ? " active" : ""}`, item.emoji || (item.icon ? "" : item.name.trim().charAt(0).toUpperCase() || "?"));
+    // The icon picked in Vivaldi's workspace editor is its own SVG markup from the profile's preferences, drawn in currentColor.
+    if (!item.emoji && item.icon) pill.innerHTML = item.icon;
     pill.title = item.name;
     pill.addEventListener("click", () => switchSpace(item));
     if (item.id) pill.addEventListener("contextmenu", (e) => showMenu(e, [["Delete Space…", () => confirmDeleteSpace(item, e), true]]));
@@ -1126,6 +1131,17 @@
         if (data) chrome.tabs.update(tab.id, { vivExtData: data });
       }).catch(() => {});
     });
+    chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+      if (!state.workspaces?.length || window.__vm.switchingSpace) return;
+      const tab = await chrome.tabs.get(tabId).catch(() => null);
+      if (!tab || window.__vm.peek.isPeekTab(tab, window.__vm.peek.tabIds())) return;
+      const space = spacesOf.follow(tab, toldSpace, window.vivaldiWindowId);
+      if (space == null) return;
+      const activate = spacesOf.findSwitcher(chrome.extension.getBackgroundPage?.()?.webpackChunkgapp_browser_react);
+      if (!activate) return;
+      toldSpace = space;
+      activate(window.vivaldiWindowId, space);
+    });
     // Closing the active tab (or moving it to another window) can make Vivaldi activate a tab of another space;
     // stay in the space instead, on its most recent tab, or in it empty (#75). The removals of one action (closing
     // several tabs) are gathered first.
@@ -1162,7 +1178,7 @@
       });
     }
     setInterval(async () => {
-      const brief = (list) => JSON.stringify(list.map((w) => [w.id, w.name, w.emoji]));
+      const brief = (list) => JSON.stringify(list.map((w) => [w.id, w.name, w.emoji, w.icon]));
       if (brief(await readWorkspaces()) !== brief(state.workspaces)) refresh(false);
     }, 3000);
     try {

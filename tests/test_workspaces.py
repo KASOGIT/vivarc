@@ -105,6 +105,10 @@ class SpaceList(unittest.TestCase):
     def test_each_space_keeps_its_emoji_and_the_default_has_none(self):
         self.assertEqual([i["emoji"] for i in self.items([WORK])], ["", "📚"])
 
+    def test_a_space_with_an_icon_picked_in_vivaldi_keeps_it_and_the_default_has_none(self):
+        car = {"id": 9, "name": "Client", "emoji": "", "icon": '<svg viewBox="0 0 16 16"><path d="M0 0"/></svg>'}
+        self.assertEqual([i["icon"] for i in self.items([car])], ["", car["icon"]])
+
     def targets(self, workspaces, moving):
         return js("workspaces.moveTargets(list, 'Home', moving).map((i) => i.id)", list=workspaces, moving=moving)
 
@@ -191,6 +195,30 @@ class NewTabs(unittest.TestCase):
     def test_a_tab_that_already_has_a_workspace_is_left_alone(self):
         self.assertIsNone(self.stamped({**tab(1, SIDE["id"]), "windowId": 1}, WORK["id"]))
         self.assertIsNone(self.stamped({"id": 1, "windowId": 1, "vivExtData": json.dumps({"workspaceId": 0})}, WORK["id"]))
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class VivaldisActiveSpace(unittest.TestCase):
+    """Vivaldi opens new tabs in the workspace it last activated, which activating a tab of another space does not
+    change: after such a switch, Vivaldi must be told the space of the active tab."""
+
+    def follow(self, t, told, window=1):
+        return js("workspaces.follow(t, told, window)", t=t, told=told, window=window)
+
+    def test_activating_a_tab_of_another_space_tells_vivaldi_that_space(self):
+        self.assertEqual(self.follow({**tab(1, SIDE["id"]), "windowId": 1}, WORK["id"]), SIDE["id"])
+
+    def test_activating_a_tab_of_the_default_space_tells_vivaldi_the_default_space(self):
+        self.assertEqual(self.follow({**tab(1), "windowId": 1}, WORK["id"]), 0)
+
+    def test_a_tab_of_the_space_vivaldi_already_has_needs_nothing(self):
+        self.assertIsNone(self.follow({**tab(1, WORK["id"]), "windowId": 1}, WORK["id"]))
+
+    def test_the_first_activation_tells_vivaldi_since_nothing_is_known_yet(self):
+        self.assertEqual(self.follow({**tab(1, WORK["id"]), "windowId": 1}, None), WORK["id"])
+
+    def test_a_tab_activated_in_another_window_is_left_to_that_window(self):
+        self.assertIsNone(self.follow({**tab(1, SIDE["id"]), "windowId": 2}, WORK["id"]))
 
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
