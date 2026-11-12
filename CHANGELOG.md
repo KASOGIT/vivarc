@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.32 - 2026-11-12
 - Fix: **pinned links and new tabs open in the space on screen.** After switching spaces with the space tiles, Vivaldi kept opening them in the space you came from. Vivarc now tells Vivaldi about every switch, including the ones made through a favorite or the tab switcher.
 - A space tile shows the icon picked in Vivaldi's workspace editor when the space has no emoji, instead of the first letter of its name. The README mentions **Move to Space** (right-click a tab) for moving a tab to another space. Thanks u/blondedco on Reddit for the report (#169).
 
