@@ -28,7 +28,7 @@ import sys
 import time
 import urllib.request
 
-VERSION = "0.1.27"
+VERSION = "0.1.32"
 IS_WIN = os.name == "nt"
 HOME = os.path.expanduser("~")
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -572,13 +572,15 @@ def write_bundle(resources, with_peek):
     if os.path.exists(icons):
         pre.append(("icons.js", read_text(icons)))
     peek_dir = os.path.join(HOME_DIR, "peek")
-    if with_peek and os.path.exists(os.path.join(peek_dir, "VividPeek.js")):
+    peek_installed = with_peek and os.path.exists(os.path.join(peek_dir, "VividPeek.js"))
+    if peek_installed:
         extras.append(("peek-stubs.js", read_text(os.path.join(HERE, "src/optional/peek-stubs.js"))))
         extras.append(("VividPeek.js", read_text(os.path.join(peek_dir, "VividPeek.js"))))
         extras.append(("VividPeek.css", style_script("vivarc-peek-css", read_text(os.path.join(peek_dir, "VividPeek.css")))))
     start_page = pathlib.Path(HOME_DIR, "start", "index.html").as_uri()
     config = {**load_config(), "startUrl": start_page, "platform": PLATFORM,
-              "keys": KEYS[PLATFORM], "keyLabels": KEY_LABELS[PLATFORM], "version": VERSION}
+              "keys": KEYS[PLATFORM], "keyLabels": KEY_LABELS[PLATFORM], "version": VERSION,
+              "peekInstalled": peek_installed}
     bundle = build_bundle(os.path.join(HERE, "src/js"), config, extras, pre)
     write_atomic(os.path.join(resources, "vivarc.js"), bundle)
 
@@ -829,13 +831,18 @@ def enable_reminder(app):
         if out.returncode != 0:
             say(f"Could not create the scheduled task: {(out.stderr or out.stdout).strip()}")
         return
+    script = os.path.join(HERE, "vivarc.py")
     for folder in ("Documents", "Desktop", "Downloads"):
         if HERE.startswith(os.path.join(HOME, folder) + os.sep):
-            say(f"Note: macOS does not let background jobs read ~/{folder}, so the reminder cannot run from this copy. "
-                "Use the copy the one-line install puts in ~/.vivarc/app.")
+            installed = os.path.join(HOME_DIR, "app", "vivarc.py")
+            if os.path.exists(installed):
+                script = installed
+            else:
+                say(f"Note: macOS does not let background jobs read ~/{folder}, so the reminder cannot run from this copy. "
+                    "Use the copy the one-line install puts in ~/.vivarc/app.")
     agent = {
         "Label": REMINDER_LABEL,
-        "ProgramArguments": ["/usr/bin/python3", os.path.join(HERE, "vivarc.py"), "--app", app, "remind"],
+        "ProgramArguments": ["/usr/bin/python3", script, "--app", app, "remind"],
         "RunAtLoad": True,
         "StartInterval": 3600,
         "WatchPaths": [os.path.join(app, "Contents", "Info.plist")],

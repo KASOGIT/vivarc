@@ -177,6 +177,17 @@ class ReminderAgent(ReminderCase):
             vivarc.enable_reminder(self.app)
         self.assertIn("Documents", out.getvalue())
 
+    def test_runs_the_installed_copy_when_this_folder_is_unreadable_to_background_jobs(self):
+        installed = os.path.join(self.home, "app", "vivarc.py")
+        os.makedirs(os.path.dirname(installed))
+        open(installed, "w").close()
+        with mock.patch.object(vivarc, "HERE", os.path.join(vivarc.HOME, "Documents", "vivarc")), \
+                redirect_stdout(io.StringIO()) as out:
+            vivarc.enable_reminder(self.app)
+        with open(self.plist, "rb") as f:
+            self.assertEqual(plistlib.load(f)["ProgramArguments"][1], installed)
+        self.assertNotIn("cannot run", out.getvalue())
+
     def test_off_unloads_and_deletes_it_and_tolerates_it_being_absent(self):
         vivarc.enable_reminder(self.app)
         vivarc.disable_reminder()

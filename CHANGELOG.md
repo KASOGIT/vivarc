@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.32 - 2026-11-12
+- Fix: **pinned links and new tabs open in the space on screen.** After switching spaces with the space tiles, Vivaldi kept opening them in the space you came from. Vivarc now tells Vivaldi about every switch, including the ones made through a favorite or the tab switcher.
+- A space tile shows the icon picked in Vivaldi's workspace editor when the space has no emoji, instead of the first letter of its name. The README mentions **Move to Space** (right-click a tab) for moving a tab to another space. Thanks u/blondedco on Reddit for the report (#169).
+
+## 0.1.31 - 2026-11-11
+- Fix: with the **URL bar** setting on, the address bar no longer spills past a narrow sidebar when you click into it, and the buttons on its right (feed, translate, install, bookmark) are hidden to leave the room to the address, which now runs to the end of the field instead of fading out before it. A site asking for the camera or microphone still shows its button there (#155, #156).
+
+## 0.1.30 - 2026-11-11
+- Fix: **Copy Link** in the sidebar menu (pinned tabs, favorites, tabs) and **Copy Current URL** in the command bar copy the link again. They silently did nothing while the page had focus (#153).
+
+## 0.1.29 - 2026-11-11
+- **Peek, the link preview, behaves like Arc's and can be turned off.** A plain click on Google results now opens the page normally; a plain click opens a preview only for a link to another site from a pinned tab, as in Arc. **Vivarc Settings** has a **Link preview (Peek)** switch (off, every link opens in its tab, at once, even on pages already open), plus **Preview links from pinned tabs**, the **Preview shortcut** (Option+click, Shift+click or none; Cmd+click always opens a new tab) and **Dim the page behind**. The tabs Peek opens behind a preview no longer show up in the sidebar, a space, the tab switcher or tab search, and the preview keeps Arc's controls only: close, open in a tab, split view, copy link. The first preview says what it is and where to turn it off. Thanks u/yapesochek on Reddit for the report (#150).
+
+## 0.1.28 - 2026-11-10
+- Fix: the update reminder works when you installed from a checkout in Documents, Desktop or Downloads. macOS hides those folders from background jobs, so the reminder never ran and no popup appeared after a Vivaldi update. It now runs the copy in `~/.vivarc/app`. Run `./vivarc.py reminder on` once to switch an existing reminder over.
+
 ## 0.1.27 - 2026-11-09
 - Fix: dragging a favorite to a new place in the grid is reliable. A drop in the gap between tiles lands next to the closest tile instead of at the end of the grid, the drop marker shows on the glass theme, and tiles no longer grow under the pointer while you drag.
 - Fix: a hovered favorite in the top row is no longer cut off at the top of the sidebar on the glass theme.

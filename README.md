@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Vivarc demo: split view, the command bar and a YouTube search shortcut in Vivaldi" width="860">
+  <img src="docs/demo.gif" alt="Vivarc demo in Vivaldi: add a tab to Favorites, pin a tab, Liquid glass and the URL bar in Vivarc Settings, a theme colour, split view from the command bar, hiding the sidebar and revealing it from the left edge, a YouTube search shortcut and Copy URL" width="860">
 </p>
 
 > **Arc is being discontinued on December 22, 2026**, according to the announcement email The Browser Company sent. If you want to keep the sidebar and command bar workflow somewhere else, Vivarc gives you most of it in Vivaldi, free and open source.
@@ -138,7 +138,9 @@ python3 ~/.vivarc/app/vivarc.py status      # what is installed
 
 On Windows, Win+Ctrl+arrows belong to virtual desktops, so the profile keys add Shift instead. Ctrl+T, Ctrl+S and Ctrl+Shift+C take over New Tab, Save Page and Copy to Note (the command bar opens a new tab; Save Page stays in Vivaldi's menu).
 
-**Also:** an optional link preview (Peek, by [PaRr0tBoY](https://github.com/PaRr0tBoY/Awesome-Vivaldi), downloaded from upstream and verified at install), and an importer for your Arc spaces and site icons.
+**Also:** an importer for your Arc spaces and site icons, and a link preview like Arc's Peek (VividPeek, by [PaRr0tBoY](https://github.com/PaRr0tBoY/Awesome-Vivaldi), downloaded from upstream and verified at install).
+
+**Link preview (Peek).** A link to another site, clicked in a pinned tab, opens in a floating window over the page; so does a link clicked with Option held (Alt on Windows) or held down with the middle mouse button. Esc or a click outside closes it, and the buttons on its right open it in a tab or in split view. Cmd+click (Ctrl+click) always opens a new tab. If links open in a small window and you did not want that, turn off **Link preview (Peek)** in **Vivarc Settings**, or change its shortcut there. `--no-peek` at install leaves it out entirely.
 
 ## Coming from Arc or Chrome
 
@@ -155,7 +157,7 @@ In each Vivaldi profile: **File > Import Bookmarks and Settings… > HTML file**
 
 ### Where Vivaldi differs from Arc
 
-- **Spaces and profiles are two layers.** A **space** is a Vivaldi workspace: a group of tabs and pinned links inside one window. Once a profile has workspaces, a row of emoji tiles under the sidebar switches between them (click one, or **Cmd+Option+Left/Right** for the previous/next; **Ctrl+Cmd+N** makes one; right-click a tile to delete it). Each space lists only its own tabs and has its own Pinned folder, named after the workspace; favorites are shared. Spaces **share the profile's logins**, which Vivaldi does not separate. A **profile** is the real boundary: its own window, bookmarks, logins and extensions. Switch with the **round avatars in the bottom bar** (click one, **Cmd+Ctrl+1..9** for the nth, **Cmd+Ctrl+Left/Right** for the previous/next); the **+** creates a profile and right-clicking your own avatar opens Vivaldi's profile manager. Vivaldi's own use of Cmd+Option+arrows for switching tabs is given up for the spaces, and Ctrl+Tab opens the tab switcher instead of cycling tabs.
+- **Spaces and profiles are two layers.** A **space** is a Vivaldi workspace: a group of tabs and pinned links inside one window. Once a profile has workspaces, a row of emoji tiles under the sidebar switches between them (click one, or **Cmd+Option+Left/Right** for the previous/next; **Ctrl+Cmd+N** makes one; right-click a tile to delete it; a tile shows the workspace's emoji or the icon picked in Vivaldi). To move a tab to another space, right-click it and pick **Move to Space**. Each space lists only its own tabs, opens new tabs and pinned links in itself, and has its own Pinned folder, named after the workspace; favorites are shared. Spaces **share the profile's logins**, which Vivaldi does not separate. A **profile** is the real boundary: its own window, bookmarks, logins and extensions. Switch with the **round avatars in the bottom bar** (click one, **Cmd+Ctrl+1..9** for the nth, **Cmd+Ctrl+Left/Right** for the previous/next); the **+** creates a profile and right-clicking your own avatar opens Vivaldi's profile manager. Vivaldi's own use of Cmd+Option+arrows for switching tabs is given up for the spaces, and Ctrl+Tab opens the tab switcher instead of cycling tabs.
 - **One Vivaldi account per profile.** Arc keeps one account and separates spaces by itself; in Vivaldi the profile is the separation, and Vivaldi Sync keeps one set of data per account. Two profiles signed into the same account receive each other's bookmarks, extensions and settings, and Vivarc's favorites and pinned folders are bookmarks, so both profiles show the same ones (even the other profile's space name). To keep profiles apart and still sync each one with your other computers and phone, sign every profile into its own free Vivaldi account (**Settings > Sync**). If two profiles already share an account, log one out first (**Settings > Sync > Log out**, keep the local data) and only then delete what belongs to the other profile; deleting while still synced deletes it in both.
 - **Links do not pick a space.** Arc can send a link to a given space; Vivaldi opens links from other apps in whichever profile was used last. On macOS the workaround is [Finicky](https://github.com/johnste/finicky), a tiny app that becomes your default browser and routes each link to a profile by domain:
   1. `brew install --cask finicky`, then set Finicky as the default browser in System Settings.
@@ -170,7 +172,7 @@ The command bar searches with the default search engine you picked in Vivaldi's 
 
 ## Contributing
 
-**Contributions are very welcome, and they make this project better.** Bug reports, ideas, testing on other setups, docs fixes and pull requests all help, and you do not need to be an expert. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started, and open an issue if you want to talk something through first. The notes in [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) cover the Vivaldi quirks worth knowing. If Vivarc saves you time, a star on the repo helps others find it, and you can [sponsor the project](https://github.com/sponsors/KASOGIT) to support its development.
+**Contributions are very welcome, and they make this project better.** Bug reports, ideas, testing on other setups, docs fixes and pull requests all help, and you do not need to be an expert. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started, and open an issue if you want to talk something through first. Rather not use GitHub? Suggest a feature or report a problem in a comment on the [Vivarc thread on r/vivaldibrowser](https://www.reddit.com/r/vivaldibrowser/comments/1xcttd5/i_built_an_arcstyle_sidebar_cmdt_command_bar_for). The notes in [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) cover the Vivaldi quirks worth knowing. If Vivarc saves you time, a star on the repo helps others find it, and you can [sponsor the project](https://github.com/sponsors/KASOGIT) to support its development.
 
 ## Credits and licence
 

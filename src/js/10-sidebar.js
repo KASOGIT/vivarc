@@ -207,7 +207,7 @@
     return true;
   };
 
-  const copy = (text) => navigator.clipboard?.writeText(text).catch(() => {});
+  const copy = window.__vm.copyText;
 
   // Removing goes to Vivaldi's bookmark trash, so it can be undone from there.
   const discard = (node) => {
@@ -261,7 +261,7 @@
   document.addEventListener("focusin", outside, true);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
   window.addEventListener("blur", closeMenu);
-  window.__vm?.onShortcut((key) => { if (key === "esc") closeMenu(); });
+  window.__vm?.onShortcut((key) => { if (key === "esc") { closeMenu(); clearSelection(); } });
 
   // ---- drag and drop ----
   let drag = null;
@@ -552,16 +552,114 @@
     return tile;
   };
 
+  // ---- tab stacks and selecting several tabs (#122) ----
+  // Cmd+click (Ctrl+click on Windows) picks a tab, Shift+click a range; a right-click on a picked tab then acts on
+  // all of them. Escape or a plain click lets go. The tab you are on counts as the first one picked.
+  const stacksOf = window.__vm.stacks;
+  const collapsedStacks = new Set();
+  const selected = new Set();
+  let selectAnchor = null;
+  const visibleTabIds = () => [...(panel?.querySelectorAll(".vm-tab[data-tab-id]") ?? [])]
+    .filter((r) => r.offsetParent).map((r) => Number(r.dataset.tabId));
+  const paintSelection = () => panel?.querySelectorAll(".vm-tab[data-tab-id]")
+    .forEach((r) => r.classList.toggle("vm-selected", selected.has(Number(r.dataset.tabId))));
+  const clearSelection = () => { if (!selected.size) return; selected.clear(); selectAnchor = null; paintSelection(); };
+  const picks = (e) => (window.__vm.platform === "win" ? e.ctrlKey : e.metaKey);
+  const selectWith = (e, tab) => {
+    if (e.shiftKey && selectAnchor != null) {
+      stacksOf.range(visibleTabIds(), selectAnchor, tab.id).forEach((id) => selected.add(id));
+    } else {
+      if (!selected.size) {
+        const active = state.tabs.find((t) => t.active && t.id !== tab.id);
+        if (active && visibleTabIds().includes(active.id)) selected.add(active.id);
+      }
+      selected.has(tab.id) ? selected.delete(tab.id) : selected.add(tab.id);
+      selectAnchor = tab.id;
+    }
+    paintSelection();
+  };
+  const selectedTabs = () => state.tabs.filter((t) => selected.has(t.id)).sort((a, b) => a.index - b.index);
+  // Vivaldi 8.3 makes a stack with tabsPrivate.move and the "create-new-group" tweak, and takes a tab out of one with
+  // "ungroup" (what its own Stack Tabs and Remove from Tab Stack do). The move needs the space, or the new stack
+  // lands in the default space (null is the default space itself).
+  const stackTabs = async (tabs) => {
+    if (tabs.length < 2) return;
+    await vivaldi.tabsPrivate.move({ tabIds: tabs.map((t) => t.id), target: tabs[0].id, workspaceId: spacesOf.of(tabs[0]) || null,
+      tweaks: ["do-not-reparent", "create-new-group"], debug: "Vivarc.stackTabs" });
+    refresh(false);
+  };
+  const unstack = async (tabIds) => {
+    await vivaldi.tabsPrivate.move({ tabIds, target: "last", tweaks: ["ungroup"], debug: "Vivarc.unstack" });
+    refresh(false);
+  };
+  const selectionMenu = () => {
+    const tabs = selectedTabs();
+    const n = tabs.length;
+    return [
+      [`Stack ${n} Tabs`, () => { clearSelection(); stackTabs(tabs); }],
+      [],
+      ["Clear Selection", clearSelection],
+      [`Close ${n} Tabs`, () => { clearSelection(); chrome.tabs.remove(tabs.map((t) => t.id)); }],
+    ];
+  };
+
+  const STACK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="7.5" y="7.5" width="12" height="12" rx="2.5"/><path d="M4.5 15.5v-8a3 3 0 0 1 3-3h8"/></svg>';
+  const CHEVRON = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"/></svg>';
+  // A stack's row is its title, not a tab: clicking it folds and unfolds the stack without leaving the tab you are
+  // on. The title is the stack's name (Vivaldi's own) or else its first tab's. Its tabs are listed under it alike,
+  // along a guide line. A folded stack holding the tab you are on opens, so no open tab is out of sight.
+  const tabStack = (id, tabs) => {
+    const wrap = el("div", "vm-folder vm-tab-stack");
+    const name = stacksOf.nameOf(tabs);
+    const title = name || tabs[0].title || tabs[0].url || "Tab stack";
+    const head = el("div", "vm-row vm-stack-head");
+    head.setAttribute("role", "button");
+    head.tabIndex = 0;
+    const glyph = el("span", "vm-glyph vm-stack-glyph");
+    glyph.innerHTML = STACK_ICON;
+    const chevron = el("span", "vm-stack-chevron");
+    chevron.innerHTML = CHEVRON;
+    head.append(glyph, el("span", "vm-title", title), el("span", "vm-stack-count", String(tabs.length)), chevron);
+    head.title = title;
+    const body = el("div", "vm-folder-body");
+    const content = el("div", "vm-folder-content vm-stack-content");
+    tabs.forEach((tab) => content.append(tabRow(tab)));
+    body.append(content);
+    const sync = () => {
+      const open = !collapsedStacks.has(id);
+      wrap.classList.toggle("open", open);
+      content.inert = !open;
+      head.setAttribute("aria-expanded", String(open));
+    };
+    head.addEventListener("click", () => { collapsedStacks.has(id) ? collapsedStacks.delete(id) : collapsedStacks.add(id); sync(); });
+    head.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); head.click(); } });
+    head.addEventListener("contextmenu", (e) => showMenu(e, [
+      ["Ungroup Stack", () => unstack(tabs.map((t) => t.id))],
+      [],
+      ["Close Stack", () => chrome.tabs.remove(tabs.map((t) => t.id))],
+    ]));
+    if (tabs.some((t) => t.active)) collapsedStacks.delete(id);
+    sync();
+    wrap.append(head, body);
+    return wrap;
+  };
+
   const tabRow = (tab) => {
     const row = el("div", "vm-row vm-tab");
+    row.dataset.tabId = String(tab.id);
     row.style.paddingLeft = "8px";
     if (tab.active) row.classList.add("active");
+    if (selected.has(tab.id)) row.classList.add("vm-selected");
     if (tab.discarded) row.classList.add("discarded");
     row.title = tab.url;
     row.append(iconEl(tab.url, tab.favIconUrl), el("span", "vm-title", tab.title || tab.url), ...soundButton(tab));
     if (window.__vm.tilingOf(tab)) row.append(el("span", "vm-split-mark", "◫"));
     row.append(actionButton("×", "Close tab", () => chrome.tabs.remove(tab.id)));
-    row.addEventListener("click", () => chrome.tabs.update(tab.id, { active: true }));
+    row.addEventListener("click", (e) => {
+      if (picks(e) || e.shiftKey) { e.preventDefault(); selectWith(e, tab); return; }
+      clearSelection();
+      chrome.tabs.update(tab.id, { active: true });
+    });
     row.addEventListener("auxclick", (e) => { if (e.button === 1) chrome.tabs.remove(tab.id); });
     wireDrag(row, { type: "tab", tab, url: tab.url });
     wireDrop(row, {
@@ -578,6 +676,7 @@
     row.addEventListener("contextmenu", async (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (selected.size > 1 && selected.has(tab.id)) { showMenu(e, selectionMenu()); return; }
       const windows = (await chrome.windows.getAll({ populate: true, windowTypes: ["normal"] }).catch(() => []))
         .filter((w) => w.id !== tab.windowId);
       const spaces = spacesOf.moveTargets(state.workspaces, defaultSpaceName(), tab);
@@ -602,6 +701,7 @@
           () => chrome.tabs.move(tab.id, { windowId: w.id, index: -1 })]),
         ...spaces.map((s) => [`Move to Space: ${s.emoji ? `${s.emoji} ` : ""}${s.name}`, () => moveTabToSpace(tab.id, s.id, false)]),
         [],
+        ...(stacksOf.groupOf(tab) ? [["Remove from Stack", () => unstack([tab.id])]] : []),
         ["Close Tab", () => chrome.tabs.remove(tab.id)],
         ["Close Other Tabs", () => {
           const ids = state.tabs.filter((t) => t.id !== tab.id && !t.pinned).map((t) => t.id);
@@ -706,9 +806,11 @@
   // (or one with only Vivaldi's blank start page): Vivaldi's own workspace action, which opens its landing tab
   // there; then the command bar opens on it, ready for an address (#57). While the switch runs, the landing tab is
   // neither stamped with the old space nor taken by the command bar for a new-tab request.
+  // The space Vivaldi's own switch action was last told, which is where Vivaldi opens new tabs (see workspaces.follow).
+  let toldSpace = null;
   const switchSpace = async (item, { force = false } = {}) => {
     if (item.id === state.active && !force) return;
-    const tabs = await chrome.tabs.query({ currentWindow: true });
+    const tabs = window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true }));
     const pages = spacesOf.tabsIn(tabs, item.id).filter((t) => !BLANK.test(t.pendingUrl || t.url || ""));
     const tab = spacesOf.recentTab(pages, item.id);
     if (tab) { await chrome.tabs.update(tab.id, { active: true }); return; }
@@ -722,11 +824,12 @@
     window.__vm.switchingSpace = true;
     try {
       await activate(window.vivaldiWindowId, item.id);
+      toldSpace = item.id;
       // A space left with only its blank landing tab from an earlier visit: Vivaldi may not switch to it again, so
       // land on that tab ourselves.
       const [after] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (after && spacesOf.of(after) !== item.id) {
-        const landing = spacesOf.recentTab(await chrome.tabs.query({ currentWindow: true }), item.id);
+        const landing = spacesOf.recentTab(window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true })), item.id);
         if (landing) await chrome.tabs.update(landing.id, { active: true });
       }
     } finally { window.__vm.switchingSpace = false; }
@@ -739,7 +842,9 @@
   };
 
   const spacePill = (item) => {
-    const pill = el("div", `vm-space-pill${item.id === state.active ? " active" : ""}`, item.emoji || item.name.trim().charAt(0).toUpperCase() || "?");
+    const pill = el("div", `vm-space-pill${item.id === state.active ? " active" : ""}`, item.emoji || (item.icon ? "" : item.name.trim().charAt(0).toUpperCase() || "?"));
+    // The icon picked in Vivaldi's workspace editor is its own SVG markup from the profile's preferences, drawn in currentColor.
+    if (!item.emoji && item.icon) pill.innerHTML = item.icon;
     pill.title = item.name;
     pill.addEventListener("click", () => switchSpace(item));
     if (item.id) pill.addEventListener("contextmenu", (e) => showMenu(e, [["Delete Space…", () => confirmDeleteSpace(item, e), true]]));
@@ -858,7 +963,8 @@
     fresh.addEventListener("click", () => window.dispatchEvent(new CustomEvent("vm-open-command-bar")));
     wireDrop(fresh, { accept: isBookmark, onDrop: (_zone, data) => unpin(data) });
     body.append(fresh);
-    open.sort((a, b) => b.index - a.index).forEach((t) => body.append(tabRow(t)));
+    stacksOf.layout(open).forEach((entry) => body.append(entry.type === "stack" ? tabStack(entry.id, entry.tabs) : tabRow(entry.tab)));
+    for (const id of selected) if (!open.some((t) => t.id === id)) selected.delete(id);
 
     const pill = updatePill();
     const bar = spaceBar();
@@ -1019,9 +1125,14 @@
     try { return (await vivaldi.prefs.get("vivaldi.workspaces.list"))?.value || []; } catch (_) { return []; }
   };
   const loadTabs = async () => {
-    state.allTabs = await chrome.tabs.query({ currentWindow: true });
+    state.allTabs = window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true }));
     state.workspaces = await readWorkspaces();
     ({ active: state.active, tabs: state.tabs } = spacesOf.scope(state.allTabs, state.workspaces));
+    // The theme editor (40-theme.js) keeps one theme per space: tell it which space is on screen.
+    if (window.__vm.activeSpace !== state.active) {
+      window.__vm.activeSpace = state.active;
+      window.dispatchEvent(new CustomEvent("vm-active-space-changed", { detail: state.active }));
+    }
   };
 
   // Calls inside the debounce window are merged, and a request to reload bookmarks is never lost to a later
@@ -1119,11 +1230,23 @@
     }
     chrome.tabs.onCreated.addListener((tab) => {
       if (window.__vm.switchingSpace) return; // the landing tab of a space switch belongs to the new space
+      if (window.__vm.peek.creatingTab() || window.__vm.peek.isPeekTab(tab, window.__vm.peek.tabIds())) return; // Peek keeps its tabs out of the space
       const active = state.active;
       chrome.windows.getCurrent().then((win) => {
         const data = spacesOf.stamp(tab, active, win.id);
         if (data) chrome.tabs.update(tab.id, { vivExtData: data });
       }).catch(() => {});
+    });
+    chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+      if (!state.workspaces?.length || window.__vm.switchingSpace) return;
+      const tab = await chrome.tabs.get(tabId).catch(() => null);
+      if (!tab || window.__vm.peek.isPeekTab(tab, window.__vm.peek.tabIds())) return;
+      const space = spacesOf.follow(tab, toldSpace, window.vivaldiWindowId);
+      if (space == null) return;
+      const activate = spacesOf.findSwitcher(chrome.extension.getBackgroundPage?.()?.webpackChunkgapp_browser_react);
+      if (!activate) return;
+      toldSpace = space;
+      activate(window.vivaldiWindowId, space);
     });
     // Closing the active tab (or moving it to another window) can make Vivaldi activate a tab of another space;
     // stay in the space instead, on its most recent tab, or in it empty (#75). The removals of one action (closing
@@ -1140,7 +1263,7 @@
         const { space, removed, wasActive } = leaving;
         leaving = null;
         if (!wasActive || window.__vm.switchingSpace) return;
-        const next = spacesOf.stayIn(await chrome.tabs.query({ currentWindow: true }), space, removed);
+        const next = spacesOf.stayIn(window.__vm.peek.withoutPeekTabs(await chrome.tabs.query({ currentWindow: true })), space, removed);
         if (next?.tab) {
           await chrome.tabs.update(next.tab.id, { active: true });
           if (BLANK.test(next.tab.pendingUrl || next.tab.url || "")) window.dispatchEvent(new CustomEvent("vm-open-command-bar"));
@@ -1161,7 +1284,7 @@
       });
     }
     setInterval(async () => {
-      const brief = (list) => JSON.stringify(list.map((w) => [w.id, w.name, w.emoji]));
+      const brief = (list) => JSON.stringify(list.map((w) => [w.id, w.name, w.emoji, w.icon]));
       if (brief(await readWorkspaces()) !== brief(state.workspaces)) refresh(false);
     }, 3000);
     try {
