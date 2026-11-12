@@ -260,7 +260,8 @@
 .vm-menu-item.danger { color: #ff6b6b; }
 .vm-menu-sep { height: 1px; margin: 5px 8px; background-color: color-mix(in srgb, var(--colorFg, #fff) 14%, transparent); }
 
-/* Command bar (js/30-command-bar.js) */
+/* Command bar (js/30-command-bar.js). Its sizes grow with the window past 1920 x 1080, by half as much as the
+   window, up to 1.2x: clamp(base, base / 2 + base / 2 scaled by the window, base x 1.2) (#70). */
 #vm-cmd {
   position: fixed;
   inset: 0;
@@ -269,10 +270,10 @@
   justify-content: center;
   align-items: flex-start;
   /* top stays put while the list grows or shrinks: sits where a full box (head + 7 rows, ~350px) would be centred */
-  padding-top: max(24px, calc(50vh - 175px));
+  padding-top: max(24px, calc(50vh - clamp(175px, calc(87.5px + min(4.557vw, 8.102vh)), 210px)));
 }
 #vm-cmd .vm-cmd-box {
-  width: min(680px, 92vw);
+  width: min(clamp(680px, calc(340px + min(17.708vw, 31.481vh)), 816px), 92vw);
   overflow: hidden;
   border-radius: 14px;
   color: var(--vm-text);
@@ -283,16 +284,16 @@
 #vm-cmd .vm-cmd-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 18px;
+  gap: clamp(10px, calc(5px + min(0.26vw, 0.463vh)), 12px);
+  padding: clamp(14px, calc(7px + min(0.365vw, 0.648vh)), 16.8px) clamp(18px, calc(9px + min(0.469vw, 0.833vh)), 21.6px);
   border-bottom: 1px solid color-mix(in srgb, var(--vm-text) 8%, transparent);
 }
 #vm-cmd .vm-cmd-glyph { display: flex; flex: none; opacity: 0.9; }
 #vm-cmd .vm-cmd-chips { display: flex; flex: none; }
 #vm-cmd .vm-cmd-chip {
-  padding: 2px 12px;
+  padding: 2px clamp(12px, calc(6px + min(0.312vw, 0.556vh)), 14.4px);
   border-radius: 999px;
-  font-size: 14px;
+  font-size: clamp(14px, calc(7px + min(0.365vw, 0.648vh)), 16.8px);
   font-weight: 600;
   color: #fff;
 }
@@ -303,32 +304,32 @@
   outline: 0;
   background: transparent;
   color: inherit;
-  font-size: 17px;
+  font-size: clamp(17px, calc(8.5px + min(0.443vw, 0.787vh)), 20.4px);
   box-shadow: none;
 }
 #vm-cmd input::placeholder { color: color-mix(in srgb, var(--vm-text) 40%, transparent); }
-#vm-cmd .vm-cmd-list { max-height: 58vh; overflow-y: auto; padding: 6px; scrollbar-width: none; }
+#vm-cmd .vm-cmd-list { max-height: 58vh; overflow-y: auto; padding: clamp(6px, calc(3px + min(0.156vw, 0.278vh)), 7.2px); scrollbar-width: none; }
 #vm-cmd .vm-cmd-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  height: 40px;
-  padding: 0 10px;
+  gap: clamp(12px, calc(6px + min(0.312vw, 0.556vh)), 14.4px);
+  height: clamp(40px, calc(20px + min(1.042vw, 1.852vh)), 48px);
+  padding: 0 clamp(10px, calc(5px + min(0.26vw, 0.463vh)), 12px);
   border-radius: 9px;
-  font-size: 14px;
+  font-size: clamp(14px, calc(7px + min(0.365vw, 0.648vh)), 16.8px);
   cursor: pointer;
   white-space: nowrap;
 }
 #vm-cmd .vm-cmd-row.sel { background: var(--vm-sel); }
-#vm-cmd .vm-cmd-ico { display: flex; flex: none; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 5px; overflow: hidden; }
+#vm-cmd .vm-cmd-ico { display: flex; flex: none; align-items: center; justify-content: center; width: clamp(20px, calc(10px + min(0.521vw, 0.926vh)), 24px); height: clamp(20px, calc(10px + min(0.521vw, 0.926vh)), 24px); border-radius: 5px; overflow: hidden; }
 #vm-cmd .vm-cmd-ico img { width: 100%; height: 100%; object-fit: contain; }
-#vm-cmd .vm-cmd-letter { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 11px; font-weight: 700; color: #fff; }
+#vm-cmd .vm-cmd-letter { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: clamp(11px, calc(5.5px + min(0.286vw, 0.509vh)), 13.2px); font-weight: 700; color: #fff; }
 #vm-cmd .vm-cmd-title { overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
 #vm-cmd .vm-cmd-sub { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; color: color-mix(in srgb, var(--vm-text) 40%, transparent); }
 #vm-cmd .vm-cmd-hint { display: flex; align-items: center; gap: 10px; margin-left: auto; color: color-mix(in srgb, var(--vm-text) 40%, transparent); font-weight: 600; }
 #vm-cmd .vm-cmd-row.sel .vm-cmd-hint { color: #fff; }
 #vm-cmd .vm-cmd-arrow { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 7px; background: color-mix(in srgb, var(--vm-text) 8%, transparent); }
-#vm-cmd .vm-cmd-glyph svg { width: 16px; height: 16px; }
+#vm-cmd .vm-cmd-glyph svg { width: clamp(16px, calc(8px + min(0.417vw, 0.741vh)), 19.2px); height: clamp(16px, calc(8px + min(0.417vw, 0.741vh)), 19.2px); }
 #vm-cmd .vm-cmd-arrow svg { width: 14px; height: 14px; }
 #vm-cmd .vm-cmd-row.sel .vm-cmd-arrow { background: var(--vm-text); color: var(--vm-surface); }
 
