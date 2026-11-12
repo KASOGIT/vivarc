@@ -121,5 +121,31 @@ class OpenPreviewTabs(unittest.TestCase):
         self.assertEqual(js("[...peek.previewTabIds([])]"), [])
 
 
+ADOPT = "(async () => { const moves = []; const done = await peek.adoptStashedTab(data, active, async (p) => { moves.push(p); }); return { done, moves }; })()"
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class StashedTab(unittest.TestCase):
+    def adopt(self, data, active):
+        return js(ADOPT, data=data, active=active)
+
+    def test_a_preloaded_tab_opened_as_a_tab_is_moved_by_vivaldi_into_the_space_on_screen(self):
+        out = self.adopt({"parallelTabId": 7, "_hiddenWorkspaceId": 5}, {"id": 1, "vivExtData": '{"workspaceId": 3}'})
+        self.assertTrue(out["done"])
+        self.assertEqual(out["moves"], [{"tabIds": [7], "target": "last", "tweaks": ["do-not-reparent"], "workspaceId": 3}])
+
+    def test_into_the_default_space_it_moves_to_no_workspace(self):
+        out = self.adopt({"parallelTabId": 7, "_hiddenWorkspaceId": 5}, {"id": 1, "vivExtData": "{}"})
+        self.assertEqual(out["moves"][0]["workspaceId"], None)
+        out = self.adopt({"parallelTabId": 7, "_hiddenWorkspaceId": 5}, None)
+        self.assertEqual(out["moves"][0]["workspaceId"], None)
+
+    def test_a_preloaded_tab_that_was_never_stashed_is_left_alone(self):
+        out = self.adopt({"parallelTabId": 7, "_hiddenWorkspaceId": None}, {"id": 1, "vivExtData": '{"workspaceId": 3}'})
+        self.assertEqual(out, {"done": False, "moves": []})
+        self.assertEqual(self.adopt({"parallelTabId": None}, None), {"done": False, "moves": []})
+        self.assertEqual(self.adopt(None, None), {"done": False, "moves": []})
+
+
 if __name__ == "__main__":
     unittest.main()
