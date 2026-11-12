@@ -33,6 +33,11 @@ Steps:
   `vivaldi.tabsPrivate.move` to such an id does nothing. `seed.js` creates spaces with Vivaldi's own workspace manager
   (webpack module exposing `addWorkspace`) and opens tabs while the space is active.
 - New tabs report their URL in `pendingUrl` until they load; match `pendingUrl || url`.
+- Testing a change in the throwaway profile needs it applied to `/Applications/Vivaldi.app` (quit the user's Vivaldi
+  first). A `ditto` copy patched with `VIVARC_APP=<copy> ./vivarc.py apply` is rejected by Gatekeeper ("Vivaldi is
+  damaged"), even after `xattr -cr` and `codesign --force --deep -s -`.
+- Vivaldi opens new tabs in the workspace its own switch action last activated; activating a tab of another space does
+  not change it, so the sidebar calls the switcher whenever the active tab lands in another space.
 - Synthetic CDP input shows no cursor, so `input.swift` posts real CGEvents with an eased pointer. Vivaldi drops key events
   that only carry a unicode string, so `type` uses real key codes (US layout; add keys to `codes` when a word needs them). Set `flags` to none on every typed key, or a Cmd held by the
   previous shortcut leaks into the letters and they vanish.
