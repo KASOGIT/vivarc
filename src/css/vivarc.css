@@ -505,6 +505,7 @@
   font-size: 13px;
 }
 .vm-theme-pop button { font: inherit; color: inherit; cursor: pointer; }
+.vm-theme-heading { font-weight: 600; margin-bottom: 10px; }
 .vm-theme-modes { display: flex; gap: 6px; margin-bottom: 10px; }
 .vm-theme-mode {
   flex: 1;
