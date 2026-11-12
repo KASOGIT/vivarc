@@ -1,4 +1,4 @@
-// Vivarc theme editor: tints the sidebar with a colour, shade and grain, saved per profile.
+// Vivarc theme editor: each space has its own tint, shade and grain, saved in the profile.
 (() => {
   const { store } = window.__vm;
   const PRESETS = [
@@ -8,6 +8,11 @@
   const DEFAULT = { on: false, hue: 250, sat: 28, light: 20, grain: 30 };
   let theme = { ...DEFAULT };
   let pop = null;
+  let activeSpace = null;
+  let revision = 0;
+  let pending = Promise.resolve();
+  const keyFor = (id) => `theme:space:${id}`;
+  const updates = typeof BroadcastChannel === "function" ? new BroadcastChannel("vivarc-space-themes") : null;
 
   const fgFor = (light) => (light > 58 ? "#1b1b1f" : "#f2f2f5");
   const noise = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")";
@@ -27,7 +32,13 @@
     style.setProperty("--vm-noise", noise);
   };
 
-  const save = () => { apply(); store.set("theme", theme); };
+  const save = () => {
+    apply();
+    if (activeSpace === null) return;
+    const saved = { ...theme };
+    store.set(keyFor(activeSpace), saved);
+    updates?.postMessage({ space: activeSpace, theme: saved });
+  };
 
   const el = (tag, cls, text) => {
     const e = document.createElement(tag);
@@ -39,11 +50,15 @@
   let shield = null; // catches a click on the page, which this document never sees (see the sidebar's menu)
   const close = () => { pop?.remove(); pop = null; shield?.remove(); shield = null; };
 
-  const open = () => {
+  const open = async () => {
     if (!window.__vm.cssLoaded) return;
     if (pop) return close();
+    const space = activeSpace;
+    await pending;
+    if (space !== activeSpace || activeSpace === null) return;
     if (!theme.on) { theme = { ...theme, on: true }; save(); }
     pop = el("div", "vm-theme-pop");
+    const heading = el("div", "vm-theme-heading", "Theme for this space");
 
     const modes = el("div", "vm-theme-modes");
     for (const [label, light] of [["Dark", 18], ["Light", 88]]) {
@@ -96,7 +111,7 @@
     const intensity = slider("Intensity", "sat");
     const grain = slider("Grain", "grain");
 
-    const reset = el("button", "vm-theme-reset", "Reset");
+    const reset = el("button", "vm-theme-reset", "Reset space theme");
     reset.addEventListener("click", () => { theme = { ...DEFAULT }; save(); close(); });
 
     const sync = () => {
@@ -107,7 +122,7 @@
     };
     sync();
 
-    pop.append(modes, pad, swatches, intensity.row, grain.row, reset);
+    pop.append(heading, modes, pad, swatches, intensity.row, grain.row, reset);
     shield = el("div", "vm-menu-shield");
     shield.addEventListener?.("mousedown", (e) => { e.preventDefault(); close(); });
     (document.querySelector("#browser") || document.body).append(shield, pop);
@@ -119,9 +134,26 @@
   window.__vm.onShortcut((key) => { if (key === "esc") close(); });
   window.addEventListener("vm-open-theme", open);
 
-  window.__vm.onMark(apply);
-  store.get("theme", null).then((saved) => {
-    if (saved) theme = { ...DEFAULT, ...saved };
+  const selectSpace = (id) => {
+    if (id === activeSpace) return;
+    close();
+    activeSpace = id;
+    const current = ++revision;
+    pending = Promise.all([store.get(keyFor(id), null), store.get("theme", null)]).then(([saved, legacy]) => {
+      if (current !== revision) return;
+      theme = { ...DEFAULT, ...(saved || legacy || {}) };
+      apply();
+    });
+  };
+  window.addEventListener("vm-active-space-changed", (event) => selectSpace(event.detail));
+  if (updates) updates.onmessage = ({ data }) => {
+    if (data?.space !== activeSpace || !data.theme) return;
+    revision++;
+    theme = { ...DEFAULT, ...data.theme };
+    close();
     apply();
-  });
+  };
+
+  window.__vm.onMark(apply);
+  if (window.__vm.activeSpace !== undefined) selectSpace(window.__vm.activeSpace);
 })();

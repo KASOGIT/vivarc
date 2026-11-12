@@ -26,7 +26,8 @@
   // Without any workspace there is only one space, so no bar.
   const items = (list, defaultName) => {
     if (!list?.length) return [];
-    return [{ id: 0, name: defaultName, emoji: "" }, ...list.map((w) => ({ id: w.id, name: w.name, emoji: w.emoji || "" }))];
+    return [{ id: 0, name: defaultName, emoji: "", icon: "" },
+      ...list.map((w) => ({ id: w.id, name: w.name, emoji: w.emoji || "", icon: w.icon || "" }))];
   };
 
   // Where a tab's "Move to Space" menu entries go: every space but the one it is in.
@@ -78,6 +79,11 @@
     if ("workspaceId" in data) return null;
     return JSON.stringify({ ...data, workspaceId: activeSpace });
   };
+
+  // Vivaldi opens new tabs in the workspace it last activated, and activating a tab of another space (a space tile,
+  // a favorite, the tab switcher) does not change it: a pin clicked in space B then opened in space A. Returns the
+  // space to activate in Vivaldi when this window's active tab is in another one than `told`, else null.
+  const follow = (tab, told, windowId) => (tab?.windowId === windowId && of(tab) !== told ? of(tab) : null);
 
   // A mod can neither create a workspace (Vivaldi reads its list once) nor press a shortcut for the user: events a
   // mod dispatches never reach Vivaldi's shortcut handler. So the install binds "Create New Workspace" to this chord,
@@ -134,5 +140,5 @@
     return null;
   };
 
-  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, moveTargets, recentTab, stayIn, label, assign, stamp, findRemover, findSwitcher, removalLabel, CREATE_HINT, CREATE_LABEL };
+  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, moveTargets, recentTab, stayIn, label, assign, stamp, follow, findRemover, findSwitcher, removalLabel, CREATE_HINT, CREATE_LABEL };
 })();

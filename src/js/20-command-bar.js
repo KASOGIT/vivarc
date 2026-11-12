@@ -179,6 +179,7 @@
   let selected = 0;
   let seq = 0;
   let autoCompleted = false;
+  let computedFor = null;
 
   const iconFor = (url, favicon) => {
     const wrap = el("span", "vm-cmd-ico");
@@ -207,6 +208,7 @@
     bar = input = list = chipHolder = targetTab = mode = null;
     rows = [];
     seq++;
+    computedFor = null;
     if (removeBlank && blank != null) removeBlankTab(blank);
   };
   // The blank tab the bar was opened for is closed, unless it is all its space has: closing it would leave the space
@@ -315,7 +317,8 @@
 
   const compute = async () => {
     const id = ++seq;
-    const text = input.value.trim();
+    const value = input ? input.value : "";
+    const text = value.trim();
     const out = [];
     if (mode) {
       out.push({ type: "search", engine: mode, query: text, label: text || "%s" });
@@ -354,20 +357,36 @@
       const keyword = !/\s/.test(text) && engines.find((en) => en.keyword.toLowerCase() === needle);
       if (keyword) out.unshift({ type: "engine", engine: keyword, label: `Search ${keyword.name}` });
       out.push(...matches.filter((m) => m !== prefix));
+      if (id !== seq) return;
+      rows = out.slice();
+      selected = 0;
+      computedFor = value;
+      render();
+
       const suggest = window.__vm.settings.get("searchSuggestions") && !looksLikeUrl(text) && text.length > 1
         && search.suggestUrl(search.current(), text);
       if (suggest) {
-        try {
-          const phrases = search.parseSuggestions(await (await fetch(suggest)).text());
-          if (id !== seq) return;
-          phrases.filter((p) => p && p.toLowerCase() !== needle).slice(0, 4)
-            .forEach((p) => out.push(suggestionRow(p)));
-        } catch (_) {}
+        fetch(suggest)
+          .then((r) => r.text())
+          .then((body) => {
+            if (id !== seq) return;
+            const phrases = search.parseSuggestions(body);
+            const suggestions = phrases.filter((p) => p && p.toLowerCase() !== needle).slice(0, 4)
+              .map(suggestionRow)
+              .map((r) => (r.type === "suggest" ? { ...r, type: "search" } : r));
+            if (suggestions.length) {
+              rows = [...out, ...suggestions];
+              render();
+            }
+          })
+          .catch(() => {});
       }
+      return;
     }
     if (id !== seq) return;
-    rows = out.map((r) => (r.type === "suggest" ? { ...r, type: "search" } : r));
+    rows = out.slice();
     selected = 0;
+    computedFor = value;
     render();
   };
 
@@ -381,6 +400,7 @@
     }
     input.placeholder = engine ? "Search…" : "Search or Enter URL…";
     input.value = "";
+    computedFor = null;
     compute();
   };
 
@@ -396,10 +416,12 @@
     if (host && input.value === text) {
       input.value = host;
       input.setSelectionRange(text.length, host.length);
+      // The rows still match what was typed, so Enter must not recompute them for the completed host.
+      if (computedFor === text) computedFor = host;
     }
   };
 
-  const onKey = (e) => {
+  const onKey = async (e) => {
     if (e.key === "Escape") { e.preventDefault(); close(true); return; }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
@@ -408,7 +430,15 @@
       render();
       return;
     }
-    if (e.key === "Enter") { e.preventDefault(); run(rows[selected]); return; }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (computedFor !== (input ? input.value : "")) {
+        await compute();
+        if (!bar) return;
+      }
+      run(rows[selected]);
+      return;
+    }
     if (e.key === "Tab") {
       e.preventDefault();
       const keyword = input.value.trim().toLowerCase();
@@ -425,6 +455,7 @@
     if (bar) { targetTab = tabId; return; }
     targetTab = tabId;
     mode = null;
+    computedFor = null;
     bar = el("div");
     bar.id = "vm-cmd";
     const box = el("div", "vm-cmd-box");
@@ -452,7 +483,10 @@
       }, { once: true, capture: true });
     });
     input.addEventListener("keydown", onKey);
-    input.addEventListener("input", async () => { await compute(); autocomplete(); });
+    input.addEventListener("input", async () => {
+      await compute();
+      autocomplete();
+    });
     (document.querySelector("#browser") || document.body).append(bar);
     const focus = () => input?.focus();
     focus();

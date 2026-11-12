@@ -3,6 +3,10 @@
 ## Unreleased
 - Fix: a tab opened from a **Peek** preview (open in a tab) now really joins the space on screen. With more than one space it could stay behind in another space, shown greyed out in the sidebar but impossible to switch to, even with Cmd+Shift+[ (#165).
 
+## 0.1.32 - 2026-11-12
+- Fix: **pinned links and new tabs open in the space on screen.** After switching spaces with the space tiles, Vivaldi kept opening them in the space you came from. Vivarc now tells Vivaldi about every switch, including the ones made through a favorite or the tab switcher.
+- A space tile shows the icon picked in Vivaldi's workspace editor when the space has no emoji, instead of the first letter of its name. The README mentions **Move to Space** (right-click a tab) for moving a tab to another space. Thanks u/blondedco on Reddit for the report (#169).
+
 ## 0.1.31 - 2026-11-11
 - Fix: with the **URL bar** setting on, the address bar no longer spills past a narrow sidebar when you click into it, and the buttons on its right (feed, translate, install, bookmark) are hidden to leave the room to the address, which now runs to the end of the field instead of fading out before it. A site asking for the camera or microphone still shows its button there (#155, #156).
 
