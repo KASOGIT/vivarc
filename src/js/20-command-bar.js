@@ -147,6 +147,8 @@
     { label: "Mute / Unmute Tab", words: "sound audio silence", tab: true, run: (tab) =>
       chrome.tabs.update(tab.id, { muted: !tab.mutedInfo?.muted }) },
     { label: "Close Tab", words: "quit remove", tab: true, run: (tab) => chrome.tabs.remove(tab.id) },
+    { label: "Move Tab to Space…", words: "move space workspace send", tab: true, stay: true,
+      when: (tab) => (window.__vm.moveTargets?.(tab) || []).length > 0, run: (tab) => setMode(moveToSpacePicker(tab)) },
     { label: "Reopen Closed Tab", words: "restore undo", run: () => chrome.sessions.restore() },
     { label: "New Window", words: "open window", run: () => chrome.windows.create({}) },
     { label: "New Private Window", words: "incognito private", run: () => chrome.windows.create({ incognito: true }) },
@@ -166,6 +168,14 @@
     { label: "Vivarc Settings", words: "preferences options configure features toggle glass", run: () => window.dispatchEvent(new CustomEvent("vm-open-settings")) },
     { label: "Edit Theme", words: "color appearance sidebar", run: () => window.dispatchEvent(new CustomEvent("vm-open-theme")) },
   ];
+  // A picker is a mode of the bar that lists choices instead of pages: pick(text) returns rows { label, sub, run };
+  // Enter runs the selected one and closes the bar. Backspace on an empty field leaves it, like an engine chip.
+  const moveToSpacePicker = (tab) => ({ name: "Move to Space", placeholder: "Move this tab to…",
+    pick: (text) => (window.__vm.moveTargets?.(tab) || [])
+      .filter((space) => space.name.toLowerCase().includes(text.trim().toLowerCase()))
+      .map((space) => ({ label: `${space.emoji ? `${space.emoji} ` : ""}${space.name}`, sub: "Space",
+        run: () => window.__vm.moveTabToSpaceAndGo(tab.id, space.id)
+          .then(() => toast(`Moved to ${space.name}`), (e) => { console.warn("[vivarc] move:", e); toast("Could not move the tab"); }) })) });
   const ACTION_SVG =
     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg>';
 
@@ -250,6 +260,12 @@
     } else if (row.type === "engine") {
       input.value = "";
       setMode(row.engine);
+    } else if (row.type === "pick") {
+      close(true);
+      Promise.resolve(row.run()).catch((e) => console.warn("[vivarc] pick:", e));
+    } else if (row.type === "action" && row.action.stay) {
+      input.value = "";
+      row.action.run(row.tab);
     } else if (row.type === "action") {
       close(true);
       Promise.resolve(row.action.run(row.tab)).catch((e) => console.warn("[vivarc] action:", e));
@@ -262,10 +278,11 @@
     if (!list) return;
     list.replaceChildren(...rows.map((row, i) => {
       const item = el("div", `vm-cmd-row${i === selected ? " sel" : ""}`);
-      if (row.type === "action" || row.type === "engine") {
+      if (row.type === "action" || row.type === "engine" || row.type === "pick") {
         const glyph = el("span", "vm-cmd-ico vm-cmd-glyph");
         glyph.innerHTML = ACTION_SVG;
         item.append(glyph, el("span", "vm-cmd-title", row.label));
+        if (row.sub) item.append(el("span", "vm-cmd-sub", `— ${row.sub}`));
       } else if (row.type === "search" || row.type === "suggest") {
         const glyph = el("span", "vm-cmd-ico vm-cmd-glyph");
         glyph.innerHTML = SEARCH_SVG;
@@ -274,9 +291,9 @@
         item.append(iconFor(row.url, row.favicon), el("span", "vm-cmd-title", row.label));
         if (row.sub) item.append(el("span", "vm-cmd-sub", `— ${row.sub}`));
       }
-      if (row.type === "tab" || row.type === "action" || row.type === "engine") {
+      if (row.type === "tab" || row.type === "action" || row.type === "engine" || row.type === "pick") {
         const hint = el("span", "vm-cmd-hint");
-        hint.append(el("span", null, { tab: "Switch to Tab", action: "Run Action", engine: "Tab" }[row.type]));
+        hint.append(el("span", null, { tab: "Switch to Tab", action: "Run Action", engine: "Tab", pick: "Choose" }[row.type]));
         const arrow = el("span", "vm-cmd-arrow");
         arrow.innerHTML = ARROW_SVG;
         hint.append(arrow);
@@ -317,7 +334,9 @@
     const id = ++seq;
     const text = input.value.trim();
     const out = [];
-    if (mode) {
+    if (mode?.pick) {
+      out.push(...mode.pick(text).map((p) => ({ type: "pick", ...p })));
+    } else if (mode) {
       out.push({ type: "search", engine: mode, query: text, label: text || "%s" });
     } else if (!text) {
       (await allTabs()).slice(0, 7).forEach((tab) =>
@@ -379,7 +398,7 @@
       chip.style.backgroundColor = CHIP_COLORS[engine.keyword] || "#5b5670";
       chipHolder.append(chip);
     }
-    input.placeholder = engine ? "Search…" : "Search or Enter URL…";
+    input.placeholder = engine?.placeholder || (engine ? "Search…" : "Search or Enter URL…");
     input.value = "";
     compute();
   };
@@ -462,7 +481,7 @@
     window.dispatchEvent(new CustomEvent("vm-command-bar-opened"));
   };
 
-  window.__vm.commandBar = { suggestionRow, splitView, closeSplitView };
+  window.__vm.commandBar = { suggestionRow, splitView, closeSplitView, moveToSpacePicker };
   if (!window.addEventListener || !window.__vm?.onShortcut) return;
 
   window.addEventListener("vm-open-command-bar", () => open(null));
