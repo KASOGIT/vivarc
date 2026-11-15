@@ -847,8 +847,83 @@
     if (!item.emoji && item.icon) pill.innerHTML = item.icon;
     pill.title = item.name;
     pill.addEventListener("click", () => switchSpace(item));
-    if (item.id) pill.addEventListener("contextmenu", (e) => showMenu(e, [["Delete Space…", () => confirmDeleteSpace(item, e), true]]));
+    if (item.id) pill.addEventListener("contextmenu", (e) => showMenu(e, [
+      ["Rename Space", () => spaceField(pill, item.name, "Space name", "", (value) => renameSpace(item, value))],
+      ["Change Emoji…", () => spaceField(pill, item.emoji, "Emoji (empty to clear)",
+        `Type or paste an emoji (${window.__vm.platform === "win" ? "Win+." : "Ctrl+Cmd+Space"} opens the emoji picker)`, (value) => setSpaceEmoji(item, value))],
+      [],
+      ["Delete Space…", () => confirmDeleteSpace(item, e), true],
+    ]));
     return pill;
+  };
+
+  // A field floating just above the space bar, near the tile: Enter commits, Escape or a click away cancels.
+  const spaceField = (pill, value, placeholder, title, onCommit) => {
+    document.querySelector(".vm-space-field")?.remove();
+    const field = el("input", "vm-rename-float vm-space-field");
+    field.value = value || "";
+    field.placeholder = placeholder;
+    if (title) field.title = title;
+    const width = 200;
+    const tile = pill.getBoundingClientRect();
+    const bar = (pill.parentElement || pill).getBoundingClientRect();
+    field.style.width = `${width}px`;
+    field.style.left = `${Math.max(8, Math.min(tile.left + tile.width / 2 - width / 2, window.innerWidth - width - 8))}px`;
+    field.style.top = `${bar.top - 40}px`;
+    (document.querySelector("#browser") || document.body).append(field);
+    field.focus();
+    field.select();
+    let done = false;
+    const finish = (commit) => {
+      if (done) return;
+      done = true;
+      field.remove();
+      if (commit) onCommit(field.value);
+    };
+    field.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Enter") finish(true);
+      if (e.key === "Escape") finish(false);
+    });
+    field.addEventListener("blur", () => finish(false));
+  };
+
+  const spaceManager = () => spacesOf.findManager(chrome.extension.getBackgroundPage?.()?.webpackChunkgapp_browser_react);
+  const toast = (detail) => window.dispatchEvent(new CustomEvent("vm-toast", { detail }));
+  const waitForWorkspaces = async (done) => {
+    for (let i = 0; i < 20; i++) {
+      if (done(await readWorkspaces())) return;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  };
+
+  // The pinned folder is renamed first, and applySpace is told to wait: a workspace without a folder of its name
+  // would get a new empty one.
+  let renaming = false;
+  const renameSpace = async (item, value) => {
+    const folder = spacesOf.assign(state.folders, state.workspaces).byId[item.id];
+    const plan = spacesOf.renamePlan(item.name, folder?.title ?? null, value);
+    if (!plan) return;
+    const manager = spaceManager();
+    if (!manager) { toast("Could not rename the space. Use Vivaldi's Workspaces button."); return; }
+    renaming = true;
+    try {
+      if (plan.folderTitle) await chrome.bookmarks.update(folder.id, { title: plan.folderTitle });
+      manager.setName(item.id, plan.name);
+      await waitForWorkspaces((list) => list.some((w) => w.id === item.id && w.name === plan.name));
+    } finally { renaming = false; }
+    refresh(true);
+  };
+
+  // An emoji and an icon replace each other: setIcon(id, undefined) clears both, then the emoji is set.
+  const setSpaceEmoji = async (item, value) => {
+    const emoji = spacesOf.firstGrapheme(value);
+    const manager = spaceManager();
+    if (!manager) { toast("Could not change the emoji. Use Vivaldi's Workspaces button."); return; }
+    manager.setIcon(item.id, undefined);
+    if (emoji) manager.setEmoji(item.id, emoji);
+    await waitForWorkspaces((list) => list.some((w) => w.id === item.id && (w.emoji || "") === emoji && (emoji || !w.icon)));
+    refresh(false);
   };
 
   const confirmDeleteSpace = (item, event) => {
@@ -1108,7 +1183,7 @@
     };
     let picked = pick();
     const workspace = state.workspaces.find((w) => w.id === state.active);
-    if (!picked.space && workspace && picked.base && !madeFolderFor.has(workspace.id)) {
+    if (!renaming && !picked.space && workspace && picked.base && !madeFolderFor.has(workspace.id)) {
       madeFolderFor.add(workspace.id);
       const folder = await chrome.bookmarks.create({ parentId: picked.base.parentId, title: workspace.name });
       await chrome.bookmarks.create({ parentId: folder.id, title: "Pinned" });

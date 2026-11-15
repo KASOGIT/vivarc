@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Right-click a **space tile** to rename it (its pinned folder follows) or change its emoji. Thanks @gulin-desigenr (#126).
+
 ## 0.1.33 - 2026-11-12
 - **One theme per space**, like Arc. The theme editor (the palette next to the space name) saves the colour, intensity and grain of the space on screen, and switching spaces switches the theme. Spaces you have not edited keep the theme you had, and Reset only resets the space on screen. Thanks @gulin-desigenr (#145).
 - **Tab stacks in the sidebar.** Vivaldi's tab stacks show as a group you can fold, with their name and number of tabs, instead of loose tabs, and Vivaldi's own second tab strip no longer covers the sidebar. Cmd+click (Ctrl+click on Windows) picks several tabs and Shift+click a range; right-click them for **Stack N Tabs** or **Close N Tabs**. A stacked tab's menu has **Remove from Stack**, and a stack's menu **Ungroup Stack** and **Close Stack**. Thanks @gulin-desigenr (#147).

@@ -95,11 +95,12 @@
   const CREATE_LABEL = chordLabel(CREATE_KEY);
   const CREATE_HINT = `Press ${CREATE_LABEL} to create a space`;
 
-  // Vivaldi has no extension API to delete a workspace, only its own store. Its webpack chunk array lives on the
+  // Vivaldi has no extension API to change workspaces, only its own store. Its webpack chunk array lives on the
   // background page (chrome.extension.getBackgroundPage), not on the window the mod runs in, and its push hands out the module
   // list; the module that defines removeWorkspace is found by its source and loaded
-  // only if it already ran. Returns (windowId, id) => Promise, or null when Vivaldi no longer looks like this.
-  const findRemover = (chunks) => {
+  // only if it already ran. The manager (Vivaldi 8.3) has setName(id, name), setIcon(id, index) and setEmoji(id, emoji)
+  // besides removeWorkspace(windowId, id). Returns it, or null when Vivaldi no longer looks like this.
+  const findManager = (chunks) => {
     try {
       let load;
       chunks.push([[Symbol("vivarc")], {}, (require) => { load = require; }]);
@@ -109,16 +110,32 @@
         try { exported = load(id); } catch (_) { continue; }
         for (const key of Object.keys(exported || {})) {
           const manager = exported[key];
-          if (typeof manager?.removeWorkspace === "function") return (windowId, workspaceId) => manager.removeWorkspace(windowId, workspaceId);
+          if (typeof manager?.removeWorkspace === "function") return manager;
         }
       }
     } catch (_) {}
     return null;
   };
+  const findRemover = (chunks) => {
+    const manager = findManager(chunks);
+    return manager ? (windowId, workspaceId) => manager.removeWorkspace(windowId, workspaceId) : null;
+  };
 
-  const renamePlan = (currentName, folderTitle, input) => null;
-  const firstGrapheme = (text) => "";
-  const findManager = (chunks) => null;
+  // What a rename changes: the workspace takes the new name and its pinned folder follows (keeping "Arc - " if it
+  // has it). Null when there is nothing to change.
+  const renamePlan = (currentName, folderTitle, input) => {
+    const name = String(input ?? "").trim();
+    if (!name || name === currentName) return null;
+    const folder = folderTitle == null ? null : folderTitle.startsWith(ARC_PREFIX) ? ARC_PREFIX + name : name;
+    return { name, folderTitle: folder };
+  };
+
+  // A space shows one emoji: the first whole character of the text, so a flag, a skin tone or a family stays in one piece.
+  const firstGrapheme = (text) => {
+    const trimmed = String(text ?? "").trim();
+    if (!trimmed) return "";
+    return new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(trimmed)[Symbol.iterator]().next().value.segment;
+  };
 
   const removalLabel = (name, tabCount) =>
     `Delete \u201c${name}\u201d${tabCount ? ` and close its ${tabCount} ${tabCount === 1 ? "tab" : "tabs"}` : ""}`;
