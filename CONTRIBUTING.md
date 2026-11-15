@@ -39,4 +39,22 @@ The mod itself is plain JavaScript and CSS in `src/` (no build step). To try a c
 - Match the style of the surrounding code, and keep comments for things that are not obvious.
 - Update the README or `CHANGELOG.md` when behaviour changes.
 
+## Working with an AI coding agent
+
+Using Claude Code, Cursor, Codex or another agent is fine. You still own the pull request: read the whole diff, run the tests, try the change in a throwaway Vivaldi profile, and say in the description how you checked it.
+
+The repository ships a setup for [Claude Code](https://claude.com/claude-code). Open the repo and it is active, with nothing to install:
+
+| File | What it gives the agent |
+|---|---|
+| [`CLAUDE.md`](CLAUDE.md) | What Vivarc is, the repo map, the commands, git rules, invariants, and what to stop and ask about instead of doing (preference patching, install and uninstall, releases, Arc import) |
+| [`.claude/rules/tdd.md`](.claude/rules/tdd.md) | Test first for `src/js`, `vivarc.py` and `tools`: which test file to use, how to load the JavaScript in node, what must be mocked |
+| `.claude/skills/` | `/feature <what you want>` (spec, failing test, code, review), `/debug <symptom>` (root cause, failing test, fix) and `/review` (independent review of your branch or a PR). `demo` and `triage` are for the maintainer |
+| `.claude/agents/` | Helpers the skills hand work to: writing the test, implementing, running the suite, reviewing |
+| `.claude/hooks/crew/` | A reminder when a `src/js` file is edited before any test was touched, and a guard against force-pushing or deleting `main`. They need `bash`, `git` and `jq` (Git Bash on Windows) and do nothing without `jq` |
+
+A good start is `/feature` with the issue you are working on. For another agent, point it at `CLAUDE.md` and `.claude/rules/tdd.md`: they are plain Markdown.
+
+The agents, the `feature`, `debug` and `review` skills and the hooks are copied from the crew plugin and recorded in `.claude/crew.lock.json`, so do not edit them in a pull request; open an issue instead. Fixes to `CLAUDE.md` and `.claude/rules/tdd.md` are welcome. Keep your own `.claude/settings.local.json` out of commits.
+
 Be kind in issues and reviews. Everyone here is volunteering their time.
