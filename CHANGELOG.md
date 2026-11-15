@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Fix: on Windows, the hints in **Vivarc Settings** and the guide name Ctrl, Alt and the Windows menu instead of macOS keys and settings (Cmd+click, Cmd+T, Reduce Transparency, the menu bar).
+
 ## 0.1.34 - 2026-11-15
 - **Rename a space or change its emoji from its tile.** Right-click a space tile for **Rename Space** (its pinned folder is renamed with it, so its pins stay; a name another space already uses is refused) or **Change Emoji…** (it replaces the icon, empty clears it, Ctrl+Cmd+Space opens the emoji picker). Thanks @gulin-desigenr (#126, #176).
 - **Cmd+L can edit the address in the command bar**, like Arc. Turn on **Edit the address in the command bar** in Vivarc Settings (off by default): the page's address opens in the command bar, selected, Enter loads what you typed in the same tab and Escape leaves the page as it was. Ctrl+L on Windows. Thanks @gulin-desigenr (#125, #144).
