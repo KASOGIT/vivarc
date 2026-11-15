@@ -1,18 +1,19 @@
 // Vivarc settings: switches that apply live, saved per profile (like the theme) and shared by the profile's windows.
 // Precedence: what the user saved, then the install config (~/.vivarc/config.json), then the default.
 (() => {
+  // hint: one string, or { mac, win } when it names a key or a system option.
   // onClass / offClass: a marker class on #browser while the setting is on / off (the stylesheet reacts to it).
   // needs: the row shows only while that other setting is on. requires: the row shows only when the install config
   // has that flag (Peek is optional, see 03-peek.js). section: the heading it sits under, in SECTIONS order.
   const SECTIONS = ["Appearance", "Sidebar", "Tabs", "Link preview", "General"];
   const SCHEMA = [
-    { key: "glass", section: "Appearance", label: "Liquid glass", hint: "Translucent, blurred sidebar, menus and dialogs. Follows Reduce Transparency.",
+    { key: "glass", section: "Appearance", label: "Liquid glass", hint: { mac: "Translucent, blurred sidebar, menus and dialogs. Follows Reduce Transparency.", win: "Translucent, blurred sidebar, menus and dialogs." },
       default: false, onClass: "vm-glass" },
     { key: "glassOpacity", section: "Appearance", type: "range", min: 15, max: 95, step: 1, default: 55, unit: "%", needs: "glass", cssVar: "--vm-glass-opacity",
       label: "Glass opacity", low: "Clear", high: "Frosted" },
     { key: "urlBar", section: "Sidebar", label: "URL bar", hint: "Always show the address bar. Off, it appears when you edit the address.",
       default: false, onClass: "vm-url-bar" },
-    { key: "commandBarAddress", section: "Sidebar", label: "Edit the address in the command bar", hint: "Cmd+L (Ctrl+L on Windows) opens the address in the command bar, like Arc. Off, it is edited in the sidebar.",
+    { key: "commandBarAddress", section: "Sidebar", label: "Edit the address in the command bar", hint: { mac: "Cmd+L opens the address in the command bar, like Arc. Off, it is edited in the sidebar.", win: "Ctrl+L opens the address in the command bar, like Arc. Off, it is edited in the sidebar." },
       default: false },
     { key: "spaceBar", section: "Sidebar", label: "Space bar", hint: "The row of space tiles at the bottom.", default: true, offClass: "vm-no-space-bar" },
     { key: "compactBottomBar", section: "Sidebar", label: "Compact bottom bar", hint: "A tighter row for profiles and downloads.", default: true,
@@ -27,7 +28,7 @@
       default: true, needs: "peek", requires: "peekInstalled" },
     { key: "peekShortcut", section: "Link preview", type: "choice", default: "alt", needs: "peek", requires: "peekInstalled",
       options: [["alt", null], ["shift", null], ["none", "Off"]],
-      label: "Shortcut", hint: "Click a link with this key held. Cmd+click still opens a new tab." },
+      label: "Shortcut", hint: { mac: "Click a link with this key held. Cmd+click still opens a new tab.", win: "Click a link with this key held. Ctrl+click still opens a new tab." } },
     { key: "peekDim", section: "Link preview", label: "Dim the page behind", default: true, needs: "peek", requires: "peekInstalled" },
     { key: "searchSuggestions", section: "General", label: "Search suggestions", hint: "From your default search engine, in the command bar.",
       default: true, fromConfig: (c) => (c.suggestions === undefined ? undefined : c.suggestions !== "off" && c.suggestions !== false) },
@@ -62,7 +63,8 @@
 
   const shownRows = (schema, values) => schema.filter((s) => !s.needs || !!values[s.needs]);
 
-  const hint = (item) => item.hint;
+  // A hint is one string, or { mac, win } when the text names a key or a system option.
+  const hint = (item, platform) => (typeof item.hint === "object" ? item.hint[platform] : item.hint) ?? null;
 
   const api = { SCHEMA, resolve, classes, vars, visible, sections, shownRows, hint };
   window.__vm.settings = api;
