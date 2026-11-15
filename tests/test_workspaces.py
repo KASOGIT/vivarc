@@ -346,6 +346,15 @@ class RenameSpace(unittest.TestCase):
     def test_the_arc_prefix_is_dropped_before_checking_taken_names(self):
         self.assertEqual(self.plan_among("Home", "Home", "Arc - Work", ["Work"]), {"taken": True})
 
+    def test_spaces_before_a_typed_arc_prefix_do_not_keep_it(self):
+        self.assertEqual(self.plan("Work", "Work", "  Arc - Foo"), {"name": "Foo", "folderTitle": "Foo"})
+
+    def test_spaces_around_a_typed_arc_prefix_still_leave_the_folder_its_own_prefix(self):
+        self.assertEqual(self.plan("Work", "Arc - Work", " Arc - Foo "), {"name": "Foo", "folderTitle": "Arc - Foo"})
+
+    def test_the_same_name_after_trimming_and_dropping_the_arc_prefix_changes_nothing(self):
+        self.assertIsNone(self.plan("Foo", "Foo", " Arc - Foo"))
+
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class SpaceEmoji(unittest.TestCase):
