@@ -44,13 +44,17 @@
 }
 
 #browser.vm-on.vm-url-bar #tabs-tabbar-container .UrlBar-AddressField { margin-bottom: 8px; }
-/* Under 360px wide, Vivaldi stretches the focused field to 360px, past the sidebar edge: keep it at the sidebar width,
-   and drop the buttons on its right (feed, translate, install, bookmark) except a pending site permission request. */
+/* Under 360px wide, Vivaldi stretches the focused field to 360px, past the sidebar edge: keep it at the sidebar width
+   (docked with the URL bar setting, floating without it), and drop the buttons on its right (feed, translate, install,
+   bookmark) except a pending site permission request. */
 #browser.vm-on.vm-url-bar #tabs-tabbar-container .UrlBar-AddressField:focus-within { min-width: 100% !important; }
-#browser.vm-on.vm-url-bar #tabs-tabbar-container .UrlBar-UrlFieldWrapper + .toolbar
+#browser.vm-on:not(.vm-url-bar) #tabs-tabbar-container .UrlBar-AddressField:focus-within {
+  min-width: 0 !important; max-width: none !important; width: auto !important; /* Vivaldi also sets max-width: 0 */
+}
+#browser.vm-on #tabs-tabbar-container .UrlBar-UrlFieldWrapper + .toolbar
   > :not(.pageload, .permission-popup.is-undecided, .permission-popup.is-allowing) { display: none; }
 /* Vivaldi fades the last 16px of the address out, which reads as an empty gap at the end of the field */
-#browser.vm-on.vm-url-bar #tabs-tabbar-container .UrlBar-UrlFieldWrapper { mask-image: none !important; }
+#browser.vm-on #tabs-tabbar-container .UrlBar-UrlFieldWrapper { mask-image: none !important; }
 
 #vm-panel {
   flex: 0 1 auto;
