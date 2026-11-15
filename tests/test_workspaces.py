@@ -292,5 +292,90 @@ class DeleteSpace(unittest.TestCase):
         self.assertEqual(js("workspaces.removalLabel('Work', 0)"), "Delete \u201cWork\u201d")
 
 
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class RenameSpace(unittest.TestCase):
+    def plan(self, current, folder_title, text):
+        return js("workspaces.renamePlan(current, folderTitle, text)", current=current, folderTitle=folder_title, text=text)
+
+    def test_the_new_name_is_trimmed_and_the_folder_takes_the_same_name(self):
+        self.assertEqual(self.plan("Work", "Work", "  Projects "), {"name": "Projects", "folderTitle": "Projects"})
+
+    def test_a_folder_with_arcs_prefix_keeps_the_prefix(self):
+        self.assertEqual(self.plan("Work", "Arc - Work", "Projects"), {"name": "Projects", "folderTitle": "Arc - Projects"})
+
+    def test_a_space_without_a_folder_renames_only_the_workspace(self):
+        self.assertEqual(self.plan("Work", None, "Projects"), {"name": "Projects", "folderTitle": None})
+
+    def test_an_empty_name_changes_nothing(self):
+        self.assertIsNone(self.plan("Work", "Work", "   "))
+        self.assertIsNone(self.plan("Work", "Work", ""))
+
+    def test_the_same_name_changes_nothing(self):
+        self.assertIsNone(self.plan("Work", "Work", " Work "))
+
+    def test_a_change_of_case_is_a_rename(self):
+        self.assertEqual(self.plan("Work", "Work", "work"), {"name": "work", "folderTitle": "work"})
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class SpaceEmoji(unittest.TestCase):
+    def first(self, text):
+        return js("workspaces.firstGrapheme(text)", text=text)
+
+    def test_no_text_gives_no_emoji(self):
+        self.assertEqual(self.first(""), "")
+        self.assertEqual(self.first("   "), "")
+        self.assertEqual(self.first(None), "")
+
+    def test_the_first_character_is_kept(self):
+        self.assertEqual(self.first("abc"), "a")
+        self.assertEqual(self.first("\U0001F3A8x"), "\U0001F3A8")
+
+    def test_a_family_emoji_joined_by_zero_width_joiners_stays_whole(self):
+        self.assertEqual(self.first(" \U0001F468\u200d\U0001F469\u200d\U0001F467 hi"), "\U0001F468\u200d\U0001F469\u200d\U0001F467")
+
+    def test_a_flag_stays_whole(self):
+        self.assertEqual(self.first("\U0001F1EB\U0001F1F7"), "\U0001F1EB\U0001F1F7")
+
+    def test_an_emoji_with_a_skin_tone_stays_whole(self):
+        self.assertEqual(self.first("\U0001F44D\U0001F3FDok"), "\U0001F44D\U0001F3FD")
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class FindManager(unittest.TestCase):
+    FAKE = DeleteSpace.FAKE
+
+    def fake(self, body):
+        return js("(() => {" + self.FAKE + body + "})()")
+
+    def test_the_manager_is_the_export_that_has_removeWorkspace(self):
+        out = self.fake("const found = workspaces.findManager(chunks); return [found === manager, typeof found?.removeWorkspace];")
+        self.assertEqual(out, [True, "function"])
+
+    def test_modules_that_do_not_mention_removeWorkspace_are_never_loaded(self):
+        self.assertEqual(self.fake("workspaces.findManager(chunks); return calls;"), [])
+
+    def test_no_manager_when_vivaldi_has_no_such_module(self):
+        self.assertIsNone(js("workspaces.findManager({ push: ([a, b, run]) => run(Object.assign(() => ({}), { m: { 1: function () {} } })) })"))
+
+    def test_no_manager_when_the_module_cannot_be_loaded(self):
+        out = js("""workspaces.findManager({ push: ([a, b, run]) => run(Object.assign(() => { throw new Error('not ready'); },
+          { m: { 1: function () { return "x.removeWorkspace(e,t)"; } } })) })""")
+        self.assertIsNone(out)
+
+    def test_no_manager_when_the_chunk_list_is_missing_or_broken(self):
+        self.assertIsNone(js("workspaces.findManager(undefined)"))
+        self.assertIsNone(js("workspaces.findManager(null)"))
+        self.assertIsNone(js("workspaces.findManager({ push: () => { throw new Error('boom'); } })"))
+
+    def test_the_remover_calls_the_managers_removeWorkspace(self):
+        out = self.fake("const remove = workspaces.findRemover(chunks); remove(7, 42); return calls;")
+        self.assertEqual(out, [[7, 42]])
+
+    def test_no_remover_when_there_is_no_manager(self):
+        self.assertIsNone(js("workspaces.findRemover(undefined)"))
+        self.assertIsNone(js("workspaces.findRemover({ push: ([a, b, run]) => run(Object.assign(() => ({}), { m: { 1: function () {} } })) })"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -116,6 +116,10 @@
     return null;
   };
 
+  const renamePlan = (currentName, folderTitle, input) => null;
+  const firstGrapheme = (text) => "";
+  const findManager = (chunks) => null;
+
   const removalLabel = (name, tabCount) =>
     `Delete \u201c${name}\u201d${tabCount ? ` and close its ${tabCount} ${tabCount === 1 ? "tab" : "tabs"}` : ""}`;
 
@@ -140,5 +144,5 @@
     return null;
   };
 
-  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, moveTargets, recentTab, stayIn, label, assign, stamp, follow, findRemover, findSwitcher, removalLabel, CREATE_HINT, CREATE_LABEL };
+  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, moveTargets, recentTab, stayIn, label, assign, stamp, follow, findRemover, findSwitcher, renamePlan, firstGrapheme, findManager, removalLabel, CREATE_HINT, CREATE_LABEL };
 })();
