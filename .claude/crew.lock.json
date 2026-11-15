@@ -1,0 +1,29 @@
+{
+  "revision": "37ebf46b403bb7c7099e23693cefd205d9e2a8be",
+  "files": {
+    ".claude/agents/architecture-planner.md": "b9a59a00006de1a71f2a9e584dd5f686f320c84016b6df859560491317ff37a9",
+    ".claude/agents/code-reviewer.md": "c5fe9ddfd9c47011c11a90fc3f36287cf55fb8feb610ea6c9e2b3f83e077b280",
+    ".claude/agents/debugger-analyst.md": "7246fcaa5fbb08252dc654331762aa252c9f5e1163ab2790ca6374747e8fd205",
+    ".claude/agents/domain-researcher.md": "93f31855d561a488f94c8c508bbeb87f65f9917a2905a591f9737fccf458db6b",
+    ".claude/agents/implementer.md": "b7eaca8c38cc869bb3539a75ff0e627a41752a49f9c538a41567844b056a42f2",
+    ".claude/agents/test-engineer.md": "1072f18b0727c719f28610a80cbc9d5c03e1ae9372ad30729a02fa8620633570",
+    ".claude/agents/test-runner.md": "aa2e5bf3573fb531e1a33c4f1cb5de6609950edc9d37e6465f50cfd7db2b2cb5",
+    ".claude/hooks/crew/crew.example.json": "bca1a461db87da29e7f5a52acfe76b4657842c5916f640d5281a5d115c273e76",
+    ".claude/hooks/crew/crew.schema.json": "436f92f743086941208c7e745ad2e203b41b91eb632ffde592b05ecac2ed9c68",
+    ".claude/hooks/crew/guard-destructive.sh": "2fa2321905ed4470af22c83f6ac9f89341d05fd33fb4671e4deecdbd9b10346b",
+    ".claude/hooks/crew/require-spec-first.sh": "9d720b6cdbb1075049cf07139bfbf40a7ffcc6038a1a8b1569b62fa20d40345f",
+    ".claude/skills/debug/SKILL.md": "24ffdbc16e12e6de8fb96e547b1c21aa7f0e21e0048c4bfd08dead89dba5fb30",
+    ".claude/skills/feature/SKILL.md": "38abebd03a20fd3baf6df3851e91c49c2372b92f55a0a43841db1108ebe218a0",
+    ".claude/skills/review/SKILL.md": "2d854c7ece99f23c618c3e1167db3fbb3df6194b12e6697957af7def110fc9a2"
+  },
+  "hooks": [
+    {
+      "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/crew/guard-destructive.sh\"",
+      "event": "PreToolUse"
+    },
+    {
+      "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/crew/require-spec-first.sh\"",
+      "event": "PreToolUse"
+    }
+  ]
+}

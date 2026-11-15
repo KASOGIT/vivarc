@@ -1,6 +1,6 @@
 ---
 name: triage
-description: Review Vivarc's open pull requests and issues on GitHub, see what changed since the maintainer last spoke, review new ones, and prepare merges, closes and replies for the maintainer to run. Use for the regular round: triage, "the PR and issue round", check what's new on GitHub. Not for a code review of one PR (use /crew:review).
+description: Review Vivarc's open pull requests and issues on GitHub, see what changed since the maintainer last spoke, review new ones, and prepare merges, closes and replies for the maintainer to run. Use for the regular round: triage, "the PR and issue round", check what's new on GitHub. Not for a code review of one PR (use /review).
 ---
 
 # PR and issue triage
@@ -27,7 +27,7 @@ Also check `git log --oneline -30` for merged PRs that complete an open issue or
 
 Only for NEW and UPDATED PRs, and OWNER_LAST PRs where the contributor's turn is done:
 - `gh pr view N --json body,files,commits` and `gh pr diff N`. Compare with the maintainer's earlier asks: is each one done?
-- For a deep review, hand the diff to `crew:code-reviewer` (or `/crew:review N`), briefed with the maintainer's earlier comments.
+- For a deep review, hand the diff to `code-reviewer` (or `/review N`), briefed with the maintainer's earlier comments.
 - Check against CONTRIBUTING.md: one thing per PR, Conventional Commit title, Python test for installer or preference changes (machine-touching calls mocked), "how I checked it" for JS, README or CHANGELOG updated when behaviour changes, before and after screenshots (light, dark, Liquid Glass) for look changes.
 - Read `docs/HOW-IT-WORKS.md` quirks before judging changes to toolbars, preferences or tiling.
 - `CI=NONE` on a first-time fork PR usually means the maintainer must click "Approve and run workflows".

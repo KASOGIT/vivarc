@@ -1,0 +1,132 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "crew.schema.json",
+  "title": "crew project config",
+  "description": "Optional per-project config for the crew plugin hooks, read from <project>/.claude/crew.json. Without the file the hooks use their defaults, and spec-first does nothing. A malformed file is ignored.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "$comment": {
+      "type": "string"
+    },
+    "baseBranch": {
+      "description": "Branch that spec-first compares against, as origin/<baseBranch>. When that ref is missing and a local branch of that name exists (a project with no remote), the local branch is used. With neither, the hook does nothing.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._/-]+$",
+      "default": "main"
+    },
+    "protectedBranches": {
+      "description": "Branches that guard-destructive protects from force-push, deletion and (through an upstream) plain push. Entries that are not plain branch names are dropped. An empty or invalid list falls back to the default.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._/-]+$"
+      },
+      "default": [
+        "main",
+        "master",
+        "develop",
+        "production"
+      ]
+    },
+    "specFirst": {
+      "description": "Spec-first nudge. Without this block, or without at least one valid root and one source extension, the hook does nothing.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roots",
+        "sourceExtensions"
+      ],
+      "properties": {
+        "$comment": {
+          "type": "string"
+        },
+        "mode": {
+          "description": "nudge, shadow, enforce or off (case-insensitive, any other value behaves as shadow). The CREW_POLICY_MODE environment variable wins when set and not empty.",
+          "type": "string",
+          "default": "nudge"
+        },
+        "ruleFile": {
+          "description": "Project file that explains the rule. Named in the nudge and in the enforce message when set.",
+          "type": "string"
+        },
+        "roots": {
+          "description": "Source directories that are gated.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path"
+            ],
+            "properties": {
+              "$comment": {
+                "type": "string"
+              },
+              "path": {
+                "description": "Directory relative to the project root, for example apps/api/src. Must stay below the project (no ..).",
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_./-]+$"
+              },
+              "moduleDepth": {
+                "description": "Number of directories below the root that name a module. A test must be touched under the same module as the edited file. 0 makes the whole root one module (a flat source folder). With 1 or more, files with fewer directories than this below the root are not gated.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9,
+                "default": 1
+              },
+              "sharedModulePattern": {
+                "description": "Extended regular expression matched against the first directory of the module. A module that matches is a cross-cutting layer: a test anywhere under the root satisfies it.",
+                "type": "string"
+              },
+              "testRoots": {
+                "description": "Extra directories, relative to the project root, where a test file also counts, for a test/ or tests/ folder next to the source root. Searched whole, whatever the module of the edited file. Entries that climb out of the project (..) are dropped.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_./-]+$"
+                }
+              }
+            }
+          }
+        },
+        "sourceExtensions": {
+          "description": "Extensions of files that are gated, for example .ts. Other files under a root are never gated.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^\\.[^/]+$"
+          }
+        },
+        "testPatterns": {
+          "description": "Basename globs of test files. They are never gated, and one touched under the module satisfies the rule. Patterns must not contain a slash.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "*.spec.*",
+            "*.test.*",
+            "*_test.*",
+            "test_*.*"
+          ]
+        },
+        "ignoreRegex": {
+          "description": "Extended regular expressions tested against /<module>/<rest of path>. A match is never gated. Added to the built-in ignores: test, fixture and mock directories (fixtures, tests, __tests__, __fixtures__, __snapshots__, __mocks__) and *.fixture, *.fixtures, *.e2e-fixture, *.mock, *.stub and *.test-utils files.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      }
+    }
+  }
+}
