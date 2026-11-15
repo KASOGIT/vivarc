@@ -316,6 +316,36 @@ class RenameSpace(unittest.TestCase):
     def test_a_change_of_case_is_a_rename(self):
         self.assertEqual(self.plan("Work", "Work", "work"), {"name": "work", "folderTitle": "work"})
 
+    def plan_among(self, current, folder_title, text, taken):
+        return js("workspaces.renamePlan(current, folderTitle, text, taken)", current=current, folderTitle=folder_title, text=text, taken=taken)
+
+    def test_a_name_used_by_another_space_is_refused_whatever_its_case(self):
+        self.assertEqual(self.plan_among("Home", "Home", "personal", ["Personal", "Work"]), {"taken": True})
+
+    def test_a_name_used_by_another_space_is_refused_ignoring_surrounding_spaces(self):
+        self.assertEqual(self.plan_among("Home", "Home", " WORK ", ["Personal", "Work"]), {"taken": True})
+
+    def test_a_name_used_by_no_other_space_is_a_plan(self):
+        self.assertEqual(self.plan_among("Home", "Home", "Garden", ["Personal", "Work"]), {"name": "Garden", "folderTitle": "Garden"})
+
+    def test_a_taken_name_is_refused_even_for_a_space_without_a_folder(self):
+        self.assertEqual(self.plan_among("Home", None, "work", ["Work"]), {"taken": True})
+
+    def test_a_leading_arc_prefix_typed_in_the_name_is_dropped(self):
+        self.assertEqual(self.plan("Work", "Work", "Arc - Foo"), {"name": "Foo", "folderTitle": "Foo"})
+
+    def test_a_dropped_arc_prefix_still_leaves_the_folder_its_own_prefix(self):
+        self.assertEqual(self.plan("Work", "Arc - Work", "Arc - Foo"), {"name": "Foo", "folderTitle": "Arc - Foo"})
+
+    def test_a_name_that_is_only_the_arc_prefix_changes_nothing(self):
+        self.assertIsNone(self.plan("Work", "Work", "Arc - "))
+
+    def test_the_same_name_after_dropping_the_arc_prefix_changes_nothing(self):
+        self.assertIsNone(self.plan("Foo", "Foo", "Arc - Foo"))
+
+    def test_the_arc_prefix_is_dropped_before_checking_taken_names(self):
+        self.assertEqual(self.plan_among("Home", "Home", "Arc - Work", ["Work"]), {"taken": True})
+
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class SpaceEmoji(unittest.TestCase):
