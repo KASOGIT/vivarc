@@ -122,10 +122,12 @@
   };
 
   // What a rename changes: the workspace takes the new name and its pinned folder follows (keeping "Arc - " if it
-  // has it). Null when there is nothing to change.
-  const renamePlan = (currentName, folderTitle, input) => {
-    const name = String(input ?? "").trim();
+  // has it). A typed "Arc -" prefix is dropped, since the folder keeps its own. Null when there is nothing to change,
+  // {taken: true} when another space (`taken` holds their names) already uses the name.
+  const renamePlan = (currentName, folderTitle, input, taken = []) => {
+    const name = String(input ?? "").replace(/^Arc -\s*/, "").trim();
     if (!name || name === currentName) return null;
+    if (taken.some((other) => same(other, name))) return { taken: true };
     const folder = folderTitle == null ? null : folderTitle.startsWith(ARC_PREFIX) ? ARC_PREFIX + name : name;
     return { name, folderTitle: folder };
   };
