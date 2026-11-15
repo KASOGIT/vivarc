@@ -900,7 +900,7 @@
 
   // The pinned folder is renamed first, and applySpace is told to wait: a workspace without a folder of its name
   // would get a new empty one. If Vivaldi does not take the new name, the folder gets its old title back.
-  let renaming = false;
+  let renaming = 0;
   const renameSpace = async (item, value) => {
     try {
       const folder = spacesOf.assign(state.folders, state.workspaces).byId[item.id];
@@ -913,20 +913,27 @@
       if (plan.taken) { toast("Another space already uses that name."); return; }
       const manager = spaceManager();
       if (typeof manager?.setName !== "function") { toast("Could not rename the space. Use Vivaldi's Workspaces button."); return; }
-      renaming = true;
+      renaming++;
       let renamedFolder = false;
       try {
         if (plan.folderTitle) {
           await chrome.bookmarks.update(folder.id, { title: plan.folderTitle });
           renamedFolder = true;
         }
-        manager.setName(item.id, plan.name);
+        await Promise.resolve(manager.setName(item.id, plan.name));
         if (!await waitForWorkspaces((list) => list.some((w) => w.id === item.id && w.name === plan.name))) throw new Error("rename timed out");
       } catch (_) {
-        if (renamedFolder) await chrome.bookmarks.update(folder.id, { title: folder.title }).catch(() => {});
-        toast("Could not rename the space.");
+        // setName may have landed late, and someone else may have renamed the folder meanwhile: roll back only when safe.
+        const landed = (await readWorkspaces()).some((w) => w.id === item.id && w.name === plan.name);
+        if (!landed) {
+          if (renamedFolder) {
+            const [now] = await chrome.bookmarks.get(folder.id).catch(() => []);
+            if (now?.title === plan.folderTitle) await chrome.bookmarks.update(folder.id, { title: folder.title }).catch(() => {});
+          }
+          toast("Could not rename the space.");
+        }
       } finally {
-        renaming = false;
+        renaming--;
         refresh(true);
       }
     } catch (_) {}
@@ -941,9 +948,13 @@
         toast("Could not change the emoji. Use Vivaldi's Workspaces button.");
         return;
       }
-      manager.setIcon(item.id, undefined);
-      if (emoji) manager.setEmoji(item.id, emoji);
-      await waitForWorkspaces((list) => list.some((w) => w.id === item.id && (w.emoji || "") === emoji && (emoji || !w.icon)));
+      try {
+        await Promise.resolve(manager.setIcon(item.id, undefined));
+        if (emoji) await Promise.resolve(manager.setEmoji(item.id, emoji));
+        if (!await waitForWorkspaces((list) => list.some((w) => w.id === item.id && (w.emoji || "") === emoji && (emoji || !w.icon)))) throw new Error("emoji timed out");
+      } catch (_) {
+        toast("Could not change the emoji.");
+      }
       refresh(false);
     } catch (_) {}
   };
@@ -1205,13 +1216,15 @@
     };
     let picked = pick();
     const workspace = state.workspaces.find((w) => w.id === state.active);
-    if (!renaming && !picked.space && workspace && picked.base && !madeFolderFor.has(workspace.id)) {
+    if (renaming === 0 && !picked.space && workspace && picked.base && !madeFolderFor.has(workspace.id)) {
       madeFolderFor.add(workspace.id);
-      // Another window or a refresh in flight (a rename) may have changed things since: decide on fresh values.
+      // Another window or a refresh in flight (a rename) may have changed things since: wait for a rename in another
+      // window to write the workspace pref, then decide on fresh values.
+      await new Promise((r) => setTimeout(r, 400));
       const list = await readWorkspaces();
       const fresh = list.find((w) => w.id === workspace.id);
       const freshPick = fresh && pick(findSpaces(await chrome.bookmarks.getTree()), list);
-      if (!renaming && freshPick && !freshPick.space && freshPick.base) {
+      if (renaming === 0 && freshPick && !freshPick.space && freshPick.base) {
         const folder = await chrome.bookmarks.create({ parentId: freshPick.base.parentId, title: fresh.name });
         await chrome.bookmarks.create({ parentId: folder.id, title: "Pinned" });
         await loadBookmarks();

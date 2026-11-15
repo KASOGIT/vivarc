@@ -125,7 +125,7 @@
   // has it). A typed "Arc -" prefix is dropped, since the folder keeps its own. Null when there is nothing to change,
   // {taken: true} when another space (`taken` holds their names) already uses the name.
   const renamePlan = (currentName, folderTitle, input, taken = []) => {
-    const name = String(input ?? "").replace(/^Arc -\s*/, "").trim();
+    const name = String(input ?? "").trim().replace(/^Arc -\s*/, "").trim();
     if (!name || name === currentName) return null;
     if (taken.some((other) => same(other, name))) return { taken: true };
     const folder = folderTitle == null ? null : folderTitle.startsWith(ARC_PREFIX) ? ARC_PREFIX + name : name;
