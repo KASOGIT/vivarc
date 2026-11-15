@@ -187,6 +187,18 @@ class Hints(unittest.TestCase):
     def test_every_setting_is_covered_by_the_hint_tables(self):
         self.assertEqual(sorted(list(self.SAME) + list(self.BY_PLATFORM)), sorted(resolve().keys()))
 
+    MAC_ONLY_TERMS = ("Cmd", "Option", "⌘", "⌥", "⌃", "Reduce Transparency", "System Settings", "Finder")
+
+    def test_no_windows_hint_names_a_macos_only_term(self):
+        hints = js("settings.SCHEMA.map((s) => [s.key, settings.hint(s, 'win')])")
+        self.assertTrue(hints)
+        for key, text in hints:
+            if text is None:
+                continue
+            for term in self.MAC_ONLY_TERMS:
+                with self.subTest(key=key, term=term):
+                    self.assertNotIn(term, text)
+
 
 if __name__ == "__main__":
     unittest.main()
