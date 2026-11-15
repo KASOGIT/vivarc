@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
-- Right-click a **space tile** to rename it (its pinned folder follows) or change its emoji. Thanks @gulin-desigenr (#126).
+## 0.1.34 - 2026-11-15
+- **Rename a space or change its emoji from its tile.** Right-click a space tile for **Rename Space** (its pinned folder is renamed with it, so its pins stay; a name another space already uses is refused) or **Change Emoji…** (it replaces the icon, empty clears it, Ctrl+Cmd+Space opens the emoji picker). Thanks @gulin-desigenr (#126, #176).
+- **Cmd+L can edit the address in the command bar**, like Arc. Turn on **Edit the address in the command bar** in Vivarc Settings (off by default): the page's address opens in the command bar, selected, Enter loads what you typed in the same tab and Escape leaves the page as it was. Ctrl+L on Windows. Thanks @gulin-desigenr (#125, #144).
+- Fix: with the **URL bar** setting off, the address field that appears when you edit the address stays inside a narrow sidebar instead of running past its edge, and drops the buttons on its right, as it already did with the setting on (#175).
 
 ## 0.1.33 - 2026-11-12
 - **One theme per space**, like Arc. The theme editor (the palette next to the space name) saves the colour, intensity and grain of the space on screen, and switching spaces switches the theme. Spaces you have not edited keep the theme you had, and Reset only resets the space on screen. Thanks @gulin-desigenr (#145).
