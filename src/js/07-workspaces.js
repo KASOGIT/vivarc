@@ -95,11 +95,12 @@
   const CREATE_LABEL = chordLabel(CREATE_KEY);
   const CREATE_HINT = `Press ${CREATE_LABEL} to create a space`;
 
-  // Vivaldi has no extension API to delete a workspace, only its own store. Its webpack chunk array lives on the
+  // Vivaldi has no extension API to change workspaces, only its own store. Its webpack chunk array lives on the
   // background page (chrome.extension.getBackgroundPage), not on the window the mod runs in, and its push hands out the module
   // list; the module that defines removeWorkspace is found by its source and loaded
-  // only if it already ran. Returns (windowId, id) => Promise, or null when Vivaldi no longer looks like this.
-  const findRemover = (chunks) => {
+  // only if it already ran. The manager (Vivaldi 8.3) has setName(id, name), setIcon(id, index) and setEmoji(id, emoji)
+  // besides removeWorkspace(windowId, id). Returns it, or null when Vivaldi no longer looks like this.
+  const findManager = (chunks) => {
     try {
       let load;
       chunks.push([[Symbol("vivarc")], {}, (require) => { load = require; }]);
@@ -109,11 +110,33 @@
         try { exported = load(id); } catch (_) { continue; }
         for (const key of Object.keys(exported || {})) {
           const manager = exported[key];
-          if (typeof manager?.removeWorkspace === "function") return (windowId, workspaceId) => manager.removeWorkspace(windowId, workspaceId);
+          if (typeof manager?.removeWorkspace === "function") return manager;
         }
       }
     } catch (_) {}
     return null;
+  };
+  const findRemover = (chunks) => {
+    const manager = findManager(chunks);
+    return manager ? (windowId, workspaceId) => manager.removeWorkspace(windowId, workspaceId) : null;
+  };
+
+  // What a rename changes: the workspace takes the new name and its pinned folder follows (keeping "Arc - " if it
+  // has it). A typed "Arc -" prefix is dropped, since the folder keeps its own. Null when there is nothing to change,
+  // {taken: true} when another space (`taken` holds their names) already uses the name.
+  const renamePlan = (currentName, folderTitle, input, taken = []) => {
+    const name = String(input ?? "").trim().replace(/^Arc -\s*/, "").trim();
+    if (!name || name === currentName) return null;
+    if (taken.some((other) => same(other, name))) return { taken: true };
+    const folder = folderTitle == null ? null : folderTitle.startsWith(ARC_PREFIX) ? ARC_PREFIX + name : name;
+    return { name, folderTitle: folder };
+  };
+
+  // A space shows one emoji: the first whole character of the text, so a flag, a skin tone or a family stays in one piece.
+  const firstGrapheme = (text) => {
+    const trimmed = String(text ?? "").trim();
+    if (!trimmed) return "";
+    return new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(trimmed)[Symbol.iterator]().next().value.segment;
   };
 
   const removalLabel = (name, tabCount) =>
@@ -140,5 +163,5 @@
     return null;
   };
 
-  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, moveTargets, recentTab, stayIn, label, assign, stamp, follow, findRemover, findSwitcher, removalLabel, CREATE_HINT, CREATE_LABEL };
+  window.__vm.workspaces = { of, tabsIn, activeId, scope, items, moveTargets, recentTab, stayIn, label, assign, stamp, follow, findRemover, findSwitcher, renamePlan, firstGrapheme, findManager, removalLabel, CREATE_HINT, CREATE_LABEL };
 })();
