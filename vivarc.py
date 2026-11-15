@@ -91,6 +91,7 @@ KEYS = {
         "spacePrev": "alt+meta+left", "spaceNext": "alt+meta+right",
         "spaceNew": "ctrl+meta+n",  # opens Vivaldi's own Create Workspace dialog
         "tabNext": "ctrl+tab", "tabPrev": "ctrl+shift+tab",  # freed from Vivaldi's tab cycling: the tab switcher handles them
+        "editAddress": "meta+l",  # Vivaldi's own Focus Address Field; with "Edit the address in the command bar" the bar takes it
     },
     "win": {
         "commandBar": "ctrl+t",
@@ -100,6 +101,7 @@ KEYS = {
         "spacePrev": "ctrl+alt+left", "spaceNext": "ctrl+alt+right",
         "spaceNew": "ctrl+alt+n",
         "tabNext": "ctrl+tab", "tabPrev": "ctrl+shift+tab",
+        "editAddress": "ctrl+l",
     },
 }
 KEY_LABELS = {"mac": {"meta": "Cmd", "alt": "Option", "ctrl": "Ctrl", "shift": "Shift"},

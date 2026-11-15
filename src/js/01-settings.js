@@ -12,6 +12,8 @@
       label: "Glass opacity", low: "Clear", high: "Frosted" },
     { key: "urlBar", section: "Sidebar", label: "URL bar", hint: "Always show the address bar. Off, it appears when you edit the address.",
       default: false, onClass: "vm-url-bar" },
+    { key: "commandBarAddress", section: "Sidebar", label: "Edit the address in the command bar", hint: "Cmd+L (Ctrl+L on Windows) opens the address in the command bar, like Arc. Off, it is edited in the sidebar.",
+      default: false },
     { key: "spaceBar", section: "Sidebar", label: "Space bar", hint: "The row of space tiles at the bottom.", default: true, offClass: "vm-no-space-bar" },
     { key: "compactBottomBar", section: "Sidebar", label: "Compact bottom bar", hint: "A tighter row for profiles and downloads.", default: true,
       fromConfig: (c) => c.compactBottomBar, onClass: "vm-compact-bottom" },

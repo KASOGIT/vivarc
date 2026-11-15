@@ -15,7 +15,7 @@ def resolve(config=None, saved=None):
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class Resolve(unittest.TestCase):
     def test_without_anything_saved_the_defaults_apply(self):
-        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "urlBar": False, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
+        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "urlBar": False, "commandBarAddress": False, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
                                     "archive": False, "archiveHours": 12, "updateCheck": True,
                                     "peek": True, "peekPinned": True, "peekShortcut": "alt", "peekDim": True})
 
