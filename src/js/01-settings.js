@@ -62,7 +62,9 @@
 
   const shownRows = (schema, values) => schema.filter((s) => !s.needs || !!values[s.needs]);
 
-  const api = { SCHEMA, resolve, classes, vars, visible, sections, shownRows };
+  const hint = (item) => item.hint;
+
+  const api = { SCHEMA, resolve, classes, vars, visible, sections, shownRows, hint };
   window.__vm.settings = api;
   if (!window.__vm.store) return;
 
