@@ -18,7 +18,8 @@
   const textOf = (item) => {
     const text = el("div", "vm-set-text");
     text.append(el("div", "vm-set-label", item.label));
-    if (item.hint) text.append(el("div", "vm-set-hint", item.hint));
+    const hint = settings.hint(item, window.__vm.platform);
+    if (hint) text.append(el("div", "vm-set-hint", hint));
     return text;
   };
 

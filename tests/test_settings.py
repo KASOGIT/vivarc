@@ -139,5 +139,66 @@ class Sections(unittest.TestCase):
         self.assertIn("peekShortcut", shown({"peek": True}))
 
 
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class Hints(unittest.TestCase):
+    SAME = {
+        "glassOpacity": None,
+        "urlBar": "Always show the address bar. Off, it appears when you edit the address.",
+        "spaceBar": "The row of space tiles at the bottom.",
+        "compactBottomBar": "A tighter row for profiles and downloads.",
+        "archive": "Close tabs left unopened, like Arc. Pins, favorites and tabs playing sound stay.",
+        "archiveHours": None,
+        "peek": "Open some links in a floating window over the page. Esc closes it.",
+        "peekPinned": "A link to another site opens in the preview, like Arc.",
+        "peekDim": None,
+        "searchSuggestions": "From your default search engine, in the command bar.",
+        "updateCheck": "Ask GitHub now and then for a new Vivarc release. Off, nothing is requested.",
+    }
+    BY_PLATFORM = {
+        "commandBarAddress": {
+            "mac": "Cmd+L opens the address in the command bar, like Arc. Off, it is edited in the sidebar.",
+            "win": "Ctrl+L opens the address in the command bar, like Arc. Off, it is edited in the sidebar.",
+        },
+        "peekShortcut": {
+            "mac": "Click a link with this key held. Cmd+click still opens a new tab.",
+            "win": "Click a link with this key held. Ctrl+click still opens a new tab.",
+        },
+        "glass": {
+            "mac": "Translucent, blurred sidebar, menus and dialogs. Follows Reduce Transparency.",
+            "win": "Translucent, blurred sidebar, menus and dialogs.",
+        },
+    }
+
+    def hint(self, key, platform):
+        return js("settings.hint(settings.SCHEMA.find((s) => s.key === key), platform)", key=key, platform=platform)
+
+    def test_the_shortcut_and_glass_hints_follow_the_platform(self):
+        for key, by_platform in self.BY_PLATFORM.items():
+            for platform, expected in by_platform.items():
+                with self.subTest(key=key, platform=platform):
+                    self.assertEqual(self.hint(key, platform), expected)
+
+    def test_the_other_hints_are_the_same_on_both_platforms(self):
+        for key, expected in self.SAME.items():
+            for platform in ("mac", "win"):
+                with self.subTest(key=key, platform=platform):
+                    self.assertEqual(self.hint(key, platform), expected)
+
+    def test_every_setting_is_covered_by_the_hint_tables(self):
+        self.assertEqual(sorted(list(self.SAME) + list(self.BY_PLATFORM)), sorted(resolve().keys()))
+
+    MAC_ONLY_TERMS = ("Cmd", "Option", "⌘", "⌥", "⌃", "Reduce Transparency", "System Settings", "Finder")
+
+    def test_no_windows_hint_names_a_macos_only_term(self):
+        hints = js("settings.SCHEMA.map((s) => [s.key, settings.hint(s, 'win')])")
+        self.assertTrue(hints)
+        for key, text in hints:
+            if text is None:
+                continue
+            for term in self.MAC_ONLY_TERMS:
+                with self.subTest(key=key, term=term):
+                    self.assertNotIn(term, text)
+
+
 if __name__ == "__main__":
     unittest.main()
