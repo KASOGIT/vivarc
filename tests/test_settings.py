@@ -148,6 +148,7 @@ class Hints(unittest.TestCase):
         "compactBottomBar": "A tighter row for profiles and downloads.",
         "archive": "Close tabs left unopened, like Arc. Pins, favorites and tabs playing sound stay.",
         "archiveHours": None,
+        "backCloses": "Going back on a tab a link opened, with no page to go back to, closes it and returns to the page it came from, like Arc.",
         "peek": "Open some links in a floating window over the page. Esc closes it.",
         "peekPinned": "A link to another site opens in the preview, like Arc.",
         "peekDim": None,
