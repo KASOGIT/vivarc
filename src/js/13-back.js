@@ -1,8 +1,8 @@
 // Arc's Back on an opened tab: when a link opened the tab (target=_blank, window.open, Cmd+click) and the tab has
 // no page to go back to, Back closes it and returns to the tab the link was on. Vivaldi does nothing there.
-// Back reaches Vivarc four ways: the toolbar button (disabled, so its click falls through to the toolbar, see
-// vivarc.css), Vivaldi's Back shortcut, its mouse and rocker gestures, and a trackpad swipe, which no API reports:
-// a small script in the opened page watches for it.
+// Back reaches Vivarc three ways: the toolbar button (disabled, so its click falls through to the toolbar, see
+// vivarc.css), Vivaldi's Back shortcut, and its mouse and rocker gestures. A trackpad swipe is not covered: Chromium
+// handles it without asking Vivaldi, and with no page to go back to it reports nothing.
 (() => {
   // The decision, kept pure for the tests. source: the tab the link was on, if it is still open. noHistory: the tab
   // cannot go back, read before Vivaldi acts on the same Back. kept: a pin, favorite, split view or Peek tab.
@@ -18,37 +18,11 @@
   const backKeys = (shortcuts, platform) => [...new Set([...(Array.isArray(shortcuts) ? shortcuts : DEFAULT_KEYS[platform] || []),
     ...(platform === "mac" ? ["meta+["] : [])].filter((s) => String(s).includes("+")).map(comboKey))];
 
-  // Injected into an opened tab. A swipe back is a run of wheel events going left, with the page unable to scroll
-  // further left; a site that takes the wheel itself (a carousel) cancels it. navigation.canGoBack is read in the
-  // page at that moment: if the page could go back, the swipe navigates and nothing is closed.
-  const swipeScript = (tabId) => `(() => {
-    if (window.__vmBackSwipe) return;
-    window.__vmBackSwipe = true;
-    let dx = 0, dy = 0, last = -1e9, skip = false;
-    const scrollsLeft = (el) => {
-      for (; el && el.nodeType === 1; el = el.parentElement) {
-        if (el.scrollLeft > 0 && /auto|scroll/.test(getComputedStyle(el).overflowX)) return true;
-      }
-      return window.scrollX > 0;
-    };
-    window.addEventListener("wheel", (e) => {
-      if (e.timeStamp - last > 250) { dx = 0; dy = 0; skip = e.ctrlKey || scrollsLeft(e.target); }
-      last = e.timeStamp;
-      if (skip) return;
-      if (e.defaultPrevented) { skip = true; return; }
-      dx += e.deltaX; dy += Math.abs(e.deltaY);
-      if (-dx > Math.max(160, innerWidth * 0.2) && -dx > 3 * dy) {
-        skip = true;
-        if (window.navigation && navigation.canGoBack === false) window.chrome?.runtime?.sendMessage?.({ vivarcBack: ${Number(tabId)} });
-      }
-    }, { passive: true });
-  })();`;
-
   // Asked in the page when a shortcut comes in: a key that is Back for Vivaldi also moves the caret in a text field.
   const EDITING = `(() => { const a = document.activeElement;
     return !!a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT|IFRAME)$/.test(a.tagName)); })()`;
 
-  window.__vm.back = { shouldClose, comboKey, backKeys, swipeScript };
+  window.__vm.back = { shouldClose, comboKey, backKeys };
   if (!window.__vm.store) return;
 
   const { settings, pins, peek, tilingOf, platform } = window.__vm;
@@ -100,19 +74,6 @@
   chrome.tabs.onRemoved.addListener((id) => opened.delete(id));
   chrome.tabs.onReplaced?.addListener((added, removed) => {
     if (opened.has(removed)) { opened.set(added, opened.get(removed)); opened.delete(removed); }
-  });
-
-  // The swipe watcher goes into each new document of an opened tab.
-  chrome.webNavigation.onCommitted.addListener(({ tabId, frameId }) => {
-    if (frameId !== 0 || !opened.has(tabId)) return;
-    webviewOf(tabId)?.executeScript?.({ code: swipeScript(tabId), runAt: "document_start" }, () => void chrome.runtime.lastError);
-  });
-  chrome.runtime.onMessage.addListener((message) => {
-    const id = message?.vivarcBack;
-    if (typeof id !== "number") return;
-    // The page said it cannot go back; the webview agrees unless a navigation slipped in meanwhile.
-    const webview = webviewOf(id);
-    tryClose(id, typeof webview?.canGoBack === "function" ? !webview.canGoBack() : true);
   });
 
   // Vivaldi's own Back shortcuts and mouse gestures, as set in its settings.

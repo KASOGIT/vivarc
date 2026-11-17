@@ -47,10 +47,3 @@ class Keys(unittest.TestCase):
     def test_single_keys_are_left_out(self):
         self.assertEqual(run_js("13-back.js", "back.backKeys(['backspace', 'z', 'alt+left'], 'win')"), ["alt+left"])
 
-
-@unittest.skipUnless(shutil.which("node"), "node is needed to test the Back behaviour's JavaScript")
-class Swipe(unittest.TestCase):
-    def test_the_page_script_is_valid_and_names_its_tab(self):
-        code = run_js("13-back.js", "back.swipeScript(42)")
-        self.assertIn("vivarcBack: 42", code)
-        run_js("13-back.js", "(new Function(code), true)", code=code)
