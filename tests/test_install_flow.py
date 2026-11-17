@@ -129,6 +129,54 @@ class InstallFlow(unittest.TestCase):
         self.run_cli("uninstall")
         self.assertEqual(self.prefs("Profile 2"), {})
 
+    def set_delays_at_runtime(self, name):
+        """What the mod does while Vivaldi runs: it writes the auto-hide delays into the profile (11-autohide.js)."""
+        prefs = self.prefs(name)
+        prefs["vivaldi"]["biscuit"] = {"auto_hide_close_delay": 150, "auto_hide_closing_animation_speed": 150}
+        with open(os.path.join(self.data, name, "Preferences"), "w") as f:
+            json.dump(prefs, f)
+
+    def test_uninstall_removes_the_auto_hide_delays_the_mod_set_while_vivaldi_ran(self):
+        before = self.prefs("Default")
+        self.run_cli("install", "--no-peek")
+        self.set_delays_at_runtime("Default")
+        self.run_cli("uninstall")
+        self.assertEqual(self.prefs("Default"), before)
+
+    def test_uninstall_puts_back_an_auto_hide_delay_the_user_had_set(self):
+        mine = {"vivaldi": {"biscuit": {"auto_hide_close_delay": 400}}}
+        with open(os.path.join(self.data, "Default", "Preferences"), "w") as f:
+            json.dump(mine, f)
+        self.run_cli("install", "--no-peek")
+        self.set_delays_at_runtime("Default")
+        self.run_cli("uninstall")
+        self.assertEqual(self.prefs("Default"), mine)
+
+    def test_an_update_of_an_older_install_still_lets_uninstall_remove_the_delays(self):
+        before = self.prefs("Default")
+        self.run_cli("install", "--no-peek")
+        state = vivarc.load_state()  # an install from before Vivarc touched the delays: they are not in its snapshot
+        for snap in state["profiles"].values():
+            for key in ("vivaldi.biscuit.auto_hide_close_delay", "vivaldi.biscuit.auto_hide_closing_animation_speed"):
+                snap.pop(key, None)
+        vivarc.save_state(state)
+        self.run_cli("install", "--no-peek")
+        self.set_delays_at_runtime("Default")
+        self.run_cli("uninstall")
+        self.assertEqual(self.prefs("Default"), before)
+
+    def test_uninstall_removes_the_delays_from_a_profile_the_js_configured_on_its_own(self):
+        self.run_cli("install", "--no-peek")
+        os.makedirs(os.path.join(self.data, "Profile 2"))
+        configured, _ = vivarc.patch_preferences({}, [NATIVE_DEFS[0]])
+        configured["vivaldi"]["biscuit"] = {"auto_hide_close_delay": 150, "auto_hide_closing_animation_speed": 150}
+        with open(os.path.join(self.data, "Profile 2", "Preferences"), "w") as f:
+            json.dump(configured, f)
+        with open(os.path.join(self.data, "Local State"), "w") as f:
+            json.dump({"profile": {"info_cache": {"Default": {}, "Profile 1": {}, "Profile 2": {}}}}, f)
+        self.run_cli("uninstall")
+        self.assertEqual(self.prefs("Profile 2"), {})
+
     def test_uninstall_leaves_an_unconfigured_profile_alone(self):
         self.run_cli("install", "--no-peek")
         os.makedirs(os.path.join(self.data, "Profile 2"))
