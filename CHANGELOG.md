@@ -2,7 +2,7 @@
 
 ## Unreleased
 - Fix: on Windows, the hints in **Vivarc Settings** and the guide name Ctrl, Alt and the Windows menu instead of macOS keys and settings (Cmd+click, Cmd+T, Reduce Transparency, the menu bar).
-- Fix: the hidden sidebar (Cmd+S) slides away as soon as the pointer leaves it. It waited about a second, and after a click on back, reload, Downloads or a profile chip it often stayed open until you moved over it and out again. **Vivarc Settings** > **Sidebar** has an **Auto-hide after** slider (100 to 1500 ms, 150 by default; Vivaldi's own is 800). The sidebar still stays while you type in the address bar or a menu is open (#162).
+- Fix: the hidden sidebar (Cmd+S) slides away as soon as the pointer leaves it. It waited about a second, and after a click on back, reload, Downloads or a profile chip it often stayed open until you moved over it and out again. **Vivarc Settings** > **Sidebar** has an **Auto-hide after** slider (100 to 1500 ms, 150 by default; Vivaldi's own is 800). Vivaldi uses the same delay for every bar that auto-hides, the panel bar included, and uninstalling Vivarc puts back the delay you had. The sidebar still stays while you type in the address bar or a menu is open (#162).
 
 ## 0.1.34 - 2026-11-15
 - **Rename a space or change its emoji from its tile.** Right-click a space tile for **Rename Space** (its pinned folder is renamed with it, so its pins stay; a name another space already uses is refused) or **Change Emoji…** (it replaces the icon, empty clears it, Ctrl+Cmd+Space opens the emoji picker). Thanks @gulin-desigenr (#126, #176).

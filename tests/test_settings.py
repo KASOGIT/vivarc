@@ -145,6 +145,7 @@ class Hints(unittest.TestCase):
         "glassOpacity": None,
         "urlBar": "Always show the address bar. Off, it appears when you edit the address.",
         "spaceBar": "The row of space tiles at the bottom.",
+        "hideDelay": "How long a hidden sidebar stays after the pointer leaves. Vivaldi uses the same delay for every bar that auto-hides, the panel bar included.",
         "compactBottomBar": "A tighter row for profiles and downloads.",
         "archive": "Close tabs left unopened, like Arc. Pins, favorites and tabs playing sound stay.",
         "archiveHours": None,

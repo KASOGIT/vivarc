@@ -28,6 +28,7 @@
     const top = el("div", "vm-set-range-top");
     const value = el("span", "vm-set-value");
     top.append(el("div", "vm-set-label", item.label), value);
+    const hint = settings.hint(item, window.__vm.platform);
     const slider = el("input", "vm-set-slider");
     Object.assign(slider, { type: "range", min: String(item.min), max: String(item.max), step: String(item.step) });
     const ends = el("div", "vm-set-ends");
@@ -35,7 +36,7 @@
     const show = () => { value.textContent = `${slider.value}${item.unit || ""}`; };
     slider.value = String(settings.get(item.key));
     slider.addEventListener("input", () => { settings.set(item.key, Number(slider.value)); show(); });
-    line.append(top, slider, ends);
+    line.append(top, ...(hint ? [el("div", "vm-set-hint", hint)] : []), slider, ends);
     show();
     return line;
   };
