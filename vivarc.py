@@ -153,6 +153,9 @@ TOUCHED = [
     ("vivaldi", "status_bar", "display"),
     ("vivaldi", "tabs", "bar", "width"),
     ("vivaldi", "tabs", "bar", "position"),
+    # written by the mod while Vivaldi runs (11-autohide.js), not at install: listed so the snapshot keeps the originals
+    ("vivaldi", "biscuit", "auto_hide_close_delay"),
+    ("vivaldi", "biscuit", "auto_hide_closing_animation_speed"),
 ]
 
 
@@ -911,7 +914,9 @@ def cmd_install(args):
         shutil.copy2(prefs_path, os.path.join(backup, directory, "Preferences"))
         prefs = read_json(prefs_path)
         new, snap = patch_preferences(prefs, actions, reapply=directory in state["profiles"])
-        state["profiles"].setdefault(directory, snap)
+        kept = state["profiles"].setdefault(directory, snap)
+        for key, value in snap.items():  # a key added to TOUCHED since the first install: its value before this apply
+            kept.setdefault(key, value)
         write_json(prefs_path, new)
         say(f"  {name}: configured")
 
