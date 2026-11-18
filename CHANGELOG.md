@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Fix: **Import from Arc** puts each space's pinned tabs and folders in **Pinned** again. They landed in **Unpinned (today)**, and that day's tabs in **Pinned**, because Arc lists the unpinned container first; the importer now reads Arc's own pinned and unpinned markers.
 - Fix: on Windows, the hints in **Vivarc Settings** and the guide name Ctrl, Alt and the Windows menu instead of macOS keys and settings (Cmd+click, Cmd+T, Reduce Transparency, the menu bar).
 
 ## 0.1.34 - 2026-11-15
