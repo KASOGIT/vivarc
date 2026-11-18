@@ -75,5 +75,10 @@
     if (next.join() !== whole.tabbar_after.join()) await vivaldi.prefs.set({ path: "vivaldi.toolbars", value: { ...whole, tabbar_after: next } });
   };
 
-  window.__vm.spaces = { profileChips, pathForShortcut, wantsAccountButton, withAccountButton, withDownloads, syncBottomBar };
+  // The room the tab list leaves under itself for the bottom toolbar. With one profile the compact bar is a taller
+  // row (34px instead of 21px, vivarc.css) so the profile picture clears the window's edge.
+  const bottomBarReserve = (compact, profiles) => (!compact ? 64 : profileChips(profiles).length ? 35 : 48);
+
+  window.__vm.spaces = { profileChips, pathForShortcut, wantsAccountButton, withAccountButton, withDownloads, syncBottomBar,
+    bottomBarReserve };
 })();
