@@ -31,11 +31,11 @@ Large or unfamiliar change: run `architecture-planner`, show the options and its
 
 ## 3. RED
 
-Run `test-engineer` with the spec literals. Open the failing assertion yourself and confirm it fails for the right reason: an assertion on the missing behavior, not an import or compile error, a missing fixture or a stub that throws. If not, send it back to `test-engineer` with the failure output; the empty skeleton that lets the test import is its job. Exempt work (pure refactor, logging only, generated files, docs, dependency bump) skips RED: say why in one line. Commit RED on its own: `test(<scope>): <behavior>`.
+Run `test-engineer` with the spec literals. The brief carries every scenario and the single-file test command, and covers one area. Open the failing assertion yourself and confirm it fails for the right reason: an assertion on the missing behavior, not an import or compile error, a missing fixture or a stub that throws. If not, send it back to `test-engineer` with the failure output; the empty skeleton that lets the test import is its job. Exempt work (pure refactor, logging only, generated files, docs, dependency bump) skips RED: say why in one line, and send it to `implementer` with acceptance checks instead of test paths. Commit RED on its own: `test(<scope>): <behavior>`.
 
 ## 4. GREEN
 
-Run `implementer` with the test paths. Then run `test-runner` for the test, type-check and lint, using the commands in the project `CLAUDE.md`, and keep the summary lines it returns verbatim for the report. Commit GREEN: `feat(<scope>): ...` or `fix(<scope>): ...`.
+Run `implementer` with the test paths. Then run `test-runner` for the test, type-check and lint, using the commands in the project `CLAUDE.md`, and keep the summary lines it returns verbatim for the report. Commit GREEN: `feat(<scope>): ...` or `fix(<scope>): ...`. For exempt work, run `implementer` with the acceptance checks instead of test paths, and commit as `refactor`, `docs` or `chore`.
 
 ## 5. Critique
 

@@ -60,4 +60,8 @@ At most 30 lines:
 - the scenario list, one line each;
 - the failing assertion output (at most 10 lines), and why that failure is the right reason;
 - the exact command to re-run it;
-- the self-check result, and anything uncertain.
+- the self-check result, and anything uncertain;
+- every behavior the brief left open, as an open question, instead of a guess.
+
+- Count your tool calls. At about 30, if you are not done, stop exploring and hand back: what is done, what is left, and the next command to run. The caller resumes you with exactly that.
+- Run the scoped test file, not the whole suite. A command that may run longer than 100 seconds goes to the background with its output in a file; read the tail once. Never wrap it in a shorter timeout and retry.

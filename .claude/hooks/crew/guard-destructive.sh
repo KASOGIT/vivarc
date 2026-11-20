@@ -53,9 +53,10 @@ FALLBACK_PATH="${CREW_FALLBACK_PATH-/opt/homebrew/bin:/usr/local/bin:/usr/bin:/b
 
 command -v jq >/dev/null 2>&1 || exit 0
 
-INPUT="$(cat)"
-CMD="$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)"
-CWD="$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null || true)"
+# One jq call: first line is the cwd (newlines flattened), the rest is the command.
+PARSED="$(jq -r '((.cwd // "") | tostring | gsub("\n"; " ")), (.tool_input.command // empty)' 2>/dev/null || true)"
+CWD="${PARSED%%$'\n'*}"
+if [[ "$PARSED" == *$'\n'* ]]; then CMD="${PARSED#*$'\n'}"; else CMD=""; fi
 [[ -z "$CMD" ]] && exit 0
 
 BRANCHES=(main master develop production)
@@ -203,6 +204,7 @@ mask() {
   MASKED="$out"
 }
 
+# On macOS bash 3.2, [[ =~ ]] and ${var//pat/rep} hang on strings of several KB, so commands over MASK_MAX characters use grep and tr.
 MASK_MAX=4096
 case "$CMD" in
   *\\* | *\'* | *\"* | *\<* | *\#*)
@@ -210,8 +212,25 @@ case "$CMD" in
   *) MASKED="$CMD" ;;
 esac
 
-has() { printf '%s' "$MASKED" | grep -qE -- "$1"; }
-hasi() { printf '%s' "$MASKED" | grep -qiE -- "$1"; }
+# Match in bash, line by line as grep did, so ^, $ and [^...] classes never span a newline.
+# A long string goes to grep instead: bash's regex engine is far slower than grep's on it.
+has() {
+  local line
+  if ((${#MASKED} > MASK_MAX)); then printf '%s' "$MASKED" | grep -qE -- "$1"; return; fi
+  if [[ "$MASKED" != *$'\n'* ]]; then [[ "$MASKED" =~ $1 ]]; return; fi
+  while IFS= read -r line; do
+    if [[ "$line" =~ $1 ]]; then return 0; fi
+  done <<< "$MASKED"
+  return 1
+}
+hasi() {
+  local rc=0
+  if ((${#MASKED} > MASK_MAX)); then printf '%s' "$MASKED" | grep -qiE -- "$1"; return; fi
+  shopt -s nocasematch
+  has "$1" || rc=$?
+  shopt -u nocasematch
+  return $rc
+}
 deny_if() { if has "$2"; then deny "$1"; fi; }
 denyi_if() { if hasi "$2"; then deny "$1"; fi; }
 
@@ -223,6 +242,12 @@ deny_if "chmod 777 on HOME or /"      "chmod${SP}+(-R${SP}+)?0?777${SP}+(/|~/?|\
 # Judge each segment on its own, so a --force or a branch name elsewhere on the line
 # (git worktree remove --force, gh pr create --base main) is not read as part of the push.
 ASK_MSG=""
+# ${//} is quadratic in bash 3.2, so a long string is split by tr.
+if ((${#MASKED} > MASK_MAX)); then
+  SEGMENTS="$(printf '%s\n' "$MASKED" | tr ';&|' '\n\n\n')"
+else
+  SEGMENTS="${MASKED//[;&|]/$'\n'}"
+fi
 while IFS= read -r seg; do
   case "$seg" in
     *rm* | *push*) ;;
@@ -244,9 +269,9 @@ while IFS= read -r seg; do
   if args_has "(--delete|${SP}-d${SP})" && args_has "$ON_PROTECTED"; then deny "git push --delete on a protected branch"; fi
   if args_has "${SP}:${PROTECTED}${PEND}"; then deny "git push :<branch> deletes a protected branch"; fi
   if args_has "$ON_PROTECTED"; then ASK_MSG="This push targets a protected branch. Confirm pushing to it."; fi
-done < <(printf '%s\n' "$MASKED" | tr ';&|' '\n\n\n')
-deny_if "git reset --hard on a protected remote" "${GBEFORE}reset${SP}+--hard${SP}+(origin|upstream)/${PROTECTED}(\\b|\$)"
-deny_if "git branch -D on a protected branch"    "${GBEFORE}branch${SP}+(-D|--delete${SP}+--force|--force${SP}+--delete|-d${SP}+-f|-f${SP}+-d)${SP}+${PROTECTED}(\\b|\$)"
+done <<< "$SEGMENTS"
+deny_if "git reset --hard on a protected remote" "${GBEFORE}reset${SP}+--hard${SP}+(origin|upstream)/${PROTECTED}([^A-Za-z0-9_]|\$)"
+deny_if "git branch -D on a protected branch"    "${GBEFORE}branch${SP}+(-D|--delete${SP}+--force|--force${SP}+--delete|-d${SP}+-f|-f${SP}+-d)${SP}+${PROTECTED}([^A-Za-z0-9_]|\$)"
 deny_if "git clean -x removes ignored files (.env, build output)" "${GBEFORE}clean[^;&|]*${SP}-[a-zA-Z]*[xX]"
 
 # --- containers: local database volumes ---

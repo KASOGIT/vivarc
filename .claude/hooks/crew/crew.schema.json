@@ -18,6 +18,16 @@
       "pattern": "^[A-Za-z0-9._/-]+$",
       "default": "main"
     },
+    "managerModel": {
+      "description": "The model the copied feature skill pins for the turn it runs in. When absent, the copy carries no model line and each contributor's session model applies.",
+      "type": "string",
+      "enum": [
+        "sonnet",
+        "opus",
+        "haiku",
+        "fable"
+      ]
+    },
     "protectedBranches": {
       "description": "Branches that guard-destructive protects from force-push, deletion and (through an upstream) plain push. Entries that are not plain branch names are dropped. An empty or invalid list falls back to the default.",
       "type": "array",
