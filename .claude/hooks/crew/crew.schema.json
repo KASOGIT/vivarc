@@ -79,7 +79,7 @@
                 "type": "string"
               },
               "path": {
-                "description": "Directory relative to the project root, for example apps/api/src. Must stay below the project (no ..).",
+                "description": "Directory relative to the project root, for example services/core/src. Must stay below the project (no ..).",
                 "type": "string",
                 "pattern": "^[A-Za-z0-9_./-]+$"
               },

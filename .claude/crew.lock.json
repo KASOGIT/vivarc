@@ -1,5 +1,5 @@
 {
-  "revision": "2b8d62dcefcbd88ed13c1ce2d359808ba8236aba",
+  "revision": "d909c5300d3d37899188957cbd1b7665cabe4a02",
   "files": {
     ".claude/agents/architecture-planner.md": "c24035b627ca3cedff553586ce8f76d00d6cca772ca82972070a48602b8c9b8d",
     ".claude/agents/code-reviewer.md": "4831886461ac70003f9e3271a77013c75e71e64ceeda8a91f90bf872997dc62a",
@@ -9,7 +9,7 @@
     ".claude/agents/test-engineer.md": "6243ac1b1cce388892573760c8de9f36afb4c50490d4e3d3fb299e54b689bb6f",
     ".claude/agents/test-runner.md": "aa2e5bf3573fb531e1a33c4f1cb5de6609950edc9d37e6465f50cfd7db2b2cb5",
     ".claude/hooks/crew/crew.example.json": "bca1a461db87da29e7f5a52acfe76b4657842c5916f640d5281a5d115c273e76",
-    ".claude/hooks/crew/crew.schema.json": "f3d83775ecac3240ffb72f36dc0394252e3ac9de4ce80b5694d6fbd4e160c396",
+    ".claude/hooks/crew/crew.schema.json": "4621ca63d12bcca049591d91a6f660a5d3a9d90398f4936e8d292a0f3eddc600",
     ".claude/hooks/crew/guard-destructive.sh": "850e3f77a5a583f15805d4201276f29c1d2607ec6016bce9f6fc48c8926b2a8b",
     ".claude/hooks/crew/require-spec-first.sh": "9d720b6cdbb1075049cf07139bfbf40a7ffcc6038a1a8b1569b62fa20d40345f",
     ".claude/skills/debug/SKILL.md": "24ffdbc16e12e6de8fb96e547b1c21aa7f0e21e0048c4bfd08dead89dba5fb30",
