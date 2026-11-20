@@ -3,7 +3,7 @@ name: debugger-analyst
 description: "Finds the root cause of a failing test, error or long log and proposes a fix, so use it for multi-file traces and long logs."
 tools: Read, Grep, Bash, WebSearch
 maxTurns: 40
-model: sonnet
+model: opus
 effort: high
 ---
 

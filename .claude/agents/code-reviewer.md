@@ -3,7 +3,7 @@ name: code-reviewer
 description: "Reviews a git diff in a clean context for logic, security and data-integrity bugs, so use it before opening a PR or when asked to review a change."
 tools: Read, Grep, Glob, Bash
 maxTurns: 40
-model: opus
+model: fable
 effort: high
 ---
 
