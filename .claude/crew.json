@@ -1,14 +1,27 @@
 {
   "$schema": "./hooks/crew/crew.schema.json",
   "baseBranch": "main",
-  "protectedBranches": ["main"],
+  "protectedBranches": [
+    "main"
+  ],
   "specFirst": {
     "mode": "nudge",
     "ruleFile": ".claude/rules/tdd.md",
     "roots": [
-      { "path": "src/js", "moduleDepth": 0, "testRoots": ["tests"] }
+      {
+        "path": "src/js",
+        "moduleDepth": 0,
+        "testRoots": [
+          "tests"
+        ]
+      }
     ],
-    "sourceExtensions": [".js"],
-    "testPatterns": ["test_*.py"]
-  }
+    "sourceExtensions": [
+      ".js"
+    ],
+    "testPatterns": [
+      "test_*.py"
+    ]
+  },
+  "updateWorkflow": true
 }
