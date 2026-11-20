@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Back closes a tab a link opened, like Arc.** On a tab opened from a link on another tab (a link that opens a new tab, or Cmd+click), going back when there is no page to go back to closes the tab and returns you to the page the link was on. It works from the Back button, Vivaldi's Back shortcut (Cmd+Left, Cmd+[; Alt+Left on Windows), and its Back mouse and rocker gestures (not a two-finger trackpad swipe). Tabs you opened yourself, pinned links, favorites and split views are never closed this way, and a shortcut typed in a text field is left to the field. Turn it off with **Back closes opened tabs** in Vivarc Settings. Thanks @groenroos (#164).
 - Fix: on Windows, the hints in **Vivarc Settings** and the guide name Ctrl, Alt and the Windows menu instead of macOS keys and settings (Cmd+click, Cmd+T, Reduce Transparency, the menu bar).
 
 ## 0.1.34 - 2026-11-15

@@ -16,7 +16,7 @@ def resolve(config=None, saved=None):
 class Resolve(unittest.TestCase):
     def test_without_anything_saved_the_defaults_apply(self):
         self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "urlBar": False, "commandBarAddress": False, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
-                                    "archive": False, "archiveHours": 12, "updateCheck": True,
+                                    "archive": False, "archiveHours": 12, "backCloses": True, "updateCheck": True,
                                     "peek": True, "peekPinned": True, "peekShortcut": "alt", "peekDim": True})
 
     def test_the_install_config_sets_the_starting_point(self):
@@ -148,6 +148,7 @@ class Hints(unittest.TestCase):
         "compactBottomBar": "A tighter row for profiles and downloads.",
         "archive": "Close tabs left unopened, like Arc. Pins, favorites and tabs playing sound stay.",
         "archiveHours": None,
+        "backCloses": "Going back on a tab a link opened, with no page to go back to, closes it and returns to the page it came from, like Arc.",
         "peek": "Open some links in a floating window over the page. Esc closes it.",
         "peekPinned": "A link to another site opens in the preview, like Arc.",
         "peekDim": None,
