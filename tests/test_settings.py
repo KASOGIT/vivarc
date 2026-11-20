@@ -15,7 +15,7 @@ def resolve(config=None, saved=None):
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class Resolve(unittest.TestCase):
     def test_without_anything_saved_the_defaults_apply(self):
-        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "urlBar": False, "commandBarAddress": False, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
+        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "urlBar": False, "hideDelay": 150, "commandBarAddress": False, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
                                     "archive": False, "archiveHours": 12, "updateCheck": True,
                                     "peek": True, "peekPinned": True, "peekShortcut": "alt", "peekDim": True})
 
@@ -145,6 +145,7 @@ class Hints(unittest.TestCase):
         "glassOpacity": None,
         "urlBar": "Always show the address bar. Off, it appears when you edit the address.",
         "spaceBar": "The row of space tiles at the bottom.",
+        "hideDelay": "How long a hidden sidebar stays after the pointer leaves. Vivaldi uses the same delay for every bar that auto-hides, the panel bar included.",
         "compactBottomBar": "A tighter row for profiles and downloads.",
         "archive": "Close tabs left unopened, like Arc. Pins, favorites and tabs playing sound stay.",
         "archiveHours": None,
