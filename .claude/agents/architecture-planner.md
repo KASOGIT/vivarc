@@ -3,7 +3,7 @@ name: architecture-planner
 description: "Explores read-only and returns implementation options for a large or unfamiliar change, so use it when a task spans many files or needs design choices."
 tools: Read, Glob, Grep, Bash
 maxTurns: 40
-model: sonnet
+model: fable
 effort: high
 ---
 
