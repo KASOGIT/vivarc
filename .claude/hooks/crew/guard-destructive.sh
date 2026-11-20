@@ -32,6 +32,11 @@
 #   - git -C <dir> is recognized, but the upstream of a bare git push is read in the session cwd,
 #     not in <dir>.
 #   - git push --all and --mirror are not looked at.
+#   - AWS endpoints held in a variable (--endpoint-url $URL, AWS_ENDPOINT_URL=$URL) count as remote, so
+#     the delete is denied; a local endpoint set in a file, a profile or a non-exported variable is not
+#     seen either, and neither is an export on a later line of a script run from a file.
+#   - An export inside a child shell or subshell (bash -c "export ...", ( export ... )) is still read
+#     as applying to later segments.
 #
 # Protected branches: main, master, develop and production by default. A project overrides the
 # list with "protectedBranches" in <project>/.claude/crew.json (see crew.schema.json). A missing,
@@ -39,8 +44,9 @@
 # this is a safety net, so a broken config must not switch it off.
 #
 # PATH: a Desktop-launched session may have a PATH without /opt/homebrew/bin or /usr/local/bin,
-# where jq lives on a Mac, and a missing jq makes the hook fail open. The usual install
-# locations are appended to PATH (after the user's own entries). CREW_FALLBACK_PATH replaces that
+# where jq lives on a Mac, and a missing jq blocks every Bash call (the hook cannot check
+# the command, so it fails closed). The usual install locations are appended to PATH (after
+# the user's own entries). CREW_FALLBACK_PATH replaces that
 # list (used by the tests; an empty value appends nothing).
 #
 # Every pattern has a case in tests/guard-cases.jsonl. After any edit run:
@@ -51,13 +57,28 @@ set -euo pipefail
 FALLBACK_PATH="${CREW_FALLBACK_PATH-/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin}"
 [[ -z "$FALLBACK_PATH" ]] || PATH="${PATH:+$PATH:}$FALLBACK_PATH"
 
-command -v jq >/dev/null 2>&1 || exit 0
+if ! command -v jq >/dev/null 2>&1; then
+  echo "crew guard: jq not found, so every Bash command is blocked until it is on PATH. Install jq outside this session (brew install jq, apt-get install jq) or add it to the image or setup script, then retry." >&2
+  exit 2
+fi
 
 # One jq call: first line is the cwd (newlines flattened), the rest is the command.
-PARSED="$(jq -r '((.cwd // "") | tostring | gsub("\n"; " ")), (.tool_input.command // empty)' 2>/dev/null || true)"
+JQ_RC=0
+PARSED="$(jq -r '((.cwd // "") | tostring | gsub("\n"; " ")), (.tool_input.command // empty)' 2>/dev/null)" || JQ_RC=$?
+if ((JQ_RC != 0)); then
+  echo "crew guard: jq failed (exit $JQ_RC), so the command cannot be checked and is blocked." >&2
+  exit 2
+fi
 CWD="${PARSED%%$'\n'*}"
 if [[ "$PARSED" == *$'\n'* ]]; then CMD="${PARSED#*$'\n'}"; else CMD=""; fi
 [[ -z "$CMD" ]] && exit 0
+# A backslash-newline continuation is one command. The mask joins the lines itself (a comment or a
+# quoted heredoc line ending in a backslash must not swallow the next line); only a command too long
+# to be masked is joined here, so a split delete is seen.
+BSNL=$'\\\n'
+case "$((${#CMD} > 4096))$CMD" in
+  1*\\$'\n'*) CMD="$(printf '%s' "$CMD" | tr '\n' '\001' | sed "s/\\\\$(printf '\001')/ /g" | tr '\001' '\n')" ;;
+esac
 
 BRANCHES=(main master develop production)
 PROJ="${CLAUDE_PROJECT_DIR:-}"
@@ -110,7 +131,7 @@ mask_quoted() {
   elif [[ "$body" != *[[:space:]]* ]]; then
     rep="$body"
   elif [[ " $seg " =~ $EXEC_RE ]]; then
-    rep="$body"
+    rep=${body//"$BSNL"/ }
   else
     rep='""'
   fi
@@ -132,8 +153,7 @@ mask() {
     c="${rest:0:1}"
     case "$c" in
       '\')
-        out+="${rest:0:2}"
-        seg+="${rest:0:2}"
+        if [[ "${rest:1:1}" == $'\n' ]]; then out+=" "; seg+=" "; else out+="${rest:0:2}"; seg+="${rest:0:2}"; fi
         i=$((i + 2)) ;;
       "'")
         if [[ "$rest" =~ $SQ_RE ]]; then
@@ -242,6 +262,33 @@ deny_if "chmod 777 on HOME or /"      "chmod${SP}+(-R${SP}+)?0?777${SP}+(/|~/?|\
 # Judge each segment on its own, so a --force or a branch name elsewhere on the line
 # (git worktree remove --force, gh pr create --base main) is not read as part of the push.
 ASK_MSG=""
+# Cloud: irreversible deletes. A segment is exempt only when it targets a local endpoint itself
+# (--endpoint-url, or AWS_ENDPOINT_URL[_<SERVICE>]= on the same segment) or an earlier segment
+# exported AWS_ENDPOINT_URL[_<SERVICE>]. Global options may sit before and after the service.
+# A --endpoint-url flag decides alone; without one the last assignment wins (an unset clears it) and
+# AWS_ENDPOINT_URL_<SERVICE> outranks AWS_ENDPOINT_URL.
+LOCAL_HOST="https?://(([A-Za-z0-9.-]+\\.)?localhost\\.localstack\\.cloud|localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\]|host\\.docker\\.internal|localstack(-[A-Za-z0-9_-]+)?)([:/]|${SP}|[;&|)]|\$)"
+AWS_OPTS="(${SP}+--[^[:space:]]+(${SP}+[^-[:space:]][^[:space:]]*)?)*"
+AWS_DELETES=("s3:(rm[^;&|]*--recursive|rb[^;&|]*--force)" "rds:delete-db" "ec2:terminate-instances" "dynamodb:delete-table" "cloudformation:delete-stack")
+AWS_EXPORTS=""
+# Endpoint variables of a segment as " NAME=value" words (a word "NAME=" is an unset).
+env_words() {
+  local w ws
+  ET=""
+  read -ra ws <<< "$1"
+  for w in ${ws[@]+"${ws[@]}"}; do
+    if [[ "$w" =~ ^AWS_ENDPOINT_URL(_[A-Za-z0-9]+)?= ]]; then ET+=" $w"; fi
+  done
+}
+# The last word for variable $2 in the words $1 wins; EV is its value ("" when unset or absent).
+env_value() {
+  local w ws
+  EV=""
+  read -ra ws <<< "$1"
+  for w in ${ws[@]+"${ws[@]}"}; do
+    if [[ "${w%%=*}" == "$2" ]]; then EV="${w#*=}"; fi
+  done
+}
 # ${//} is quadratic in bash 3.2, so a long string is split by tr.
 if ((${#MASKED} > MASK_MAX)); then
   SEGMENTS="$(printf '%s\n' "$MASKED" | tr ';&|' '\n\n\n')"
@@ -249,14 +296,41 @@ else
   SEGMENTS="${MASKED//[;&|]/$'\n'}"
 fi
 while IFS= read -r seg; do
+  if [[ "$seg" == *export* && "$seg" =~ ^${SP}*export${SP} ]]; then
+    env_words "$seg"
+    AWS_EXPORTS+="$ET"
+  elif [[ "$seg" == *unset* && "$seg" =~ ^${SP}*unset${SP} ]]; then
+    read -ra uw <<< "$seg"
+    for w in ${uw[@]+"${uw[@]}"}; do
+      if [[ "$w" =~ ^AWS_ENDPOINT_URL(_[A-Za-z0-9]+)?$ ]]; then AWS_EXPORTS+=" $w="; fi
+    done
+  fi
   case "$seg" in
-    *rm* | *push*) ;;
+    *rm* | *push* | *aws*) ;;
     *) continue ;;
   esac
   seg_has() { [[ "$seg" =~ $1 ]]; }
   if seg_has "(^|[^A-Za-z0-9_-])rm(${SP}+(-[A-Za-z]+|--[a-z-]*))+${SP}+${RM_TARGET}"; then
     deny "rm -rf on HOME, /, or .git"
   fi
+  for del in "${AWS_DELETES[@]}"; do
+    svc="${del%%:*}"
+    seg_has "aws${AWS_OPTS}${SP}+${svc}${AWS_OPTS}${SP}+${del#*:}" || continue
+    flag_any="(^|${SP})--endpoint-url(${SP}|=|\$)"
+    flag_re="(^|${SP})--endpoint-url(${SP}+|=)${LOCAL_HOST}"
+    env_words "$seg"
+    shopt -s nocasematch
+    local_ok=false
+    if [[ "$seg" =~ $flag_any ]]; then
+      if [[ "$seg" =~ $flag_re ]]; then local_ok=true; fi
+    else
+      env_value "$AWS_EXPORTS$ET" "AWS_ENDPOINT_URL_${svc}"
+      if [[ -z "$EV" ]]; then env_value "$AWS_EXPORTS$ET" AWS_ENDPOINT_URL; fi
+      if [[ -n "$EV" && "$EV" =~ ^${LOCAL_HOST} ]]; then local_ok=true; fi
+    fi
+    shopt -u nocasematch
+    [[ "$local_ok" == true ]] || deny "irreversible AWS delete"
+  done
   seg_has "${GBEFORE}push(${SP}|\$)" || continue
   [[ "$seg" =~ ${GAFTER}push(${SP}.*)?$ ]] || continue
   ARGS="${BASH_REMATCH[$((${#BASH_REMATCH[@]} - 1))]}"
@@ -277,11 +351,6 @@ deny_if "git clean -x removes ignored files (.env, build output)" "${GBEFORE}cle
 # --- containers: local database volumes ---
 deny_if "docker prune of all images or volumes"   "docker${SP}+(system${SP}+prune[^;&|]*(${SP}-[a-zA-Z]*a|--all|--volumes)|volume${SP}+prune)"
 deny_if "docker compose down -v deletes volumes"  "docker${SP}+compose${SP}+down[^;&|]*(${SP}-[a-zA-Z]*v|--volumes)"
-
-# --- cloud: irreversible deletes (local emulators are fine) ---
-if ! has "(localhost|127\\.0\\.0\\.1|localstack)"; then
-  deny_if "irreversible AWS delete" "aws${SP}+(s3${SP}+rm[^;&|]*--recursive|s3${SP}+rb[^;&|]*--force|rds${SP}+delete-db|ec2${SP}+terminate-instances|dynamodb${SP}+delete-table|cloudformation${SP}+delete-stack)"
-fi
 
 # --- SQL: only when a SQL client is actually invoked (so commit messages that merely mention it pass) ---
 if hasi "(^|[^a-z])(psql|pgcli|mysql|mariadb|sqlite3|sqlcmd)([^a-z]|\$)"; then

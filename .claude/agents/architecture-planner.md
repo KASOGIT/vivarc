@@ -14,7 +14,7 @@ You explore and plan. You never edit, and Bash is for read-only commands (`git l
 - Restate the requirement as literals: inputs, outputs, error exits, persisted state, side effects. Ask the caller about anything ambiguous instead of choosing.
 - Find the closest reference implementation and the layers and files the change touches.
 - Weigh two or three options, including one you reject and why.
-- Flag anything on the escalation list (money, auth, migrations, production commands, new dependencies, pattern deviations).
+- Flag anything on the escalation list (irreversible effects (moving value, sending, deleting, publishing), auth, migrations, production commands, new dependencies, pattern deviations).
 
 ## Hand back
 
