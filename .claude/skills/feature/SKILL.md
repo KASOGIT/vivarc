@@ -18,7 +18,7 @@ Rules for the whole run:
 - You do not write tests, skeletons or implementation yourself. When an agent's output is wrong, send it back with what is wrong.
 - Call crew agents without a `model`: each carries its own. One exception: an agent that failed twice on the same task is re-run once with `model` one tier up (sonnet to opus, opus to fable), never a third time at the same tier.
 - When you start a flow on your own (failing test first, delegating, escalating), say so in one line with the reason.
-- Stop and ask whenever the escalation list applies: architecture choices, new dependencies, pattern deviations, money, auth, migrations on existing data, production commands.
+- Stop and ask whenever the escalation list applies: architecture choices, new dependencies, pattern deviations, irreversible effects (moving value, sending, deleting, publishing), auth, migrations on existing data, production commands.
 - Never commit or push to a protected branch. If you are on one, create a branch with plain `git checkout -b <branch>` first. Commit messages follow the project convention, with no co-author trailers unless the project asks.
 
 ## 1. Spec
@@ -35,7 +35,7 @@ Run `test-engineer` with the spec literals. The brief carries every scenario and
 
 ## 4. GREEN
 
-Run `implementer` with the test paths. Then run `test-runner` for the test, type-check and lint, using the commands in the project `CLAUDE.md`, and keep the summary lines it returns verbatim for the report. Commit GREEN: `feat(<scope>): ...` or `fix(<scope>): ...`. For exempt work, run `implementer` with the acceptance checks instead of test paths, and commit as `refactor`, `docs` or `chore`.
+Run `implementer` with the test paths. Then run `test-runner` scoped to the new test paths plus `affected` (pass it the base branch), and ask for type-check and lint, using the commands in the project `CLAUDE.md`. Commit GREEN: `feat(<scope>): ...` or `fix(<scope>): ...`. For exempt work, run `implementer` with the acceptance checks instead of test paths, and commit as `refactor`, `docs` or `chore`.
 
 ## 5. Critique
 
@@ -43,17 +43,19 @@ Run `code-reviewer` on the diff against the base branch. For each finding, verif
 
 ## 6. Feedback
 
-Fix confirmed findings, with a test when behavior changes, then re-run the checks through `test-runner`. For each other finding, state why it is disputed (with evidence) or deferred. Any correction that states a rule goes into the nearest `CLAUDE.md` or rule file in the same change, and you tell the user.
+Fix confirmed findings, with a test when behavior changes, then re-run the checks through `test-runner`, scoped to `affected` (pass it the base branch). For each other finding, state why it is disputed (with evidence) or deferred. Any correction that states a rule goes into the nearest `CLAUDE.md` or rule file in the same change, and you tell the user.
 
 ## 7. Report
 
-The report is the last message of the run. Paste evidence, do not describe it: the GREEN line is the runner's own output as `test-runner` returned it, not a count you typed.
+Before the report, run `test-runner` with scope `full` as the final gate, whatever the review found. If the final gate fails, fix and re-run it: the report needs a passing full run after the last code change, and the runner's first line must say `full`.
+
+The report is the last message of the run. Paste evidence, do not describe it: the GREEN evidence is the summary line of that final gate run, as `test-runner` returned it, not a count you typed.
 
 ```markdown
 ## Report
 - Requirement (the literals)
 - What changed (files, one line each)
-- Evidence: the RED failing assertion, the GREEN run, type-check and lint results (pasted)
+- Evidence: the RED failing assertion, the final gate run, type-check and lint results (pasted)
 - Review: table of findings (severity, file:line, fixed / disputed / deferred and why)
 - Decisions needed from you, assumptions made
 - Follow-ups
