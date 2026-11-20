@@ -28,6 +28,11 @@
         "fable"
       ]
     },
+    "updateWorkflow": {
+      "description": "When true, crew-vendor also copies a weekly GitHub Action (.github/workflows/crew-update.yml) that proposes crew updates as a pull request. When false or absent, the workflow is not copied, and one that crew-vendor wrote earlier is removed on the next apply.",
+      "type": "boolean",
+      "default": false
+    },
     "protectedBranches": {
       "description": "Branches that guard-destructive protects from force-push, deletion and (through an upstream) plain push. Entries that are not plain branch names are dropped. An empty or invalid list falls back to the default.",
       "type": "array",
@@ -79,7 +84,7 @@
                 "type": "string"
               },
               "path": {
-                "description": "Directory relative to the project root, for example apps/api/src. Must stay below the project (no ..).",
+                "description": "Directory relative to the project root, for example services/core/src. Must stay below the project (no ..).",
                 "type": "string",
                 "pattern": "^[A-Za-z0-9_./-]+$"
               },

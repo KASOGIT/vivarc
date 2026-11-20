@@ -2,6 +2,7 @@
   "$schema": "./crew.schema.json",
   "$comment": "Copy to <project>/.claude/crew.json. Every key is optional. This is a plausible single-package layout (src/<module>/..., TypeScript); adapt the paths and patterns to your project. Keys named $comment are ignored.",
   "baseBranch": "main",
+  "updateWorkflow": false,
   "protectedBranches": ["main", "master", "develop", "production"],
   "specFirst": {
     "$comment": "Before an existing production file under a root is edited, a test file must already be touched under the same module: modified, staged, untracked, or committed ahead of origin/<baseBranch>. Without a specFirst block the hook does nothing. ruleFile (optional) names a project file that explains the rule, for example docs/testing.md. For a flat folder (src/slugify.js with tests in test/), set moduleDepth to 0 and testRoots to ['test'] on the root.",

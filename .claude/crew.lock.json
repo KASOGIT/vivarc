@@ -1,5 +1,5 @@
 {
-  "revision": "2b8d62dcefcbd88ed13c1ce2d359808ba8236aba",
+  "revision": "5397c3bf9f28e3f968f9a492483d74748a90f676",
   "files": {
     ".claude/agents/architecture-planner.md": "c24035b627ca3cedff553586ce8f76d00d6cca772ca82972070a48602b8c9b8d",
     ".claude/agents/code-reviewer.md": "4831886461ac70003f9e3271a77013c75e71e64ceeda8a91f90bf872997dc62a",
@@ -8,13 +8,17 @@
     ".claude/agents/implementer.md": "86a08198114406fd4d5052ce43ddf8f19f173d427340ca4c4a8723b5e0e1540a",
     ".claude/agents/test-engineer.md": "6243ac1b1cce388892573760c8de9f36afb4c50490d4e3d3fb299e54b689bb6f",
     ".claude/agents/test-runner.md": "aa2e5bf3573fb531e1a33c4f1cb5de6609950edc9d37e6465f50cfd7db2b2cb5",
-    ".claude/hooks/crew/crew.example.json": "bca1a461db87da29e7f5a52acfe76b4657842c5916f640d5281a5d115c273e76",
-    ".claude/hooks/crew/crew.schema.json": "f3d83775ecac3240ffb72f36dc0394252e3ac9de4ce80b5694d6fbd4e160c396",
+    ".claude/hooks/crew/crew-update.sh": "38148dca6da78f87da3e125e2570825e2de20883abcde9e0d253d16ba68599d8",
+    ".claude/hooks/crew/crew-vendor": "a6281a25262b8b36947807657fbc07bfa1e0dcc04b3b3a4a111ef2a4982ba1a9",
+    ".claude/hooks/crew/crew.example.json": "79b92726aa1df75acf68fe0d5a6b0585bfa5fd5a23936f5bf3bdeac2bd30c076",
+    ".claude/hooks/crew/crew.schema.json": "8a26388341f4f6870f6bece74af82d86f94c79cf9ce6f90d4286a57bfd8f3b95",
     ".claude/hooks/crew/guard-destructive.sh": "850e3f77a5a583f15805d4201276f29c1d2607ec6016bce9f6fc48c8926b2a8b",
     ".claude/hooks/crew/require-spec-first.sh": "9d720b6cdbb1075049cf07139bfbf40a7ffcc6038a1a8b1569b62fa20d40345f",
+    ".claude/skills/crew-update/SKILL.md": "7d08e296d0f8e3e527ab059a7b3cccda928d5dddc1e08dd277324347b4df2451",
     ".claude/skills/debug/SKILL.md": "24ffdbc16e12e6de8fb96e547b1c21aa7f0e21e0048c4bfd08dead89dba5fb30",
     ".claude/skills/feature/SKILL.md": "b89066484b679e9301d8e3e9870a0797b1b245c47b2fca9c251181e781aa0e44",
-    ".claude/skills/review/SKILL.md": "2d854c7ece99f23c618c3e1167db3fbb3df6194b12e6697957af7def110fc9a2"
+    ".claude/skills/review/SKILL.md": "2d854c7ece99f23c618c3e1167db3fbb3df6194b12e6697957af7def110fc9a2",
+    ".github/workflows/crew-update.yml": "447b0e608fc37bc3161fec0c898eda4dd2749d573f2ceb9defac42c35113796a"
   },
   "hooks": [
     {

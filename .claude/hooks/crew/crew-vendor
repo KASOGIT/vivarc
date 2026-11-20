@@ -1,0 +1,373 @@
+#!/usr/bin/env bash
+# crew-vendor plan|apply|check [target-repo]
+# Writes a self-contained copy of this plugin into <target-repo>/.claude/ so the repo works without
+# the plugin installed: agents, skills (except adopt), hook scripts, and the hook entries merged into
+# .claude/settings.json. Records what it wrote in .claude/crew.lock.json.
+#   plan   show what would change, write nothing
+#   apply  write it; refuses (and writes nothing) on a clash with a file it did not write or on a local edit
+#   check  exit 1 and name the files when the copy is behind the plugin or was edited locally
+# A skill's frontmatter "model:" line is never copied as it is: the copy gets "model: <managerModel>" in
+# its place when <repo>/.claude/crew.json sets managerModel (sonnet, opus, haiku or fable), and no model
+# line otherwise. A bad managerModel or an unreadable crew.json exits 2 and writes nothing.
+# The plugin's vendor/ folder holds what an adopted repo needs to update itself and is not loaded as plugin
+# content: crew-update.sh and the crew-update skill are always copied, the crew-update GitHub workflow only
+# when <repo>/.claude/crew.json sets "updateWorkflow": true (a workflow crew-vendor wrote is deleted when it is not).
+# A non-boolean updateWorkflow exits 1 and writes nothing. This script is itself copied to
+# .claude/hooks/crew/crew-vendor so a repo updates with its own copy; CREW_PLUGIN_DIR names the plugin folder
+# to read from (default: this script's own plugin root).
+set -u
+
+if [ -n "${CREW_PLUGIN_DIR:-}" ]; then
+  [ -d "$CREW_PLUGIN_DIR" ] || { echo "crew-vendor: CREW_PLUGIN_DIR is not a directory: $CREW_PLUGIN_DIR" >&2; exit 2; }
+  PLUGIN="$(cd "$CREW_PLUGIN_DIR" && pwd)"
+else
+  PLUGIN="$(cd "$(dirname "$0")/.." && pwd)"
+fi
+SKILLS_NOT_COPIED="adopt"
+HOOKS_SUBDIR=".claude/hooks/crew"
+LOCK_REL=".claude/crew.lock.json"
+SETTINGS_REL=".claude/settings.json"
+
+die() { echo "crew-vendor: $*" >&2; exit 2; }
+command -v jq >/dev/null 2>&1 || die "jq is required"
+
+CMD="${1:-}"
+case "$CMD" in plan | apply | check) ;; *) die "usage: crew-vendor plan|apply|check [target-repo]" ;; esac
+[ -d "${2:-.}" ] || die "target is not a directory: ${2:-.}"
+TARGET="$(cd "${2:-.}" && pwd)"
+
+WORK="$(mktemp -d)"
+trap 'command rm -r -f "$WORK"' EXIT
+STAGE="$WORK/stage"
+mkdir -p "$STAGE"
+
+hash_of() {
+  if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | cut -d' ' -f1; else sha256sum "$1" | cut -d' ' -f1; fi
+}
+
+# Inside a repo the agents and skills are project ones, so namespaced references become bare names.
+strip_ns() { sed -e 's/crew:\([a-z]\)/\1/g' "$1" >"$2"; }
+
+# Sets MANAGER_MODEL from <repo>/.claude/crew.json (empty when the file or the key is absent).
+read_manager_model() {
+  local cfg="$TARGET/.claude/crew.json" mm
+  MANAGER_MODEL=""
+  [ -f "$cfg" ] || return 0
+  jq -e . "$cfg" >/dev/null 2>&1 || die "$cfg is not valid JSON; fix it first (nothing was changed)"
+  mm="$(jq -r 'if type == "object" and has("managerModel") then (.managerModel | if type == "string" then "S" + . else "X" end) else "" end' "$cfg")"
+  case "$mm" in
+    "") ;;
+    Ssonnet | Sopus | Shaiku | Sfable) MANAGER_MODEL="${mm#S}" ;;
+    *) die "managerModel in $cfg must be one of sonnet, opus, haiku, fable (nothing was changed)" ;;
+  esac
+}
+
+# Sets UPDATE_WORKFLOW to 1 when <repo>/.claude/crew.json has "updateWorkflow": true (read_manager_model validated the file).
+read_update_workflow() {
+  local cfg="$TARGET/.claude/crew.json"
+  UPDATE_WORKFLOW=0
+  [ -f "$cfg" ] || return 0
+  jq -e 'type != "object" or (has("updateWorkflow") | not) or (.updateWorkflow | type == "boolean")' "$cfg" >/dev/null 2>&1 ||
+    { echo "crew-vendor: updateWorkflow must be true or false (nothing was changed)" >&2; exit 1; }
+  jq -e 'type == "object" and .updateWorkflow == true' "$cfg" >/dev/null 2>&1 && UPDATE_WORKFLOW=1
+  return 0
+}
+
+# Replace the frontmatter model line of a copied skill by the repo's managerModel, or drop it.
+pin_model() {
+  awk -v m="$MANAGER_MODEL" '
+    NR == 1 && $0 == "---" { fm = 1; print; next }
+    fm && $0 == "---" { fm = 0 }
+    fm && /^model:/ { if (m != "" && !done) { print "model: " m; done = 1 } next }
+    { print }' "$1" >"$1.pin" && command mv -f "$1.pin" "$1"
+}
+
+build_stage() {
+  local f d name rel dest
+  if [ -d "$PLUGIN/agents" ]; then
+    mkdir -p "$STAGE/.claude/agents"
+    for f in "$PLUGIN"/agents/*.md; do
+      [ -f "$f" ] || continue
+      strip_ns "$f" "$STAGE/.claude/agents/$(basename "$f")"
+    done
+  fi
+  for d in "$PLUGIN"/skills/*/; do
+    [ -d "$d" ] || continue
+    name="$(basename "$d")"
+    case " $SKILLS_NOT_COPIED " in *" $name "*) continue ;; esac
+    (cd "$d" && find . -type f) | while IFS= read -r rel; do
+      rel="${rel#./}"
+      dest="$STAGE/.claude/skills/$name/$rel"
+      mkdir -p "$(dirname "$dest")"
+      case "$rel" in
+        SKILL.md) strip_ns "$d$rel" "$dest"; pin_model "$dest" ;;
+        *.md) strip_ns "$d$rel" "$dest" ;;
+        *) command cp -p "$d$rel" "$dest" ;;
+      esac
+    done
+  done
+  if [ -d "$PLUGIN/hooks" ]; then
+    (cd "$PLUGIN/hooks" && find . -type f ! -name hooks.json ! -path './tests/*') | while IFS= read -r rel; do
+      rel="${rel#./}"
+      dest="$STAGE/$HOOKS_SUBDIR/$rel"
+      mkdir -p "$(dirname "$dest")"
+      command cp -p "$PLUGIN/hooks/$rel" "$dest"
+    done
+  fi
+  if [ -f "$PLUGIN/bin/crew-vendor" ]; then
+    mkdir -p "$STAGE/$HOOKS_SUBDIR"
+    command cp -p "$PLUGIN/bin/crew-vendor" "$STAGE/$HOOKS_SUBDIR/crew-vendor"
+    chmod +x "$STAGE/$HOOKS_SUBDIR/crew-vendor"
+  fi
+  if [ -f "$PLUGIN/vendor/crew-update.sh" ]; then
+    mkdir -p "$STAGE/$HOOKS_SUBDIR"
+    command cp -p "$PLUGIN/vendor/crew-update.sh" "$STAGE/$HOOKS_SUBDIR/crew-update.sh"
+  fi
+  if [ -f "$PLUGIN/vendor/skills/crew-update/SKILL.md" ]; then
+    mkdir -p "$STAGE/.claude/skills/crew-update"
+    command cp -p "$PLUGIN/vendor/skills/crew-update/SKILL.md" "$STAGE/.claude/skills/crew-update/SKILL.md"
+  fi
+  if [ "$UPDATE_WORKFLOW" = 1 ] && [ -f "$PLUGIN/vendor/workflows/crew-update.yml" ]; then
+    mkdir -p "$STAGE/.github/workflows"
+    command cp -p "$PLUGIN/vendor/workflows/crew-update.yml" "$STAGE/.github/workflows/crew-update.yml"
+  fi
+}
+
+# new hooks, rewritten to point at the repo copy
+new_hooks_json() {
+  if [ -f "$PLUGIN/hooks/hooks.json" ]; then
+    # the variable name is split so the vendored copy of this script carries no such reference
+    local root_var="CLAUDE_PLUGIN"_ROOT
+    jq -c '.hooks // {}' "$PLUGIN/hooks/hooks.json" | sed -e "s#\\\${$root_var}/hooks/#\${CLAUDE_PROJECT_DIR}/$HOOKS_SUBDIR/#g"
+  else
+    echo '{}'
+  fi
+}
+
+lock_files() { [ -f "$TARGET/$LOCK_REL" ] && jq -r '.files | to_entries[] | "\(.key)\t\(.value)"' "$TARGET/$LOCK_REL" 2>/dev/null | LC_ALL=C sort; }
+lock_hook_cmds() { [ -f "$TARGET/$LOCK_REL" ] && jq -c '[.hooks[]?.command]' "$TARGET/$LOCK_REL" 2>/dev/null || echo '[]'; }
+
+# status lines "<STATE>\t<path>" for every file, in $WORK/status
+compute() {
+  local p dh lh sh
+  : >"$WORK/status"
+  lock_files >"$WORK/lock.tsv"
+  (cd "$STAGE" && find . -type f | sed 's#^\./##' | LC_ALL=C sort) >"$WORK/desired"
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    sh="$(hash_of "$STAGE/$p")"
+    lh="$(awk -F'\t' -v p="$p" '$1==p{print $2}' "$WORK/lock.tsv")"
+    if [ ! -e "$TARGET/$p" ]; then
+      printf 'NEW\t%s\n' "$p" >>"$WORK/status"
+    else
+      dh="$(hash_of "$TARGET/$p")"
+      if [ "$dh" = "$sh" ]; then printf 'SAME\t%s\n' "$p" >>"$WORK/status"
+      elif [ -z "$lh" ]; then printf 'CLASH\t%s\n' "$p" >>"$WORK/status"
+      elif [ "$dh" != "$lh" ]; then printf 'EDITED\t%s\n' "$p" >>"$WORK/status"
+      else printf 'UPDATE\t%s\n' "$p" >>"$WORK/status"; fi
+    fi
+  done <"$WORK/desired"
+  while IFS="$(printf '\t')" read -r p lh; do
+    [ -n "$p" ] || continue
+    grep -qxF -- "$p" "$WORK/desired" && continue
+    if [ ! -e "$TARGET/$p" ]; then printf 'GONE\t%s\n' "$p" >>"$WORK/status"
+    elif [ "$(hash_of "$TARGET/$p")" = "$lh" ]; then printf 'DELETE\t%s\n' "$p" >>"$WORK/status"
+    else printf 'EDITED\t%s\n' "$p" >>"$WORK/status"; fi
+  done <"$WORK/lock.tsv"
+  name_clashes >>"$WORK/status"
+}
+
+fm_name() {
+  awk 'NR==1&&$0!="---"{exit} NR>1&&$0=="---"{exit} NR>1&&/^name:/{sub(/^name:[ \t]*/,""); gsub(/^["\047]|["\047]$/,""); print; exit}' "$1"
+}
+
+# an existing agent or skill with the same frontmatter name as one being written is a clash, whatever its file name
+name_clashes() {
+  local p sname e en
+  while IFS= read -r p; do
+    case "$p" in
+      .claude/agents/*.md) kind=agent; root=".claude/agents"; pat='*.md'; dflt="$(basename "$p" .md)" ;;
+      .claude/skills/*/SKILL.md) kind=skill; root=".claude/skills"; pat='SKILL.md'; dflt="$(basename "$(dirname "$p")")" ;;
+      *) continue ;;
+    esac
+    sname="$(fm_name "$STAGE/$p")"; [ -n "$sname" ] || sname="$dflt"
+    [ -d "$TARGET/$root" ] || continue
+    (cd "$TARGET" && find "$root" -type f -name "$pat") | while IFS= read -r e; do
+      [ "$e" = "$p" ] && continue
+      en="$(fm_name "$TARGET/$e")"
+      [ -n "$en" ] || { if [ "$kind" = agent ]; then en="$(basename "$e" .md)"; else en="$(basename "$(dirname "$e")")"; fi; }
+      [ "$en" = "$sname" ] && printf 'CLASH\t%s (same %s name "%s" as %s)\n' "$e" "$kind" "$sname" "$p"
+    done
+  done <"$WORK/desired"
+}
+
+count() { grep -c "^$1	" "$WORK/status" 2>/dev/null || true; }
+names() { awk -F'\t' -v s="$1" '$1==s{print "  " $2}' "$WORK/status"; }
+
+# merged settings JSON on stdout. $1 = existing file (may be missing)
+merged_settings() {
+  local cur='{}'
+  [ -f "$1" ] && cur="$(cat "$1")"
+  printf '%s' "$cur" | jq --argjson new "$NEWHOOKS" --argjson old "$OLDCMDS" '
+    ([$new[]?[]?.hooks[]?.command]) as $newcmds
+    | ($old - $newcmds) as $drop
+    | if ($new | length) == 0 and ($drop | length) == 0 then .
+      else
+        (if ($drop | length) > 0 and (.hooks | type) == "object" then
+           .hooks |= with_entries(.value |= (map(.hooks |= map(select((.command // "") as $c | ($drop | index($c)) | not))) | map(select((.hooks | length) > 0))))
+         else . end)
+        | .hooks = (.hooks // {})
+        | reduce ($new | to_entries[]) as $e (.;
+            reduce $e.value[] as $g (.;
+              ([.hooks[$e.key] // [] | .[].hooks[]?.command]) as $present
+              | ($g.hooks | map(select(.command as $c | ($present | index($c)) | not))) as $add
+              | if ($add | length) == 0 then . else .hooks[$e.key] = ((.hooks[$e.key] // []) + [$g | .hooks = $add]) end))
+      end'
+}
+
+# Validate the existing settings.json and compute the merge before anything is written.
+# Sets SETTINGS_BEHIND (0 or 1). Dies, writing nothing, when the file cannot be merged safely.
+prepare_settings() {
+  local f="$TARGET/$SETTINGS_REL" cur="$WORK/settings.now" merged="$WORK/settings.merged" out
+  if [ -e "$f" ]; then
+    [ -s "$f" ] || die "$SETTINGS_REL is empty; fix or remove it first (nothing was changed)"
+    jq -e 'type == "object"' "$f" >/dev/null 2>&1 || die "$SETTINGS_REL is not a valid JSON object; fix it first (nothing was changed)"
+    jq -e '(.hooks // {}) | type == "object" and (to_entries | all(.value | type == "array" and all(.[]; type == "object" and ((.hooks // []) | type) == "array")))' "$f" >/dev/null 2>&1 ||
+      die "$SETTINGS_REL has an unexpected shape under \"hooks\" (it must map event names to arrays of groups with a \"hooks\" array); fix it first (nothing was changed)"
+    jq -c . "$f" >"$cur" || die "cannot read $SETTINGS_REL"
+  else
+    echo '{}' >"$cur"
+  fi
+  out="$(merged_settings "$f")" || die "cannot merge hooks into $SETTINGS_REL (nothing was changed)"
+  [ -n "$out" ] || die "merging into $SETTINGS_REL produced nothing (nothing was changed)"
+  printf '%s' "$out" | jq -c . >"$merged" || die "merged settings do not parse (nothing was changed)"
+  jq -e --slurpfile o "$cur" 'type == "object" and length >= ($o[0] | length) and (($o[0] | keys) - keys | length) == 0 and (del(.hooks) == ($o[0] | del(.hooks)))' "$merged" >/dev/null 2>&1 ||
+    die "merged settings failed validation, refusing to touch $SETTINGS_REL (nothing was changed)"
+  if cmp -s "$cur" "$merged"; then SETTINGS_BEHIND=0; else SETTINGS_BEHIND=1; fi
+}
+settings_behind() { [ "$SETTINGS_BEHIND" = 1 ]; }
+
+# write <src> to <dest> atomically: temp file in the same directory, then rename
+atomic_put() {
+  local tmp
+  mkdir -p "$(dirname "$2")"
+  tmp="$(dirname "$2")/.crew-vendor.tmp.$$"
+  command cp -p "$1" "$tmp" && command mv -f "$tmp" "$2" || { command rm -f "$tmp"; die "could not write $2"; }
+}
+
+write_settings() {
+  local f="$TARGET/$SETTINGS_REL" tmp
+  [ ! -e "$f" ] || [ -w "$f" ] || die "$SETTINGS_REL is read-only; refusing to replace it (nothing was changed)"
+  mkdir -p "$TARGET/.claude"
+  tmp="$TARGET/.claude/.crew-vendor.tmp.$$"
+  if [ -e "$f" ]; then command cp -p "$f" "$tmp"; else : >"$tmp"; fi
+  jq . "$WORK/settings.merged" >|"$tmp" && [ -s "$tmp" ] && jq -e . "$tmp" >/dev/null 2>&1 && command mv -f "$tmp" "$f" || { command rm -f "$tmp"; die "could not write $SETTINGS_REL (nothing was changed)"; }
+}
+
+lock_json() { # lock content without the revision, compact and sorted
+  local p
+  : >"$WORK/files.tsv"
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    printf '%s\t%s\n' "$p" "$(hash_of "$STAGE/$p")" >>"$WORK/files.tsv"
+  done <"$WORK/desired"
+  local files hooks
+  files="$(jq -R -s 'split("\n") | map(select(length > 0) | split("\t") | {key: .[0], value: .[1]}) | from_entries' "$WORK/files.tsv")"
+  hooks="$(printf '%s' "$NEWHOOKS" | jq -c '[to_entries[] | .key as $e | .value[].hooks[] | {event: $e, command: .command}]')"
+  jq -S -n -c --argjson files "$files" --argjson hooks "$hooks" '{files: $files, hooks: $hooks}'
+}
+
+lock_differs() {
+  [ -f "$TARGET/$LOCK_REL" ] || return 0
+  [ "$(jq -S -c '{files, hooks}' "$TARGET/$LOCK_REL" 2>/dev/null)" != "$(lock_json)" ]
+}
+
+write_lock() {
+  local rev="unknown"
+  if git -C "$PLUGIN" rev-parse HEAD >/dev/null 2>&1; then
+    rev="$(git -C "$PLUGIN" rev-parse HEAD)"
+    [ -n "$(git -C "$PLUGIN" status --porcelain -- . 2>/dev/null)" ] && rev="$rev+dirty"
+  fi
+  lock_json | jq --arg rev "$rev" '{revision: $rev} + .' >"$WORK/lock.out" || die "could not build the lock file"
+  atomic_put "$WORK/lock.out" "$TARGET/$LOCK_REL"
+}
+
+read_manager_model
+read_update_workflow
+build_stage
+NEWHOOKS="$(new_hooks_json)"
+OLDCMDS="$(lock_hook_cmds)"
+[ -n "$OLDCMDS" ] || OLDCMDS='[]'
+compute
+prepare_settings
+
+report_blockers() {
+  if [ "$(count CLASH)" -gt 0 ]; then
+    echo "Files that exist and were not written by crew-vendor (nothing was changed; decide per file):"
+    names CLASH
+  fi
+  if [ "$(count EDITED)" -gt 0 ]; then
+    echo "Files edited locally since crew-vendor wrote them (nothing was changed; revert or move them):"
+    names EDITED
+  fi
+}
+blocked() { [ "$(count CLASH)" -gt 0 ] || [ "$(count EDITED)" -gt 0 ]; }
+
+case "$CMD" in
+  plan)
+    echo "crew-vendor plan for $TARGET (plugin: $PLUGIN)"
+    for s in NEW UPDATE DELETE GONE SAME; do
+      [ "$(count $s)" -gt 0 ] && { echo "$s:"; names $s; }
+    done
+    awk -F'\t' '$1=="UPDATE"{print $2}' "$WORK/status" | while IFS= read -r p; do
+      diff -u "$TARGET/$p" "$STAGE/$p" | sed -e "1s#.*#--- $p (repo)#" -e "2s#.*#+++ $p (plugin)#"
+    done
+    # an edited file the plugin also changed: show the diff so the owner can pick keep or take
+    awk -F'\t' '$1=="EDITED"{print $2}' "$WORK/status" | while IFS= read -r p; do
+      [ -f "$STAGE/$p" ] && [ -f "$TARGET/$p" ] || continue
+      [ "$(hash_of "$STAGE/$p")" != "$(awk -F'\t' -v p="$p" '$1==p{print $2}' "$WORK/lock.tsv")" ] || continue
+      diff -u "$TARGET/$p" "$STAGE/$p" | sed -e "1s#.*#--- $p (repo)#" -e "2s#.*#+++ $p (plugin)#"
+    done
+    if settings_behind; then echo "SETTINGS: $SETTINGS_REL gets the crew hook entries (other keys and hooks untouched)"; fi
+    blocked && { report_blockers; exit 1; }
+    exit 0
+    ;;
+  check)
+    [ -f "$TARGET/$LOCK_REL" ] || { echo "crew-vendor check: $LOCK_REL not found, this repo was never vendored"; exit 1; }
+    problems=0
+    if [ "$(count EDITED)" -gt 0 ] || [ "$(count CLASH)" -gt 0 ]; then problems=1; echo "edited locally:"; names EDITED; names CLASH; fi
+    for s in NEW UPDATE DELETE GONE; do
+      if [ "$(count $s)" -gt 0 ]; then problems=1; echo "behind the plugin ($s):"; names $s; fi
+    done
+    if settings_behind; then problems=1; echo "behind the plugin: $SETTINGS_REL lacks the crew hook entries"; fi
+    if lock_differs; then problems=1; echo "lock file is incomplete or out of date: run crew-vendor apply"; fi
+    # a lock file may also point at a file that was deleted by hand
+    awk -F'\t' '{print $1}' "$WORK/lock.tsv" | while IFS= read -r p; do [ -e "$TARGET/$p" ] || echo "missing: $p"; done | grep . && problems=1
+    [ $problems -eq 0 ] && echo "crew-vendor check: up to date"
+    [ $problems -eq 0 ]
+    exit $?
+    ;;
+  apply)
+    if blocked; then report_blockers; exit 1; fi
+    if settings_behind && [ -e "$TARGET/$SETTINGS_REL" ] && [ ! -w "$TARGET/$SETTINGS_REL" ]; then
+      die "$SETTINGS_REL is read-only; refusing to replace it (nothing was changed)"
+    fi
+    changed=0
+    while IFS="$(printf '\t')" read -r s p; do
+      case "$s" in
+        NEW | UPDATE)
+          atomic_put "$STAGE/$p" "$TARGET/$p"; changed=1; echo "  wrote $p" ;;
+        DELETE)
+          command rm -f "$TARGET/$p"; rmdir "$(dirname "$TARGET/$p")" 2>/dev/null; changed=1; echo "  removed $p"
+          [ "$p" = ".github/workflows/crew-update.yml" ] && rmdir "$TARGET/.github" 2>/dev/null ;;
+        GONE) changed=1 ;;
+      esac
+    done <"$WORK/status"
+    if settings_behind; then
+      write_settings; changed=1; echo "  merged hooks into $SETTINGS_REL"
+    fi
+    if lock_differs; then write_lock; changed=1; fi
+    [ $changed -eq 0 ] && echo "crew-vendor apply: nothing to do"
+    exit 0
+    ;;
+esac
