@@ -451,10 +451,21 @@
   };
 
   // edit: the page's address to edit (Cmd+L). The target is then the page itself: Enter loads into it, and closing
-  // the bar never closes it (only a blank tab is closed, see removeBlankTab).
-  const open = (tabId, { edit = null } = {}) => {
-    if (!window.__vm.cssLoaded) return;
-    if (bar) { targetTab = tabId; return; }
+  // the bar never closes it (only a blank tab is closed, see removeBlankTab). windowId: the window of the tab event
+  // that asked for the bar, if any; only a normal, focused window opens it.
+  const open = async (tabId, { edit = null, windowId = null } = {}) => {
+    if (!window.__vm.cssLoaded || window.__vm.settings.isOpen?.()) return false;
+    try {
+      const win = await chrome.windows.getCurrent();
+      const kind = win.vivExtData ? JSON.parse(win.vivExtData).windowType : null;
+      if (win.type !== "normal" || (kind && kind !== "normal") || win.focused === false ||
+          (windowId != null && windowId !== win.id)) return false;
+    } catch (error) {
+      console.warn("[vivarc] cannot determine command bar window:", error);
+      return false;
+    }
+    if (!window.__vm.cssLoaded || window.__vm.settings.isOpen?.()) return false;
+    if (bar) { targetTab = tabId; return true; }
     targetTab = tabId;
     mode = null;
     computedFor = null;
@@ -501,6 +512,7 @@
     setTimeout(focus, 250);
     compute();
     window.dispatchEvent(new CustomEvent("vm-command-bar-opened"));
+    return true;
   };
 
   window.__vm.commandBar = { suggestionRow, splitView, closeSplitView };
@@ -526,11 +538,11 @@
     if (activeHistory.length > 6) activeHistory.shift();
   });
 
-  chrome.tabs.onCreated.addListener((tab) => {
+  chrome.tabs.onCreated.addListener(async (tab) => {
     // The landing tab of a space switch is not a new-tab request (the sidebar opens the bar on it once it is active).
     if (window.__vm.switchingSpace || Date.now() - startedAt < 5000 || !isBlank(tab) || tab.active === false) return;
     const previous = activeHistory.filter((id) => id !== tab.id).pop();
-    open(tab.id);
+    if (!(await open(tab.id, { windowId: tab.windowId }))) return;
     if (previous != null) {
       setTimeout(() => {
         if (bar && targetTab === tab.id) {
