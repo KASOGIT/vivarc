@@ -39,6 +39,42 @@ class ProfileMarkers(unittest.TestCase):
         self.assertEqual(urls, ["https://x.example/"])
 
 
+class ContainerMarkers(unittest.TestCase):
+    """Arc tags each container id with the marker before it, and can list the unpinned one first."""
+    def setUp(self):
+        sidebar = {"sidebar": {"containers": [{}, {
+            "items": [
+                {"id": "U", "data": {"list": {}}, "childrenIds": ["today"]},
+                {"id": "P", "data": {"list": {}}, "childrenIds": ["kept"]},
+                tab("today", "https://today.example/", "Today"),
+                tab("kept", "https://kept.example/", "Kept"),
+            ],
+            "spaces": [{"title": "S", "profile": "p1",
+                        "newContainerIDs": [{"unpinned": {"_0": {"shared": {}}}}, "U", {"pinned": {}}, "P"]}],
+            "topAppsContainerIDs": [],
+        }]}}
+        self.text, _ = arc_import.spaces_to_html(sidebar)["S"]
+
+    def section(self, heading):
+        start = self.text.index(f"<H3>{heading}</H3>")
+        return self.text[start:self.text.index("</DL><p>", start)]
+
+    def test_the_pinned_marker_picks_the_pinned_folder_even_when_unpinned_comes_first(self):
+        self.assertIn("https://kept.example/", self.section("Pinned"))
+        self.assertNotIn("https://today.example/", self.section("Pinned"))
+
+    def test_the_unpinned_marker_picks_the_unpinned_folder(self):
+        self.assertIn("https://today.example/", self.section("Unpinned (today)"))
+
+    def test_the_pinned_marker_first_is_read_the_same_way(self):
+        ids = [{"pinned": {}}, "P", {"unpinned": {"_0": {"shared": {}}}}, "U"]
+        self.assertEqual(arc_import.containers(ids), {"pinned": "P", "unpinned": "U"})
+
+    def test_a_single_marker_gives_the_other_role_to_the_other_id(self):
+        self.assertEqual(arc_import.containers([{"unpinned": {}}, "U", "P"]), {"pinned": "P", "unpinned": "U"})
+        self.assertEqual(arc_import.containers(["U", {"pinned": {}}, "P"]), {"pinned": "P", "unpinned": "U"})
+
+
 class ArcImport(unittest.TestCase):
     def setUp(self):
         self.text, self.urls = arc_import.spaces_to_html(SIDEBAR)["Home"]

@@ -29,6 +29,28 @@ def _container(sidebar):
     raise ValueError("no spaces found in StorableSidebar.json")
 
 
+def containers(new_container_ids):
+    """{"pinned": id, "unpinned": id} for a space.
+
+    Arc writes each container id after a marker such as {"pinned": {}} or {"unpinned": {...}}, in either order. With one
+    marker, the other id takes the other role. Without markers, the ids are taken as pinned then unpinned.
+    """
+    ids = [x for x in new_container_ids if isinstance(x, str)]
+    found = {}
+    for marker, value in zip(new_container_ids, new_container_ids[1:]):
+        if isinstance(marker, dict) and isinstance(value, str):
+            for key in ("pinned", "unpinned"):
+                if key in marker:
+                    found.setdefault(key, value)
+    if len(found) == 1:
+        (key, value), = found.items()
+        other = "unpinned" if key == "pinned" else "pinned"
+        found[other] = next(i for i in ids if i != value)
+    if found:
+        return found
+    return {"pinned": ids[0], "unpinned": ids[1]}
+
+
 def spaces_to_html(sidebar):
     """Return {space title: (html text, [urls])}."""
     c = _container(sidebar)
@@ -72,7 +94,7 @@ def spaces_to_html(sidebar):
     favorites = [(top[i], by_id[top[i + 1]]) for i in range(0, len(top) - 1, 2) if top[i + 1] in by_id]
     result = {}
     for space in (s for s in c["spaces"] if isinstance(s, dict)):
-        ids = [x for x in space["newContainerIDs"] if isinstance(x, str)]
+        ids = containers(space["newContainerIDs"])
         out = ["<!DOCTYPE NETSCAPE-Bookmark-file-1>",
                '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">',
                "<TITLE>Bookmarks</TITLE>", "<H1>Bookmarks</H1>", "<DL><p>",
@@ -83,8 +105,8 @@ def spaces_to_html(sidebar):
             folder("Favorites", fav, out, urls, 2)
         else:
             out += ["        <DT><H3>Favorites</H3>", "        <DL><p>", "        </DL><p>"]
-        folder("Pinned", by_id[ids[0]], out, urls, 2)
-        folder("Unpinned (today)", by_id[ids[1]], out, urls, 2)
+        folder("Pinned", by_id[ids["pinned"]], out, urls, 2)
+        folder("Unpinned (today)", by_id[ids["unpinned"]], out, urls, 2)
         out += ["    </DL><p>", "</DL><p>"]
         result[space["title"]] = ("\n".join(out) + "\n", urls)
     return result
