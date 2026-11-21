@@ -32,8 +32,8 @@ def _container(sidebar):
 def containers(new_container_ids):
     """{"pinned": id, "unpinned": id} for a space.
 
-    Arc writes each container id after a marker such as {"pinned": {}} or {"unpinned": {...}}, and lists the unpinned
-    one first. Without markers, the ids are taken as pinned then unpinned.
+    Arc writes each container id after a marker such as {"pinned": {}} or {"unpinned": {...}}, in either order. With one
+    marker, the other id takes the other role. Without markers, the ids are taken as pinned then unpinned.
     """
     ids = [x for x in new_container_ids if isinstance(x, str)]
     found = {}
@@ -42,7 +42,11 @@ def containers(new_container_ids):
             for key in ("pinned", "unpinned"):
                 if key in marker:
                     found.setdefault(key, value)
-    if len(found) == 2:
+    if len(found) == 1:
+        (key, value), = found.items()
+        other = "unpinned" if key == "pinned" else "pinned"
+        found[other] = next(i for i in ids if i != value)
+    if found:
         return found
     return {"pinned": ids[0], "unpinned": ids[1]}
 
