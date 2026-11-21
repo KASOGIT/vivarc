@@ -156,3 +156,22 @@ class DownloadsButton(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class BottomBarReserve(unittest.TestCase):
+    # The room the sidebar's tab list leaves under itself for Vivaldi's bottom toolbar.
+    def reserve(self, compact, profiles):
+        return js("spaces.bottomBarReserve(compact, profiles)", compact=compact, profiles=profiles)
+
+    def test_the_compact_bar_with_one_profile_leaves_room_for_the_taller_row_around_the_profile_picture(self):
+        self.assertEqual(self.reserve(True, [profile("A", "/p/1", active=True)]), 48)
+
+    def test_the_compact_bar_with_profile_chips_keeps_its_usual_room(self):
+        two = [profile("A", "/p/1", active=True), profile("B", "/p/2")]
+        self.assertEqual(self.reserve(True, two), 35)
+
+    def test_the_full_height_bar_keeps_its_usual_room_whatever_the_profiles(self):
+        two = [profile("A", "/p/1", active=True), profile("B", "/p/2")]
+        self.assertEqual(self.reserve(False, two), 64)
+        self.assertEqual(self.reserve(False, two[:1]), 64)

@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Fix: with a single profile, the sidebar's **bottom bar** puts Downloads on the left and your profile picture on the right, instead of both squeezed in the middle, and with **Compact bottom bar** on the profile picture no longer sits on the window's edge. The tab list fades out at its bottom edge while there are more tabs below, instead of being cut off, and at its top edge once you scroll.
 - Fix: on Windows, the hints in **Vivarc Settings** and the guide name Ctrl, Alt and the Windows menu instead of macOS keys and settings (Cmd+click, Cmd+T, Reduce Transparency, the menu bar).
 
 ## 0.1.34 - 2026-11-15

@@ -4,7 +4,7 @@
 (() => {
   const cfg = window.__vm.config;
   const BLANK = /^(chrome|vivaldi):\/\/(newtab|vivaldi-webui\/startpage)/;
-  const bottomToolbar = () => (window.__vm.settings.get("compactBottomBar") ? 35 : 64);
+  const bottomToolbar = () => window.__vm.spaces.bottomBarReserve(window.__vm.settings.get("compactBottomBar"), state.profiles);
 
   const store = window.__vm.store;
   const openFolders = new Set();
@@ -794,6 +794,7 @@
         state.profiles = list || [];
         renderProfileBar();
         placeProfileBar();
+        fitHeight();
         window.__vm.spaces.syncBottomBar(window.__vm.spaces.wantsAccountButton(state.profiles)).catch((e) => console.warn("[vivarc] bottom bar:", e));
       });
     } catch (e) {

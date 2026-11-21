@@ -83,6 +83,20 @@
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: none;
+  /* Rows fade out at an edge only while there is more to scroll that way, instead of being cut off at the bottom of
+     the sidebar. A box that does not scroll has an inactive timeline: no fade. */
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--vm-fade-top),
+    #000 calc(100% - var(--vm-fade-bottom)), transparent);
+  animation: vm-scroll-fade linear both;
+  animation-timeline: scroll(self);
+}
+@property --vm-fade-top { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --vm-fade-bottom { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@keyframes vm-scroll-fade {
+  from { --vm-fade-top: 0px; --vm-fade-bottom: 28px; }
+  6% { --vm-fade-top: 20px; }
+  94% { --vm-fade-bottom: 28px; }
+  to { --vm-fade-top: 20px; --vm-fade-bottom: 0px; }
 }
 #vm-panel .vm-favs {
   flex: none;
@@ -631,6 +645,34 @@
   min-width: 0 !important;
 }
 #browser.vm-on .toolbar-tabbar-after > .vm-spaces { margin-bottom: 6px; }
+/* A single profile (no chips): Downloads bottom-left (where Arc keeps its Library) and the account button
+   bottom-right, instead of Vivaldi's column centring both. The first flexible spacer pushes the account button (and
+   anything after it) to the right; the others go. */
+#browser.vm-on #tabs-tabbar-container .toolbar-tabbar-after:not(:has(> .vm-spaces)) {
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding-inline: 10px !important;
+}
+#browser.vm-on .toolbar-tabbar-after:not(:has(> .vm-spaces)) > .toolbar-spacer-flexible {
+  display: flex !important;
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+#browser.vm-on .toolbar-tabbar-after:not(:has(> .vm-spaces)) > .toolbar-spacer-flexible ~ .toolbar-spacer-flexible { display: none !important; }
+#browser.vm-on .toolbar-tabbar-after:not(:has(> .vm-spaces)) > .tabbar-nested-buttons { width: auto !important; flex: none; }
+/* Downloads, as its own button or in Vivaldi 8.3's wrapper */
+#browser.vm-on .toolbar-tabbar-after:not(:has(> .vm-spaces))
+  > :is([data-name="PanelDownloads"], :has([data-name="PanelDownloads"])) { order: -1; }
+/* The compact bar is 21px, shorter than the profile picture, which then sits on the window's edge: with one profile it
+   is a 34px row with 6px under it. bottomBarReserve (06-spaces.js) leaves the matching room under the tab list. */
+#browser.vm-on.vm-compact-bottom #tabs-tabbar-container .toolbar-tabbar-after:not(:has(> .vm-spaces)) {
+  box-sizing: border-box !important;
+  height: 34px !important;
+  padding-bottom: 6px !important;
+}
 #browser.vm-on .vm-space-chip {
   display: flex;
   align-items: center;
