@@ -40,7 +40,7 @@ class ProfileMarkers(unittest.TestCase):
 
 
 class ContainerMarkers(unittest.TestCase):
-    """Arc tags each container id with the marker before it, and lists the unpinned one first."""
+    """Arc tags each container id with the marker before it, and can list the unpinned one first."""
     def setUp(self):
         sidebar = {"sidebar": {"containers": [{}, {
             "items": [
@@ -65,6 +65,15 @@ class ContainerMarkers(unittest.TestCase):
 
     def test_the_unpinned_marker_picks_the_unpinned_folder(self):
         self.assertIn("https://today.example/", self.section("Unpinned (today)"))
+
+    def test_the_pinned_marker_first_is_read_the_same_way(self):
+        ids = [{"pinned": {}}, "P", {"unpinned": {"_0": {"shared": {}}}}, "U"]
+        self.assertEqual(arc_import.containers(ids), {"pinned": "P", "unpinned": "U"})
+
+    def test_a_single_marker_gives_the_other_role_to_the_other_id(self):
+        self.assertEqual(arc_import.containers([{"unpinned": {}}, "U", "P"]), {"pinned": "P", "unpinned": "U"})
+        self.assertEqual(arc_import.containers(["U", {"pinned": {}}, "P"]), {"pinned": "P", "unpinned": "U"})
+
 
 class ArcImport(unittest.TestCase):
     def setUp(self):
