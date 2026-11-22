@@ -32,7 +32,7 @@
 #           touched. Claude then tells the developer in one line and writes the test before any
 #           further edit there, or says why the edit is exempt. The text reaches Claude next to the
 #           tool result, so it cannot undo the edit that triggered it. The marker file
-#           ${TMPDIR:-/tmp}/crew-spec-first-nudge-<uid>-<hash of session_id, module and agent_id>
+#           ${TMPDIR:-/tmp}/crew-spec-first-nudge-<uid>-<hash of session_id, root (with its prefix directory), module and agent_id>
 #           is created only when nudging; TMPDIR must be absolute. No session_id, no nudge.
 #   shadow  log would-be blocks, allow the edit, say nothing
 #   enforce exit 2 with a reason on stderr
@@ -71,6 +71,9 @@ trap 'exit 0' ERR
 FALLBACK_PATH="${CREW_FALLBACK_PATH-/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin}"
 [[ -z "$FALLBACK_PATH" ]] || PATH="${PATH:+$PATH:}$FALLBACK_PATH"
 
+# No config in a known project dir: stop before forking cat and jq.
+if [[ -n "${CLAUDE_PROJECT_DIR:-}" && -d "$CLAUDE_PROJECT_DIR" && ! -f "$CLAUDE_PROJECT_DIR/.claude/crew.json" ]]; then exit 0; fi
+
 command -v jq >/dev/null 2>&1 || exit 0
 command -v git >/dev/null 2>&1 || exit 0
 
@@ -96,7 +99,6 @@ CFG_FILTER='
 BASE_BRANCH=main
 CFG_MODE=""
 RULE=""
-HAVE_CFG=false
 ROOTS_PATH=()
 ROOTS_DEPTH=()
 ROOTS_SHARED=()
@@ -104,9 +106,10 @@ ROOTS_TESTROOTS=()
 EXTS=()
 TESTS=()
 IGNORES=()
+CFG_OUT="$(jq -r "$CFG_FILTER" "$CONF" 2>/dev/null)" || exit 0
 while IFS=$'\x1f' read -r KIND A B C D; do
   case "$KIND" in
-    S) HAVE_CFG=true; BASE_BRANCH="$A"; CFG_MODE="$B"; RULE="$C" ;;
+    S) BASE_BRANCH="$A"; CFG_MODE="$B"; RULE="$C" ;;
     R)
       RP="$A"
       while [[ "$RP" == ./* ]]; do RP="${RP#./}"; done
@@ -129,8 +132,9 @@ while IFS=$'\x1f' read -r KIND A B C D; do
     T) TESTS+=("$A") ;;
     I) IGNORES+=("$A") ;;
   esac
-done < <(jq -r "$CFG_FILTER" "$CONF" 2>/dev/null || true)
-[[ "$HAVE_CFG" == true && ${#ROOTS_PATH[@]} -gt 0 && ${#EXTS[@]} -gt 0 ]] || exit 0
+done <<<"$CFG_OUT"
+[[ ${#ROOTS_PATH[@]} -gt 0 && ${#EXTS[@]} -gt 0 ]] || exit 0
+[[ ${#TESTS[@]} -gt 0 ]] || TESTS=("*.spec.*" "*.test.*" "*_test.*" "test_*.*")
 [[ "$BASE_BRANCH" =~ ^[A-Za-z0-9._/-]+$ ]] || exit 0
 
 RAW_MODE="${CREW_POLICY_MODE:-}"
@@ -144,37 +148,21 @@ esac
 
 ABS="$FILE"
 [[ "$ABS" == /* ]] || ABS="${CWD:-$PWD}/$FILE"
+if [[ "$ABS" == *//* || "$ABS" == */./* || "$ABS" == */../* || "$ABS" == */. || "$ABS" == */.. ]]; then
+  IFS=/ read -ra PARTS <<<"$ABS"
+  NSTACK=0
+  for P in "${PARTS[@]}"; do
+    case "$P" in
+      "" | .) ;;
+      ..) [[ $NSTACK -eq 0 ]] || NSTACK=$((NSTACK - 1)) ;;
+      *) STACK[NSTACK]="$P"; NSTACK=$((NSTACK + 1)) ;;
+    esac
+  done
+  ABS=""
+  for ((IDX = 0; IDX < NSTACK; IDX++)); do ABS+="/${STACK[IDX]}"; done
+fi
 
-# Production edit: a file inside a module directory of a configured root.
-BS='\'
-MATCHED=false
-IDX=0
-while [[ $IDX -lt ${#ROOTS_PATH[@]} ]]; do
-  RPATH="${ROOTS_PATH[$IDX]}"
-  ESC="${RPATH//./$BS.}"
-  if [[ "${ROOTS_DEPTH[$IDX]}" == 0 ]]; then
-    RE="^(.*/)?${ESC}/(.+)\$"
-  else
-    RE="^(.*/)?${ESC}/(([^/]+/){${ROOTS_DEPTH[$IDX]}})(.+)\$"
-  fi
-  if [[ "$ABS" =~ $RE ]]; then
-    ROOT="${BASH_REMATCH[1]:-./}"
-    if [[ "${ROOTS_DEPTH[$IDX]}" == 0 ]]; then
-      CTX=""
-      REST="${BASH_REMATCH[2]}"
-    else
-      CTX="${BASH_REMATCH[2]%/}"
-      REST="${BASH_REMATCH[4]}"
-    fi
-    SHARED="${ROOTS_SHARED[$IDX]}"
-    TESTROOTS="${ROOTS_TESTROOTS[$IDX]}"
-    MATCHED=true
-    break
-  fi
-  IDX=$((IDX + 1))
-done
-[[ "$MATCHED" == true ]] || exit 0
-BASE="${REST##*/}"
+BASE="${ABS##*/}"
 
 EXT_OK=false
 for EXT in "${EXTS[@]}"; do
@@ -187,6 +175,88 @@ for PAT in "${TESTS[@]}"; do
   if [[ "$BASE" == $PAT ]]; then exit 0; fi
 done
 
+# The file must sit inside the project; its root is the first directory below it that matches a root,
+# so a file in another repo or under node_modules is not gated.
+# A case-insensitive filesystem (the config also opens under an upper-case name) matches ignoring case.
+CI_FS=false
+[[ ! -e "${CONF%crew.json}CREW.JSON" ]] || CI_FS=true
+[[ "$CI_FS" == false ]] || shopt -s nocasematch
+PROJ_P="${PROJ%/}"
+# Absolute, resolved common git dir of a directory (git before 2.31 prints it relative).
+git_common() {
+  local c
+  c="$(git -C "$1" rev-parse --git-common-dir 2>/dev/null)" || return 1
+  [[ "$c" == /* ]] || c="$(cd -P "$1/$c" 2>/dev/null && pwd)" || return 1
+  printf '%s' "$c"
+}
+if [[ "$ABS" != "$PROJ_P"/* ]]; then
+  cd -P "$PROJ" 2>/dev/null || exit 0
+  PROJ_P="${PWD%/}"
+  PD="${ABS%/*}"
+  TAIL="${ABS##*/}"
+  while [[ -n "$PD" && ! -d "$PD" ]]; do TAIL="${PD##*/}/$TAIL"; PD="${PD%/*}"; done
+  cd -P "${PD:-/}" 2>/dev/null || exit 0
+  ABS="${PWD%/}/$TAIL"
+  if [[ "$ABS" != "$PROJ_P"/* ]]; then
+    # Outside the project folder: only a worktree of the project's own repo counts, and it is its own prefix.
+    { read -r WT_TOP; read -r WT_COMMON; } <<<"$(git rev-parse --show-toplevel --git-common-dir 2>/dev/null)"
+    [[ -n "$WT_COMMON" ]] || exit 0
+    [[ "$WT_COMMON" == /* ]] || WT_COMMON="$(cd -P "$WT_COMMON" 2>/dev/null && pwd)" || exit 0
+    [[ "$(git_common "$PROJ_P")" == "$WT_COMMON" ]] || exit 0
+    PROJ_P="${WT_TOP%/}"
+    [[ "$ABS" == "$PROJ_P"/* ]] || exit 0
+  fi
+fi
+PREL="${ABS:${#PROJ_P}+1}"
+[[ "/$PREL" != */node_modules/* ]] || exit 0
+
+# Production edit: a file inside a module directory of a configured root. Of the roots that match,
+# the one starting earliest in the path wins (the longest remainder).
+BS='\'
+MATCHED=false
+BEST_SUB=""
+IDX=0
+while [[ $IDX -lt ${#ROOTS_PATH[@]} ]]; do
+  ESC="${ROOTS_PATH[$IDX]//./$BS.}"
+  if [[ "${ROOTS_DEPTH[$IDX]}" == 0 ]]; then
+    RE="^${ESC}/(.+)\$"
+  else
+    RE="^${ESC}/(([^/]+/){${ROOTS_DEPTH[$IDX]}})(.+)\$"
+  fi
+  SUB="$PREL"
+  while [[ ! "$SUB" =~ $RE && "$SUB" == */* ]]; do SUB="${SUB#*/}"; done
+  if [[ "$SUB" =~ $RE && ( "$MATCHED" == false || ${#SUB} -gt ${#BEST_SUB} ) ]]; then
+    BEST_SUB="$SUB"
+    RPATH="${ROOTS_PATH[$IDX]}"
+    if [[ "${ROOTS_DEPTH[$IDX]}" == 0 ]]; then
+      CTX=""
+      REST="${BASH_REMATCH[1]}"
+    else
+      CTX="${BASH_REMATCH[1]%/}"
+      REST="${BASH_REMATCH[3]}"
+    fi
+    SHARED="${ROOTS_SHARED[$IDX]}"
+    TESTROOTS="${ROOTS_TESTROOTS[$IDX]}"
+    MATCHED=true
+  fi
+  IDX=$((IDX + 1))
+done
+[[ "$MATCHED" == true ]] || exit 0
+shopt -u nocasematch
+
+# A directory with its own .git between the project and the root is another repo (a worktree of the
+# project's repo stays gated).
+PFX="${PREL%"$BEST_SUB"}"
+ROOT="$PROJ_P/$PFX"
+NEST="$PROJ_P"
+while [[ -n "$PFX" ]]; do
+  NEST="$NEST/${PFX%%/*}"
+  PFX="${PFX#*/}"
+  if [[ -e "$NEST/.git" ]]; then
+    [[ "$(git_common "$NEST")" == "$(git_common "$PROJ_P")" ]] || exit 0
+    break
+  fi
+done
 TARGET="/${CTX:+$CTX/}$REST"
 BUILTIN_DIR_RE='/(fixtures?|tests?|__tests__|__fixtures__|__snapshots__|__mocks__)/'
 BUILTIN_SUFFIX_RE='\.(fixtures?|e2e-fixture|mock|stub|test-utils)\.[A-Za-z0-9]+$'
@@ -239,7 +309,7 @@ BRANCH="$(g symbolic-ref --short -q HEAD || true)"
 
 NUDGED=false
 if [[ "$MODE" == nudge && "$NEW" == false && -n "$SID" ]]; then
-  read -r HASH LEN _ <<<"$(printf '%s\n%s\n%s' "$SID" "$CTX" "$AGENT" | cksum)"
+  read -r HASH LEN _ <<<"$(printf '%s\n%s\n%s\n%s' "$SID" "${ROOT#"$PROJ_P"/}$RPATH" "$CTX" "$AGENT" | cksum)"
   MARKER_DIR="${TMPDIR:-/tmp}"
   MARKER="${MARKER_DIR%/}/crew-spec-first-nudge-$UID-$HASH-$LEN"
   if [[ "$MARKER_DIR" == /* && ! -e "$MARKER" ]] && (set -C; : >"$MARKER") 2>/dev/null; then NUDGED=true; fi
