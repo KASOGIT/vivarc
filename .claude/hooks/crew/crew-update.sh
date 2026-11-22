@@ -36,7 +36,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-RESULT=""; BRANCH=""
+RESULT=""; BRANCH=""; EXISTS=0
 
 # lastline <text>: the last non-empty line
 lastline() { printf '%s\n' "$1" | grep -v '^[[:space:]]*$' | tail -n 1; }
@@ -58,7 +58,7 @@ create_pr() {
 rv() { env -u GH_TOKEN -u GITHUB_TOKEN CREW_PLUGIN_DIR="$src/crew" "$vendor" "$@"; }
 
 update() {
-  local out rc base rev prs vendor oldrev newrev scope subj files body blk clash edited lockrev allowed p stage src
+  local out rc base rev prs vendor oldrev newrev scope subj files body blk clash edited lockrev allowed p src same
   out="$(git -C "$ROOT" fetch -q origin 2>&1)" || { RESULT="error (git fetch origin failed: $(printf '%s' "$out" | head -n 1))"; return 1; }
   base="$(git -C "$ROOT" ls-remote --symref origin HEAD 2>/dev/null | awk '/^ref: refs\/heads\// { sub(/^ref: refs\/heads\//, ""); sub(/[ \t]+HEAD$/, ""); print; exit }')"
   if [ -z "$base" ] || ! git -C "$ROOT" rev-parse --verify -q "refs/remotes/origin/$base" >/dev/null; then
@@ -95,7 +95,8 @@ update() {
         create_pr "$base" "$subj" "$body"; return
       fi
     fi
-    RESULT="skipped (already proposed: $BRANCH)"; return 0
+    [ "$LOCAL" -eq 0 ] && [ "$DRY" -eq 1 ] && { RESULT="skipped (already proposed: $BRANCH)"; return 0; }
+    EXISTS=1
   fi
 
   WT="$TMP/wt"
@@ -123,22 +124,30 @@ update() {
   if rv check "$WT" >/dev/null 2>&1; then RESULT="up-to-date"; return 0; fi
   if [ "$DRY" -eq 1 ]; then printf '%s\n' "$out"; RESULT="dry-run"; return 0; fi
 
-  allowed="$(printf '%s\n' "$out" | awk '/^(NEW|UPDATE|DELETE):$/ {f=1; next} f && /^  [^ ]/ {sub(/^  /, ""); print; next} {f=0}')
+  allowed="$(printf '%s\n' "$out" | awk '/^(NEW|UPDATE|MODE|DELETE):$/ {f=1; next} f && /^  [^ ]/ {sub(/^  /, ""); print; next} {f=0}')
 $LOCK
 .claude/settings.json"
+  # a settings.json symlinked to a tracked file: the file it points to is part of the plan
+  if [ -L "$WT/.claude/settings.json" ]; then
+    p="$(perl -MCwd=realpath -e 'print realpath(shift)' "$WT/.claude/settings.json" 2>/dev/null)"; same="$(cd "$WT" && pwd -P)"
+    case "$p" in "$same"/*) allowed="$allowed
+${p#"$same"/}" ;; esac
+  fi
   out="$(rv apply "$WT" 2>&1)" || { printf '%s\n' "$out"; RESULT="error (crew-vendor apply failed)"; return 1; }
   out="$(rv check "$WT" 2>&1)" || { printf '%s\n' "$out"; RESULT="error (crew-vendor check fails after apply)"; return 1; }
-  stage=""
+  while IFS= read -r -d '' p; do
+    p="${p:3}"
+    printf '%s\n' "$allowed" | grep -qxF -- "$p" || { RESULT="error (unexpected change: $p)"; return 1; }
+  done < <(git -C "$WT" status --porcelain -z --untracked-files=all)
+  # -f: a path the repo's .gitignore matches is still part of the plan
   while IFS= read -r p; do
     [ -n "$p" ] || continue
-    printf '%s\n' "$allowed" | grep -qxF -- "$p" || { RESULT="error (unexpected change: $p)"; return 1; }
-    stage="$stage$p
-"
-  done <<END_STATUS
-$(git -C "$WT" status --porcelain --untracked-files=all | cut -c4-)
-END_STATUS
-  while IFS= read -r p; do [ -n "$p" ] && git -C "$WT" add -A -- "$p"; done <<END_STAGE
-$stage
+    if [ -e "$WT/$p" ] || git -C "$WT" ls-files --error-unmatch -- "$p" >/dev/null 2>&1; then
+      git -C "$WT" add -f -A -- "$p" >/dev/null 2>&1 || { RESULT="error (cannot stage $p)"; return 1; }
+      [ ! -e "$WT/$p" ] || git -C "$WT" ls-files --error-unmatch -- "$p" >/dev/null 2>&1 || { RESULT="error (not staged: $p)"; return 1; }
+    fi
+  done <<END_STAGE
+$allowed
 END_STAGE
   files="$(git -C "$WT" diff --cached --name-only)"
   [ -n "$files" ] || { RESULT="up-to-date"; return 0; }
@@ -156,10 +165,37 @@ $(printf '%s\n' "$files" | sed 's/^/- /')
 
 Crew revision: $(printf '%s' "$oldrev" | cut -c1-7) -> $(printf '%s' "$newrev" | cut -c1-7)"
   out="$(git -C "$WT" -c commit.gpgsign=false commit -q -m "$subj" -m "$body" 2>&1)" || { RESULT="error (commit failed: $(lastline "$out"))"; return 1; }
+  if [ "${EXISTS:-0}" -eq 1 ]; then
+    # the branch of an earlier run blocks unless it was merged since (strictly behind the base) and no longer holds this plan
+    out="$(git -C "$WT" fetch -q origin "refs/heads/$BRANCH" 2>&1)" || { RESULT="error (git fetch $BRANCH failed: $(lastline "$out"))"; return 1; }
+    same=1
+    while IFS= read -r p; do
+      [ "$(git -C "$WT" rev-parse -q --verify "FETCH_HEAD:$p" 2>/dev/null)" = "$(git -C "$WT" rev-parse -q --verify "HEAD:$p" 2>/dev/null)" ] || same=0
+    done <<END_SAME
+$files
+END_SAME
+    if [ "$same" -eq 1 ] || [ "$(git -C "$WT" rev-parse FETCH_HEAD)" = "$(git -C "$ROOT" rev-parse "origin/$base")" ] \
+      || ! git -C "$ROOT" merge-base --is-ancestor "$(git -C "$WT" rev-parse FETCH_HEAD)" "origin/$base"; then
+      RESULT="skipped (already proposed: $BRANCH)"; return 0
+    fi
+    # named after the planned content, so the same plan finds its branch again whatever the base does meanwhile
+    same="$(printf '%s\n' "$files" | while IFS= read -r p; do printf '%s %s\n' "$p" "$(git -C "$WT" rev-parse -q --verify "HEAD:$p")"; done | git -C "$WT" hash-object --stdin | cut -c1-7)"
+    BRANCH="$BRANCH-$same"
+    if [ "$LOCAL" -eq 1 ] && git -C "$ROOT" show-ref -q --verify "refs/heads/$BRANCH"; then RESULT="skipped (already committed: $BRANCH)"; return 0; fi
+    if git -C "$ROOT" ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+      RESULT="skipped (already proposed: $BRANCH)"
+      [ "$LOCAL" -eq 0 ] || return 0
+      prs="$(cd "$ROOT" && gh pr list --head "$BRANCH" --state all --json number --jq length 2>&1)" \
+        || { RESULT="error (gh pr list failed: $(lastline "$prs"))"; return 1; }
+      [ "$prs" = 0 ] || return 0
+      create_pr "$base" "$subj" "$body"; return
+    fi
+  fi
   if [ "$LOCAL" -eq 1 ]; then
     out="$(git -C "$WT" branch "$BRANCH" 2>&1)" || { RESULT="error (branch $BRANCH: $(printf '%s' "$out" | head -n 1))"; return 1; }
     RESULT="committed $BRANCH"; return 0
   fi
+  command -v gh >/dev/null 2>&1 || { RESULT="error (gh is required to open the PR, so nothing was sent to origin; use --local to commit only)"; return 1; }
   out="$(git -C "$WT" push -q origin "HEAD:refs/heads/$BRANCH" 2>&1)" || { RESULT="error (push failed: $(lastline "$out"))"; return 1; }
   create_pr "$base" "$subj" "$body"
 }
