@@ -21,13 +21,15 @@ Long commands: run them in the foreground with the Bash timeout set to 600000 ms
 
 ## Scope
 
+- The run directory is the folder the caller says to run from (for example `<repo>/packages/a`), not the repository root or the session's working directory unless the caller asks for that. Use its absolute path after `-C` in every git command below, the same path in each.
 - The caller names a scope: test paths, `affected`, or `full`. No scope given means the full suite when the request includes tests; a lint-only or type-check-only request runs no tests.
 - Scopes combine: test paths plus `affected` runs both sets. With test paths as the sole scope, run only those files, with the project's one-test command.
 - The caller passes the base branch for `affected`.
-- Changed files: `git diff --name-only --relative <base>` (committed and uncommitted changes since base, paths relative to the run directory), plus `git ls-files --others --exclude-standard` for untracked files. `--relative` hides changed files outside the run directory, so also run `git diff --name-only <base>` without `--relative` and compare the two lists.
+- First step for `affected`: run `git -C <run directory> diff --name-only --merge-base <base> -- ':/' ':(exclude).'` and `git -C <run directory> ls-files --others --exclude-standard -- ':/' ':(exclude).'`, each on its own, not chained after other commands, and read their output and exit code. Always pass the run directory with `-C` to every `git diff --name-only` and `git ls-files --others --exclude-standard` call, since the shell's folder can reset between calls. They list the changed and untracked files outside the run directory. Any output, or a non-zero exit from either, means: run the full suite and say why on the first line. Only when both print nothing, list and map the changed files inside the run directory.
+- Changed files inside the run directory: `git -C <run directory> diff --name-only --relative --merge-base <base>` (committed and uncommitted changes since the branch left base, paths relative to the run directory), plus `git -C <run directory> ls-files --others --exclude-standard` for untracked files. `--merge-base` compares with the point where the branch left base, so commits that landed on base later do not count as changes.
 - Related tests: use the tool's own related mode where it exists (`vitest related <files>`, `jest --findRelatedTests <files>`).
 - Elsewhere (pytest, `go test` and the rest) map by test naming, folder or package.
-- Run the full suite instead, and say so on the first line, when: the base is missing or a git command fails, the changed set is empty, a changed file is not source code (config, SQL, fixtures, a deleted file), a changed file lies outside the run directory (`--relative` hides it), you cannot map a changed file to tests, or the selection is zero tests. Never skip silently.
+- Run the full suite instead, and say so on the first line, when: the base is missing or a git command fails, the changed set is empty, a changed file is not source code (config, SQL, fixtures, a deleted file), a changed file lies outside the run directory (the first step), you cannot map a changed file to tests, or the selection is zero tests. Never skip silently.
 - Type-check and lint, when requested, run on the whole project.
 
 ## Hand back

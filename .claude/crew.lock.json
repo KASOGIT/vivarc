@@ -1,5 +1,5 @@
 {
-  "revision": "2238035915604663a49f4b4be34f8429aa9bca53",
+  "revision": "b40ace0f89459005505ec5fe6d217644c3cb6f0a",
   "files": {
     ".claude/agents/architecture-planner.md": "9fe84b27bbf54531fb9e0e7307e46e5445d8da19113397613ba321e4e929baa2",
     ".claude/agents/code-reviewer.md": "bdc77fdc2ad18ec4007aec1cbdc6c1dc1e89328e8f5ba200c0436063c949d806",
@@ -7,7 +7,7 @@
     ".claude/agents/domain-researcher.md": "08b178df5d19c0ba3e4da6092bcaed6d223099d44caf1cc129707169f304e8bc",
     ".claude/agents/implementer.md": "2d472b701c1ec1d8950bc8d80dec59e16ce9acd638de74abc36e4142b1764aaa",
     ".claude/agents/test-engineer.md": "23e008b29aa1fe63ee642f8be072e9ffa36d9c9acaf04f4859eff74d7c6cfcd7",
-    ".claude/agents/test-runner.md": "5028757d009882b08bd2a6ea2288b5db0a1ee343a30717a20e03bfc87026d543",
+    ".claude/agents/test-runner.md": "2f667cb0ae14964f2d41b832ead3f82da0c643b2b67bae94f4f96c42815c506d",
     ".claude/hooks/crew/crew-update.sh": "6e11e181fdd92b059ba71820ee43d02fd819528ff191e6398448310339b5a5d8",
     ".claude/hooks/crew/crew-vendor": "7f3ba51f5364c04d8920e84d41b2b9855eea99eb683cf5c47048c241a96437d4",
     ".claude/hooks/crew/crew.example.json": "79b92726aa1df75acf68fe0d5a6b0585bfa5fd5a23936f5bf3bdeac2bd30c076",
@@ -24,12 +24,29 @@
   },
   "hooks": [
     {
-      "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/crew/guard-destructive.sh\"",
-      "event": "PreToolUse"
+      "event": "PreToolUse",
+      "group": {
+        "hooks": [
+          {
+            "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/crew/guard-destructive.sh\"",
+            "onFailure": "block",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      }
     },
     {
-      "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/crew/require-spec-first.sh\"",
-      "event": "PreToolUse"
+      "event": "PreToolUse",
+      "group": {
+        "hooks": [
+          {
+            "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/crew/require-spec-first.sh\"",
+            "type": "command"
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit"
+      }
     }
   ]
 }
