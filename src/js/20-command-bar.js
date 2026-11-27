@@ -179,6 +179,7 @@
   let selected = 0;
   let seq = 0;
   let autoCompleted = false;
+  let arrowed = false;
   let computedFor = null;
 
   const iconFor = (url, favicon) => {
@@ -360,6 +361,7 @@
       if (id !== seq) return;
       rows = out.slice();
       selected = 0;
+      arrowed = false;
       computedFor = value;
       render();
 
@@ -386,6 +388,7 @@
     if (id !== seq) return;
     rows = out.slice();
     selected = 0;
+    arrowed = false;
     computedFor = value;
     render();
   };
@@ -427,6 +430,7 @@
       e.preventDefault();
       if (!rows.length) return;
       selected = (selected + (e.key === "ArrowDown" ? 1 : rows.length - 1)) % rows.length;
+      arrowed = true;
       render();
       return;
     }
@@ -441,22 +445,26 @@
     }
     if (e.key === "Tab") {
       e.preventDefault();
-      const row = selected > 0 ? rows[selected] : null;
+      const row = arrowed ? rows[selected] : null;
       if (row) {
-        if (row.type === "engine") { setMode(row.engine); return; }
-        const text = { search: row.query, suggest: row.query, url: row.label }[row.type] ??
-          (["tab", "bookmark", "history"].includes(row.type) ? row.url : null);
+        const text = { search: row.query, url: row.label, tab: row.url, bookmark: row.url, history: row.url }[row.type];
         if (text == null) return;
         input.value = text;
         input.setSelectionRange(text.length, text.length);
         await compute();
+        const same = rows.findIndex((r) => r.type === row.type && (row.type === "search" ? r.query === row.query : r.url === row.url));
+        if (same > 0) { selected = same; render(); }
         return;
       }
-      const keyword = input.value.trim().toLowerCase();
+      const completing = autoCompleted && input.selectionStart < input.selectionEnd && input.selectionEnd === input.value.length;
+      const keyword = (completing ? input.value.slice(0, input.selectionStart) : input.value).trim().toLowerCase();
       const engine = !mode && keyword && engines.find((en) => en.keyword.toLowerCase() === keyword);
       if (engine) { setMode(engine); return; }
-      const end = input.value.length;
-      if (input.selectionEnd === end && input.selectionStart < end) input.setSelectionRange(end, end);
+      if (completing) {
+        const end = input.value.length;
+        input.setSelectionRange(end, end);
+        if (!rows[0]?.url || hostOf(rows[0].url) !== input.value) computedFor = null;
+      }
       return;
     }
     if (e.key === "Backspace" && mode && !input.value) { e.preventDefault(); setMode(null); return; }
@@ -482,6 +490,8 @@
     targetTab = tabId;
     mode = null;
     computedFor = null;
+    autoCompleted = false;
+    arrowed = false;
     bar = el("div");
     bar.id = "vm-cmd";
     const box = el("div", "vm-cmd-box");
