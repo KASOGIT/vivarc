@@ -38,4 +38,6 @@ In diff and lens modes, cap the hand-back at 10 findings, most severe first, eac
 - a concrete failure scenario (input and state, then the wrong outcome);
 - a suggested fix.
 
+In disprove mode, hand back one entry per finding you were given, in the order given: the verdict (SURVIVES, REFUTED or PARTLY), the final severity and the evidence, with at least one `file:line` in every entry. For a verdict that rests on a measurement or a reproduction, cite the code line the measurement exercises: a case number or command alone is not a location. A PARTLY entry ends with the corrected claim.
+
 If nothing survives, write "no findings" and list in one line what you checked.

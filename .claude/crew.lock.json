@@ -1,8 +1,8 @@
 {
-  "revision": "b40ace0f89459005505ec5fe6d217644c3cb6f0a",
+  "revision": "4acf7254753f92856562777553b3013ae473619b",
   "files": {
     ".claude/agents/architecture-planner.md": "9fe84b27bbf54531fb9e0e7307e46e5445d8da19113397613ba321e4e929baa2",
-    ".claude/agents/code-reviewer.md": "bdc77fdc2ad18ec4007aec1cbdc6c1dc1e89328e8f5ba200c0436063c949d806",
+    ".claude/agents/code-reviewer.md": "cf11a46cda95643df1e3db24eab88b80495f3e7e1f4bfabe9441a0193b53ba6e",
     ".claude/agents/debugger-analyst.md": "87afc6d1454aac21bebdffa455933909ba62db5ef8042b325c7f8d9de84ac9ad",
     ".claude/agents/domain-researcher.md": "08b178df5d19c0ba3e4da6092bcaed6d223099d44caf1cc129707169f304e8bc",
     ".claude/agents/implementer.md": "2d472b701c1ec1d8950bc8d80dec59e16ce9acd638de74abc36e4142b1764aaa",
@@ -14,7 +14,7 @@
     ".claude/hooks/crew/crew.schema.json": "4e65bc1ee1f1800fab288f7b5c4b461ef4ef5cd0c3323fa7ad4d53ef2c2ed52b",
     ".claude/hooks/crew/guard-destructive.sh": "787bd2ab7bf64ac02856537545374fe1e2be1029d5ec681f82f219104908f222",
     ".claude/hooks/crew/require-spec-first.sh": "05fb3eb0f360154e94085bf6db9cb092dbcb5d7145e47d78f6716aea1c1b582c",
-    ".claude/skills/audit/SKILL.md": "5ef93f2b9dc46e0e85ace3c0e46d27c2051db8d9a11974db0acdd02fe6571959",
+    ".claude/skills/audit/SKILL.md": "3dce74992f914140eda886da6d04eaf0b5e3037d9aa16167b8ad76cfded9bff0",
     ".claude/skills/crew-update/SKILL.md": "e1c63cffdd62d0479e37bcb6358deaa4628fe0ad8216c7472fbb7b037e5860e6",
     ".claude/skills/debug/SKILL.md": "72e84865173de1e325c4931aada1ebac7b332dc130b128f01da27b85d23402f4",
     ".claude/skills/feature/SKILL.md": "1cf9dc87bfd51b2da2196f20255c823fc885f2af09c8d589ce9385ddc9205053",
