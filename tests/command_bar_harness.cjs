@@ -33,7 +33,10 @@ function setup({ incognito = false, missing = false, suggestUrl = 'https://chose
 async function loadBar(context, settingsOpen = false, autoOpen = true) {
   const nodes = [];
   class Element {
-    constructor(tag) { this.tag = tag; this.children = []; this.events = {}; this.value = ''; this.style = {}; }
+    constructor(tag) { this.tag = tag; this.children = []; this.events = {}; this.style = {}; this.value = ''; }
+    get value() { return this._value; }
+    set value(v) { this._value = String(v); this.selectionStart = this.selectionEnd = this._value.length; }
+    setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
     append(...items) { this.children.push(...items); }
     replaceChildren(...items) { this.children = items; }
     addEventListener(name, fn) { this.events[name] = fn; }
