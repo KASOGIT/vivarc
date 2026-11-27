@@ -1,5 +1,5 @@
 {
-  "revision": "4acf7254753f92856562777553b3013ae473619b",
+  "revision": "d5a22ab85038082efa0aa525c8fdbf6d5f504bbe",
   "files": {
     ".claude/agents/architecture-planner.md": "9fe84b27bbf54531fb9e0e7307e46e5445d8da19113397613ba321e4e929baa2",
     ".claude/agents/code-reviewer.md": "cf11a46cda95643df1e3db24eab88b80495f3e7e1f4bfabe9441a0193b53ba6e",
@@ -10,15 +10,15 @@
     ".claude/agents/test-runner.md": "2f667cb0ae14964f2d41b832ead3f82da0c643b2b67bae94f4f96c42815c506d",
     ".claude/hooks/crew/crew-update.sh": "6e11e181fdd92b059ba71820ee43d02fd819528ff191e6398448310339b5a5d8",
     ".claude/hooks/crew/crew-vendor": "7f3ba51f5364c04d8920e84d41b2b9855eea99eb683cf5c47048c241a96437d4",
-    ".claude/hooks/crew/crew.example.json": "79b92726aa1df75acf68fe0d5a6b0585bfa5fd5a23936f5bf3bdeac2bd30c076",
-    ".claude/hooks/crew/crew.schema.json": "4e65bc1ee1f1800fab288f7b5c4b461ef4ef5cd0c3323fa7ad4d53ef2c2ed52b",
+    ".claude/hooks/crew/crew.example.json": "4c82878b74c46f5d24860f61f1f30bd2f78c98563ca0db845ca5c91c0fc1028a",
+    ".claude/hooks/crew/crew.schema.json": "a11036e25ac25ea298b081d53692544663b1dc8c5f1c8c37663dddacf673b7bc",
     ".claude/hooks/crew/guard-destructive.sh": "787bd2ab7bf64ac02856537545374fe1e2be1029d5ec681f82f219104908f222",
     ".claude/hooks/crew/require-spec-first.sh": "05fb3eb0f360154e94085bf6db9cb092dbcb5d7145e47d78f6716aea1c1b582c",
-    ".claude/skills/audit/SKILL.md": "3dce74992f914140eda886da6d04eaf0b5e3037d9aa16167b8ad76cfded9bff0",
+    ".claude/skills/audit/SKILL.md": "f91dd2f1eb9e99f532801d6e884f17c58fd95f18cb857f4bcfebf8489bdcfcce",
     ".claude/skills/crew-update/SKILL.md": "e1c63cffdd62d0479e37bcb6358deaa4628fe0ad8216c7472fbb7b037e5860e6",
-    ".claude/skills/debug/SKILL.md": "72e84865173de1e325c4931aada1ebac7b332dc130b128f01da27b85d23402f4",
-    ".claude/skills/feature/SKILL.md": "1cf9dc87bfd51b2da2196f20255c823fc885f2af09c8d589ce9385ddc9205053",
-    ".claude/skills/research/SKILL.md": "4f53894922b4fa9941a55d17943282e731ee69961ddb3b25079320f9bca1ebe2",
+    ".claude/skills/debug/SKILL.md": "84e2c45b8e2c3d14df66bd4841b1a8aa6b446b8a14d8a37fc6948f8cf47ee318",
+    ".claude/skills/feature/SKILL.md": "9128d02436eba2d7231ceb2fda29aa205a3158599697bab02fd9eecb5f86260b",
+    ".claude/skills/research/SKILL.md": "fb0ede4ca18a4a479f8ea0e7ce006c6a2d92991f0662ebc31f2b24a60d0408d8",
     ".claude/skills/review/SKILL.md": "1038f2f35d03c05047c35aa1e9a00e40ca6f9ebd7a3905dde494cb09d7a05825",
     ".github/workflows/crew-update.yml": "bd7ba73f7b75e8639a72fac4fe28ff38f6ee4745ba4157b35bf79a018bcfaca4"
   },

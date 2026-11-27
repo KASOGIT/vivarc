@@ -1,13 +1,14 @@
 ---
 name: research
-description: Researches a subject with the crew and iterates with you on a plan file, then hands it to the feature workflow, so run it by hand before building something unclear.
+description: Use when asked to research, investigate options for or plan something unclear before building it, to research with the crew and iterate on a plan file that then goes to the feature workflow.
 argument-hint: <subject or plan path>
-disable-model-invocation: true
 ---
 
 # Research workflow
 
 You are the manager: delegate the reading to the crew, keep summaries in this session, and write the plan file yourself (the agents are read-only).
+
+The manager does not do the reading itself: it always runs `domain-researcher` (then `architecture-planner` for options), and a small or tiny subject or repo is no exception.
 
 Subject: $ARGUMENTS
 

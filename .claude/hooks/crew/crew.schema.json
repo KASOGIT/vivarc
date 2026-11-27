@@ -53,6 +53,16 @@
       "type": "boolean",
       "default": true
     },
+    "confirmRed": {
+      "description": "When true, the feature workflow pauses after the failing test is confirmed and before the RED commit, and waits for the developer's OK.",
+      "type": "boolean",
+      "default": false
+    },
+    "openPullRequest": {
+      "description": "When true, the feature workflow ends its report with a drafted PR and, after an explicit OK, pushes the branch and opens a draft pull request.",
+      "type": "boolean",
+      "default": false
+    },
     "specFirst": {
       "description": "Spec-first nudge. Without this block, or without at least one valid root and one source extension, the hook does nothing.",
       "type": "object",

@@ -2,7 +2,6 @@
 name: audit
 description: Audits the repo through one lens (perf, bugs, debt or security) with parallel reviewers and writes a ranked findings file, and it edits no code.
 argument-hint: <perf|bugs|debt|security> [paths]
-disable-model-invocation: true
 ---
 
 # Audit workflow
