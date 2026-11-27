@@ -441,9 +441,22 @@
     }
     if (e.key === "Tab") {
       e.preventDefault();
+      const row = selected > 0 ? rows[selected] : null;
+      if (row) {
+        if (row.type === "engine") { setMode(row.engine); return; }
+        const text = { search: row.query, suggest: row.query, url: row.label }[row.type] ??
+          (["tab", "bookmark", "history"].includes(row.type) ? row.url : null);
+        if (text == null) return;
+        input.value = text;
+        input.setSelectionRange(text.length, text.length);
+        await compute();
+        return;
+      }
       const keyword = input.value.trim().toLowerCase();
       const engine = !mode && keyword && engines.find((en) => en.keyword.toLowerCase() === keyword);
-      if (engine) setMode(engine);
+      if (engine) { setMode(engine); return; }
+      const end = input.value.length;
+      if (input.selectionEnd === end && input.selectionStart < end) input.setSelectionRange(end, end);
       return;
     }
     if (e.key === "Backspace" && mode && !input.value) { e.preventDefault(); setMode(null); return; }

@@ -13,7 +13,7 @@ function setup({ incognito = false, missing = false, suggestUrl = 'https://chose
     console: { log() {}, warn() {} }, AbortSignal, URL, navigator: { language: 'fr' },
     window: { __vm: {} },
     chrome: { windows: { getCurrent: async () => ({ incognito, type: "normal", focused: true, id: 1 }) }, tabs: {
-      create: async opts => calls.navigation.push(opts), update: async (id, opts) => calls.navigation.push({ id, ...opts }),
+      create: async opts => calls.navigation.push({ ...opts }), update: async (id, opts) => calls.navigation.push({ id, ...opts }),
       query: async () => [], onCreated: { addListener(fn) { calls.onCreated = fn; } }, onActivated: { addListener(fn) { calls.onActivated = fn; } },
     }, bookmarks: { search: async () => [] }, history: { search: async () => [] } },
     vivaldi: { searchEngines: {
