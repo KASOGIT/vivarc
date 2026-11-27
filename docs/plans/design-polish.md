@@ -1,6 +1,6 @@
 # Design polish: modern look, fluid motion, personal vibe, polished details
 
-Status: research round 1. Decision open.
+Status: research round 2. Scope decided, four details open.
 
 ## Question
 
@@ -122,7 +122,33 @@ Then, on a go per item: M6 keyed sidebar render (unlocks M7, M8), M2 exits, P1 u
 
 ## Decision
 
-Pending: see Open questions.
+Round 1 answers from the maintainer (2026-11-28):
+
+- Structure: option A, tokens first.
+- In scope beyond the first seven PRs: P1 user-picked gradients, P3 Appearance controls, M2 overlay exit motion, M4 space cross-fade (after a perf spike), M6 keyed sidebar render with M7 close-collapse and M8 sliding active pill.
+- Derived gradient (L2) ships behind a new Appearance switch. Stored themes stay unchanged.
+- Out of scope: P6 Boosts, P7 compact sidebar, M9 sliding command bar selection, M10 view transitions, L4 real sidebar glass.
+
+Roadmap, one PR each, in order. Items marked Esc were approved in scope here but still get their spec reviewed before `/feature` starts, since they add stored data or change architecture.
+
+| # | PR | Ideas | Files | Tests |
+|---|---|---|---|---|
+| 1 | `refactor(css): radius, motion and fill tokens` | L1, D4 | `vivarc.css` | visual |
+| 2 | `feat(motion): entry transitions for menus, command bar, theme pop-up and settings` | M1, M3 | `vivarc.css` | visual |
+| 3 | `feat(theme): accent focus rings, selection colour and thin scrollbars` | D1, D6 | `vivarc.css` | visual |
+| 4 | `feat(theme): accent and gradient derived from the space tint` | L2, L3, P4 | `vivarc.css`, `01-settings.js`, tests | node (setting), visual |
+| 5 | `feat(command-bar): highlight the matched text` | D2 | `20-command-bar.js`, CSS, `tests/command_bar_*.test.cjs` | node |
+| 6 | `feat(command-bar): key hint footer and empty state` | D3 | same | node |
+| 7 | `feat(start): restyle the guide page with the shared tokens` | L5 | `src/start/index.html` | visual |
+| 8 | `feat(motion): exit transitions for overlays` | M2 | `20-command-bar.js`, `40-theme.js`, `10-sidebar.js`, `45-settings.js`, CSS, harness | node (removal deferred, then done) |
+| 9 | `feat(settings): density, corner style and motion controls` (Esc) | P3 | `01-settings.js`, CSS | node (schema), visual |
+| 10 | `feat(theme): user-picked gradient per space` (Esc) | P1 | `40-theme.js`, CSS, `tests/test_space_themes.py` | node |
+| 11 | spike, then `feat(theme): cross-fade the tint on space switch` | M4 | CSS, maybe `40-theme.js` | visual, perf check |
+| 12 | `refactor(sidebar): keyed render` (Esc) | M6 | `10-sidebar.js` | node, drag check |
+| 13 | `feat(sidebar): collapse a closing tab row` | M7 | `10-sidebar.js`, CSS | visual |
+| 14 | `feat(sidebar): sliding active-tab indicator` | M8 | `10-sidebar.js`, CSS | visual |
+
+PR 12 gets its own `/research` round (architecture-planner) before `/feature`: it touches drag, stacks and favourites.
 
 ## Spec (literals)
 
@@ -151,6 +177,19 @@ Declared on `#browser.vm-on` and again on `#browser.vm-on #tabs-tabbar-container
 - `--vm-accent: oklch(from var(--vm-tint) clamp(0.45, l, 0.75) max(c, 0.12) h)` under `.vm-themed`, used by `.vm-selected`, drop markers, the checked switch, focus rings and `--vm-sel`. Starting values, tuned in a window against all 9 presets.
 - `#browser.vm-themed #tabs-tabbar-container { background-image: linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30))); }`.
 - Under `.vm-glass.vm-themed`, the glass rule also sets `background-image` on that element (`vivarc.css:783`): decide which wins.
+- The gradient applies only under a class from a new Appearance setting: `{ key: "spaceGradient", label: "Space gradient", onClass: "vm-gradient", default: <open> }` in `01-settings.js` SCHEMA. The accent (L3) is not behind the switch.
+
+### PR 9, Appearance controls (draft)
+
+- `density`: compact / default / comfortable, sets `--vm-row-h` to 28 / 32 / 36px (values to confirm against the current row height).
+- `corners`: sharp / default / round, multiplies the radius scale by 0.5 / 1 / 1.4 through one `--vm-r-k` factor.
+- `motion`: full / reduced / off, sets a class that zeroes `--vm-dur-*` (off) or drops transforms (reduced). System Reduce Motion always wins.
+
+### PR 10, user-picked gradient (draft)
+
+- Additive optional field on the theme record: `stops: [{hue, sat, light}, ...]`, 2 or 3 entries. Absent means the derived gradient (PR 4). No migration; `{...DEFAULT, ...saved}` still loads old records.
+- JS writes `--vm-grad` as a `linear-gradient(160deg, ...)` string when `stops` exists; CSS prefers `--vm-grad` over the derived one.
+- Editor: a second and third handle on the existing hue/lightness pad.
 
 ## Test plan
 
@@ -161,13 +200,10 @@ Declared on `#browser.vm-on` and again on `#browser.vm-on #tabs-tabbar-container
 
 ## Open questions
 
-1. Which ideas from the menu to pursue beyond the recommended first seven?
-2. Gradient rollout: on by default for every themed space, behind an Appearance switch, or a per-space choice (new stored field)?
-3. Keyed sidebar render (M6): worth the refactor risk for close-collapse and the sliding pill?
-4. Boosts (P6) and compact hover-reveal sidebar (P7): in scope or not?
-5. Radius for rows and cards: 10px or 12px?
-6. Start page: restyle only, or follow the space tint (installer change)?
-7. New commit scopes `motion` and `start`: fine?
+1. Space gradient switch: on or off by default?
+2. Radius for rows and cards: 10px or 12px?
+3. Start page: restyle only, or follow the space tint (installer change)?
+4. New commit scopes `motion` and `start`: fine?
 
 ## References
 
