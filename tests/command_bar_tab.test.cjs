@@ -210,3 +210,38 @@ test('Tab on an arrowed action row leaves value and caret alone', async () => {
   assert.equal(b.input.selectionStart, 3);
   assert.equal(b.input.selectionEnd, 3);
 });
+
+test('Tab on an arrowed engine row enters that engine mode', async () => {
+  const b = await bar();
+  await b.type('gh');
+  await b.press('ArrowDown');
+  await b.press('ArrowUp');
+  assert.equal(b.highlighted(), 'Search GitHub');
+  await b.tab();
+  assert.deepEqual(b.chips.children.map(c => c.textContent), ['GitHub']);
+  assert.equal(b.input.value, '');
+});
+
+const unawaitedTabEnter = async (b) => {
+  const key = k => ({ key: k, preventDefault() {} });
+  const pending = [b.input.events.keydown(key('Tab')), b.input.events.keydown(key('Enter'))];
+  await Promise.all(pending);
+  await flush();
+};
+
+test('Tab then Enter without awaiting Tab on an arrowed open-tab row still switches to that tab', async () => {
+  const title = 'Stripe Login | Sign in to the Stripe Dashboard';
+  const b = await bar({ tabs: [{ id: 7, title, url: 'https://dashboard.stripe.com/login' }] });
+  await b.type('stripe');
+  await b.arrowTo(title);
+  await unawaitedTabEnter(b);
+  assert.deepEqual(b.calls.navigation, [{ id: 7, active: true }]);
+});
+
+test('Tab then Enter without awaiting Tab on an arrowed search row still searches it', async () => {
+  const b = await bar({ history: [{ title: 'Stripe', url: 'https://stripe.com/' }] });
+  await b.type('stripe');
+  await b.arrowTo('stripe');
+  await unawaitedTabEnter(b);
+  assert.deepEqual(b.calls.navigation, [{ url: 'https://chosen.test/?q=stripe' }]);
+});
