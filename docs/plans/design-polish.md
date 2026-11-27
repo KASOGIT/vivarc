@@ -1,6 +1,6 @@
 # Design polish: modern look, fluid motion, personal vibe, polished details
 
-Status: research round 2. Scope decided, four details open.
+Status: decided. Ready for /feature, one PR at a time.
 
 ## Question
 
@@ -156,7 +156,7 @@ PR 12 gets its own `/research` round (architecture-planner) before `/feature`: i
 
 Declared on `#browser.vm-on` and again on `#browser.vm-on #tabs-tabbar-container` (fill tokens resolve `--colorFg` where declared). `--vm-css: 1` stays.
 
-- Radii: `--vm-r-1: 6px` (absorbs 5, 6, 7), `--vm-r-2: 8px` (8, 9), `--vm-r-3: 10px` or `12px` (10, 11, 12; open question), `--vm-r-4: 14px` (14, 16), `--vm-r-5: 18px`, `--vm-r-full: 999px` (also the 11px switch). The 1px guide line stays literal.
+- Radii: `--vm-r-1: 6px` (absorbs 5, 6, 7), `--vm-r-2: 8px` (8, 9), `--vm-r-3: 12px` (10, 11, 12), `--vm-r-4: 14px` (14, 16), `--vm-r-5: 18px`, `--vm-r-full: 999px` (also the 11px switch). The 1px guide line stays literal.
 - Durations: `--vm-dur-1: 120ms` (90, 120), `--vm-dur-2: 180ms` (150, 160, 180), `--vm-dur-3: 240ms` (220, 260).
 - Easing: `--vm-ease-out: cubic-bezier(0.22, 1, 0.36, 1)` (already at `vivarc.css:177`, `10-sidebar.js:23`), `--vm-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1)` (moved from `:770` to the root). A `linear()` spring replaces it in PR 2 once tuned.
 - Fills: `--vm-fill-1: color-mix(in srgb, var(--colorFg) 8%, transparent)`, `--vm-fill-2` 14%, `--vm-fill-3` 24%.
@@ -176,8 +176,8 @@ Declared on `#browser.vm-on` and again on `#browser.vm-on #tabs-tabbar-container
 - JS keeps writing `--vm-tint` as `hsl(H S% L%)`; stored records unchanged.
 - `--vm-accent: oklch(from var(--vm-tint) clamp(0.45, l, 0.75) max(c, 0.12) h)` under `.vm-themed`, used by `.vm-selected`, drop markers, the checked switch, focus rings and `--vm-sel`. Starting values, tuned in a window against all 9 presets.
 - `#browser.vm-themed #tabs-tabbar-container { background-image: linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30))); }`.
-- Under `.vm-glass.vm-themed`, the glass rule also sets `background-image` on that element (`vivarc.css:783`): decide which wins.
-- The gradient applies only under a class from a new Appearance setting: `{ key: "spaceGradient", label: "Space gradient", onClass: "vm-gradient", default: <open> }` in `01-settings.js` SCHEMA. The accent (L3) is not behind the switch.
+- Under `.vm-glass.vm-themed`, the glass rule also sets `background-image` on that element (`vivarc.css:783`). Default: the glass layers stack above the gradient in one comma-separated `background-image`, gradient last. Confirm visually.
+- The gradient applies only under a class from a new Appearance setting: `{ key: "spaceGradient", label: "Space gradient", onClass: "vm-gradient", default: true }` in `01-settings.js` SCHEMA. On by default, so themed spaces change look after the update: note it in `CHANGELOG.md`. The accent (L3) is not behind the switch.
 
 ### PR 9, Appearance controls (draft)
 
@@ -200,10 +200,7 @@ Declared on `#browser.vm-on` and again on `#browser.vm-on #tabs-tabbar-container
 
 ## Open questions
 
-1. Space gradient switch: on or off by default?
-2. Radius for rows and cards: 10px or 12px?
-3. Start page: restyle only, or follow the space tint (installer change)?
-4. New commit scopes `motion` and `start`: fine?
+None. Round 2 answers (2026-11-28): space gradient switch on by default; rows and cards at 12px; start page restyle only; new scopes `motion` and `start` approved.
 
 ## References
 
