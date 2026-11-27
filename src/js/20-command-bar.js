@@ -180,6 +180,7 @@
   let seq = 0;
   let autoCompleted = false;
   let arrowed = false;
+  let pick = null;
   let computedFor = null;
 
   const iconFor = (url, favicon) => {
@@ -316,6 +317,8 @@
       .map((action) => ({ type: "action", action, tab, label: action.label }));
   };
 
+  const isPick = (r) => pick && r.type === pick.type && (pick.type === "search" ? r.query === pick.query : r.url === pick.url);
+
   const compute = async () => {
     const id = ++seq;
     const value = input ? input.value : "";
@@ -360,7 +363,8 @@
       out.push(...matches.filter((m) => m !== prefix));
       if (id !== seq) return;
       rows = out.slice();
-      selected = 0;
+      selected = Math.max(0, rows.findIndex(isPick));
+      pick = null;
       arrowed = false;
       computedFor = value;
       render();
@@ -387,7 +391,7 @@
     }
     if (id !== seq) return;
     rows = out.slice();
-    selected = 0;
+    selected = Math.max(0, rows.findIndex(isPick));
     arrowed = false;
     computedFor = value;
     render();
@@ -447,13 +451,13 @@
       e.preventDefault();
       const row = arrowed ? rows[selected] : null;
       if (row) {
+        if (row.type === "engine") { setMode(row.engine); return; }
         const text = { search: row.query, url: row.label, tab: row.url, bookmark: row.url, history: row.url }[row.type];
         if (text == null) return;
         input.value = text;
         input.setSelectionRange(text.length, text.length);
+        pick = row;
         await compute();
-        const same = rows.findIndex((r) => r.type === row.type && (row.type === "search" ? r.query === row.query : r.url === row.url));
-        if (same > 0) { selected = same; render(); }
         return;
       }
       const completing = autoCompleted && input.selectionStart < input.selectionEnd && input.selectionEnd === input.value.length;
@@ -492,6 +496,7 @@
     computedFor = null;
     autoCompleted = false;
     arrowed = false;
+    pick = null;
     bar = el("div");
     bar.id = "vm-cmd";
     const box = el("div", "vm-cmd-box");
@@ -520,6 +525,7 @@
     });
     input.addEventListener("keydown", onKey);
     input.addEventListener("input", async () => {
+      pick = null;
       await compute();
       autocomplete();
     });
