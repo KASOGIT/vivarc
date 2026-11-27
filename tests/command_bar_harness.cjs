@@ -40,7 +40,17 @@ async function loadBar(context, settingsOpen = false, autoOpen = true) {
     append(...items) { this.children.push(...items); }
     replaceChildren(...items) { this.children = items; }
     addEventListener(name, fn) { this.events[name] = fn; }
-    remove() {} focus() {} scrollIntoView() {} querySelector() { return null; }
+    get classList() {
+      const self = this;
+      const names = () => (self.className || '').split(/\s+/).filter(Boolean);
+      return {
+        add(c) { if (!names().includes(c)) self.className = [...names(), c].join(' '); },
+        remove(c) { self.className = names().filter(x => x !== c).join(' '); },
+      };
+    }
+    select() { this.selectionStart = 0; this.selectionEnd = this._value.length; }
+    querySelector(selector) { return selector === '.sel' ? this.children.find(c => /\bsel\b/.test(c.className)) || null : null; }
+    remove() {} focus() {} blur() {} scrollIntoView() {}
   }
   const browser = new Element('body');
   context.document = { body: browser, querySelector: () => browser, createElement: tag => { const node = new Element(tag); nodes.push(node); return node; } };

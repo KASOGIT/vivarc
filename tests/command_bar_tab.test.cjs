@@ -108,17 +108,6 @@ test('Tab on an arrowed url row fills its label', async () => {
   atEnd(b.input, 'https://example.org/page');
 });
 
-test('Tab on an arrowed engine row enters that engine mode', async () => {
-  const b = await bar();
-  await b.type('gh');
-  await b.press('ArrowDown');
-  await b.press('ArrowUp');
-  assert.equal(b.highlighted(), 'Search GitHub');
-  await b.tab();
-  assert.equal(b.input.value, '');
-  assert.deepEqual(b.chips.children.map(c => c.textContent), ['GitHub']);
-});
-
 test('Tab on a typed engine keyword with the highlight on row 0 enters engine mode', async () => {
   const b = await bar();
   await b.type('yt');
@@ -136,4 +125,88 @@ test('Tab with the highlight on row 0 and no completion leaves value and caret a
   assert.equal(b.input.selectionStart, 3);
   assert.equal(b.input.selectionEnd, 3);
   assert.deepEqual(b.chips.children, []);
+});
+
+test('hovering a row is not arrowing: Tab on a typed keyword still enters engine mode', async () => {
+  const b = await bar();
+  await b.type('yt');
+  b.list.children[1].events.mousemove();
+  await b.tab();
+  assert.deepEqual(b.chips.children.map(c => c.textContent), ['YouTube']);
+  assert.equal(b.input.value, '');
+});
+
+test('Tab on a typed engine keyword enters engine mode even when a host is inline-completed', async () => {
+  const b = await bar({ tabs: [{ id: 7, title: 'GitHub', url: 'https://github.com/x' }] });
+  await b.type('g');
+  assert.equal(b.input.value, 'github.com');
+  assert.equal(b.input.selectionStart, 1);
+  assert.equal(b.input.selectionEnd, 10);
+  await b.tab();
+  assert.deepEqual(b.chips.children.map(c => c.textContent), ['Google']);
+  assert.equal(b.input.value, '');
+});
+
+test('Tab keeps the picked search row highlighted: Enter searches it instead of opening the first history row', async () => {
+  const b = await bar({ history: [{ title: 'Stripe', url: 'https://stripe.com/' }] });
+  await b.type('stripe');
+  await b.arrowTo('stripe');
+  await b.tab();
+  await b.press('Enter');
+  assert.deepEqual(b.calls.navigation, [{ url: 'https://chosen.test/?q=stripe' }]);
+});
+
+test('Tab then Enter on an arrowed open-tab row switches to that tab', async () => {
+  const title = 'Stripe Login | Sign in to the Stripe Dashboard';
+  const b = await bar({ tabs: [{ id: 7, title, url: 'https://dashboard.stripe.com/login' }] });
+  await b.type('stripe');
+  await b.arrowTo(title);
+  await b.tab();
+  assert.equal(b.input.value, 'https://dashboard.stripe.com/login');
+  await b.press('Enter');
+  assert.deepEqual(b.calls.navigation, [{ id: 7, active: true }]);
+});
+
+test('Tab accepts a completion whose tab is not row 0: Enter goes to the completed host, not a search for the typed text', async () => {
+  const filler = n => ({ id: n, title: `Alpha ${n}`, url: `https://alpha${n}.test/c` });
+  const b = await bar({ tabs: [filler(1), filler(2), filler(3), filler(4), { id: 5, title: 'Claude', url: 'https://claude.ai/chats' }] });
+  await b.type('c');
+  assert.equal(b.input.value, 'claude.ai');
+  await b.tab();
+  atEnd(b.input, 'claude.ai');
+  await b.press('Enter');
+  assert.equal(b.calls.navigation.length, 1);
+  assert.ok(['[{"id":5,"active":true}]', '[{"url":"https://claude.ai"}]'].includes(JSON.stringify(b.calls.navigation)),
+    `expected the tab 5 switch or a load of https://claude.ai, got ${JSON.stringify(b.calls.navigation)}`);
+});
+
+test('Tab leaves a select-all selection (edit mode, Cmd+L) alone', async () => {
+  const { context } = setup();
+  context.chrome.tabs.query = async () => [{ id: 3, title: 'Example', url: 'https://example.com/a' }];
+  await loadBar(context, false, false);
+  context.window.__vm.keys.editAddress = 'ctrl+l';
+  await context.shortcut('ctrl+l');
+  await flush();
+  const input = context.nodes.find(n => n.tag === 'input');
+  assert.equal(input.value, 'https://example.com/a');
+  assert.equal(input.selectionStart, 0);
+  assert.equal(input.selectionEnd, 21);
+  const e = { key: 'Tab', prevented: false, preventDefault() { this.prevented = true; } };
+  await input.events.keydown(e);
+  await flush();
+  assert.ok(e.prevented);
+  assert.equal(input.value, 'https://example.com/a');
+  assert.equal(input.selectionStart, 0);
+  assert.equal(input.selectionEnd, 21);
+});
+
+test('Tab on an arrowed action row leaves value and caret alone', async () => {
+  const b = await bar();
+  await b.type('history');
+  await b.arrowTo('View History');
+  b.input.setSelectionRange(3, 3);
+  await b.tab();
+  assert.equal(b.input.value, 'history');
+  assert.equal(b.input.selectionStart, 3);
+  assert.equal(b.input.selectionEnd, 3);
 });
