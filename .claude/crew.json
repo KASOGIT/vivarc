@@ -23,5 +23,6 @@
       "test_*.py"
     ]
   },
-  "updateWorkflow": true
+  "updateWorkflow": true,
+  "openPullRequest": true
 }
