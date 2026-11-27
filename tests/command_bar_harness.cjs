@@ -13,7 +13,7 @@ function setup({ incognito = false, missing = false, suggestUrl = 'https://chose
     console: { log() {}, warn() {} }, AbortSignal, URL, navigator: { language: 'fr' },
     window: { __vm: {} },
     chrome: { windows: { getCurrent: async () => ({ incognito, type: "normal", focused: true, id: 1 }) }, tabs: {
-      create: async opts => calls.navigation.push(opts), update: async (id, opts) => calls.navigation.push({ id, ...opts }),
+      create: async opts => calls.navigation.push({ ...opts }), update: async (id, opts) => calls.navigation.push({ id, ...opts }),
       query: async () => [], onCreated: { addListener(fn) { calls.onCreated = fn; } }, onActivated: { addListener(fn) { calls.onActivated = fn; } },
     }, bookmarks: { search: async () => [] }, history: { search: async () => [] } },
     vivaldi: { searchEngines: {
@@ -33,11 +33,24 @@ function setup({ incognito = false, missing = false, suggestUrl = 'https://chose
 async function loadBar(context, settingsOpen = false, autoOpen = true) {
   const nodes = [];
   class Element {
-    constructor(tag) { this.tag = tag; this.children = []; this.events = {}; this.value = ''; this.style = {}; }
+    constructor(tag) { this.tag = tag; this.children = []; this.events = {}; this.style = {}; this.value = ''; }
+    get value() { return this._value; }
+    set value(v) { this._value = String(v); this.selectionStart = this.selectionEnd = this._value.length; }
+    setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
     append(...items) { this.children.push(...items); }
     replaceChildren(...items) { this.children = items; }
     addEventListener(name, fn) { this.events[name] = fn; }
-    remove() {} focus() {} scrollIntoView() {} querySelector() { return null; }
+    get classList() {
+      const self = this;
+      const names = () => (self.className || '').split(/\s+/).filter(Boolean);
+      return {
+        add(c) { if (!names().includes(c)) self.className = [...names(), c].join(' '); },
+        remove(c) { self.className = names().filter(x => x !== c).join(' '); },
+      };
+    }
+    select() { this.selectionStart = 0; this.selectionEnd = this._value.length; }
+    querySelector(selector) { return selector === '.sel' ? this.children.find(c => /\bsel\b/.test(c.className)) || null : null; }
+    remove() {} focus() {} blur() {} scrollIntoView() {}
   }
   const browser = new Element('body');
   context.document = { body: browser, querySelector: () => browser, createElement: tag => { const node = new Element(tag); nodes.push(node); return node; } };

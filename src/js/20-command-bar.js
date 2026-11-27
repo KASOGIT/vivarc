@@ -179,6 +179,8 @@
   let selected = 0;
   let seq = 0;
   let autoCompleted = false;
+  let arrowed = false;
+  let pick = null;
   let computedFor = null;
 
   const iconFor = (url, favicon) => {
@@ -315,6 +317,8 @@
       .map((action) => ({ type: "action", action, tab, label: action.label }));
   };
 
+  const isPick = (r) => pick && r.type === pick.type && (pick.type === "search" ? r.query === pick.query : r.url === pick.url);
+
   const compute = async () => {
     const id = ++seq;
     const value = input ? input.value : "";
@@ -359,7 +363,9 @@
       out.push(...matches.filter((m) => m !== prefix));
       if (id !== seq) return;
       rows = out.slice();
-      selected = 0;
+      selected = Math.max(0, rows.findIndex(isPick));
+      pick = null;
+      arrowed = false;
       computedFor = value;
       render();
 
@@ -385,7 +391,8 @@
     }
     if (id !== seq) return;
     rows = out.slice();
-    selected = 0;
+    selected = Math.max(0, rows.findIndex(isPick));
+    arrowed = false;
     computedFor = value;
     render();
   };
@@ -427,6 +434,7 @@
       e.preventDefault();
       if (!rows.length) return;
       selected = (selected + (e.key === "ArrowDown" ? 1 : rows.length - 1)) % rows.length;
+      arrowed = true;
       render();
       return;
     }
@@ -441,9 +449,26 @@
     }
     if (e.key === "Tab") {
       e.preventDefault();
-      const keyword = input.value.trim().toLowerCase();
+      const row = arrowed ? rows[selected] : null;
+      if (row) {
+        if (row.type === "engine") { setMode(row.engine); return; }
+        const text = { search: row.query, url: row.label, tab: row.url, bookmark: row.url, history: row.url }[row.type];
+        if (text == null) return;
+        input.value = text;
+        input.setSelectionRange(text.length, text.length);
+        pick = row;
+        await compute();
+        return;
+      }
+      const completing = autoCompleted && input.selectionStart < input.selectionEnd && input.selectionEnd === input.value.length;
+      const keyword = (completing ? input.value.slice(0, input.selectionStart) : input.value).trim().toLowerCase();
       const engine = !mode && keyword && engines.find((en) => en.keyword.toLowerCase() === keyword);
-      if (engine) setMode(engine);
+      if (engine) { setMode(engine); return; }
+      if (completing) {
+        const end = input.value.length;
+        input.setSelectionRange(end, end);
+        if (!rows[0]?.url || hostOf(rows[0].url) !== input.value) computedFor = null;
+      }
       return;
     }
     if (e.key === "Backspace" && mode && !input.value) { e.preventDefault(); setMode(null); return; }
@@ -469,6 +494,9 @@
     targetTab = tabId;
     mode = null;
     computedFor = null;
+    autoCompleted = false;
+    arrowed = false;
+    pick = null;
     bar = el("div");
     bar.id = "vm-cmd";
     const box = el("div", "vm-cmd-box");
@@ -497,6 +525,7 @@
     });
     input.addEventListener("keydown", onKey);
     input.addEventListener("input", async () => {
+      pick = null;
       await compute();
       autocomplete();
     });
