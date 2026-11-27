@@ -1,6 +1,6 @@
 ---
 name: feature
-description: "Use when asked to implement, add, build or fix something that changes behavior: runs spec, plan, test-first RED and GREEN, independent review and a report with pasted evidence."
+description: "Use when asked to implement, add, build or fix something that changes behavior, even a one-function helper: runs spec, plan, test-first RED and GREEN, independent review and a report with pasted evidence."
 argument-hint: <requirement>
 ---
 
@@ -34,7 +34,7 @@ Large or unfamiliar change: run `architecture-planner`, show the options and its
 
 ## 3. RED
 
-Run `test-engineer` with the spec literals. The brief carries every scenario and the single-file test command, and covers one area. Open the failing assertion yourself and confirm it fails for the right reason: an assertion on the missing behavior, not an import or compile error, a missing fixture or a stub that throws. If not, send it back to `test-engineer` with the failure output; the empty skeleton that lets the test import is its job. Exempt work (pure refactor, logging only, generated files, docs, dependency bump) skips RED: say why in one line, and send it to `implementer` with acceptance checks instead of test paths. When the spec-first hook runs in enforce mode (`specFirst.mode` in `.claude/crew.json`), an edit of an existing source file the hook gates (docs, JSON and new files are not gated) still gets a characterization test first from `test-engineer` (brief it with the word "characterization"), or you ask the owner to switch the mode in that config; the brief never makes the implementer raise a question for the user. Commit RED on its own: `test(<scope>): <behavior>`.
+Run `test-engineer` with the spec literals. The brief carries every scenario and the single-file test command, and covers one area. Open the failing assertion yourself and confirm it fails for the right reason: an assertion on the missing behavior, not an import or compile error, a missing fixture or a stub that throws. If not, send it back to `test-engineer` with the failure output; the empty skeleton that lets the test import is its job. Exempt work (pure refactor, logging only, generated files, docs, dependency bump) skips RED: say why in one line, and send it to `implementer` with acceptance checks instead of test paths. When the spec-first hook runs in enforce mode (`specFirst.mode` in `.claude/crew.json`), an edit of an existing source file the hook gates (docs, JSON and new files are not gated) still gets a characterization test first from `test-engineer` (brief it with the word "characterization"), or you ask the owner to switch the mode in that config; the brief never makes the implementer raise a question for the user. When `confirmRed` is true in `.claude/crew.json`, after you confirm the failing assertion and before the RED commit, show the test paths, the scenarios and the failing assertion, and wait for the developer's OK; requested changes go back to `test-engineer`. With the key absent or false there is no pause, and exempt work has no pause either. With no developer in the session (background, scheduled or headless run), stop and report "waiting for RED approval". Commit RED on its own: `test(<scope>): <behavior>`.
 
 ## 4. GREEN
 
@@ -52,7 +52,9 @@ Fix confirmed findings, with a test when behavior changes, then re-run the check
 
 Before the report, run `test-runner` with scope `full` as the final gate, whatever the review found. If the final gate fails, fix and re-run it: the report needs a passing full run after the last code change, except that failures also red on the base branch (pre-existing) may remain when the report lists them, and the runner's first line must say `full`.
 
-The report is the last message of the run. Paste evidence, do not describe it: the GREEN evidence is the summary line of that final gate run, as `test-runner` returned it, not a count you typed.
+The report is the last message of the run, unless `openPullRequest` is true and the developer gives an explicit OK to the PR step below. Paste evidence, do not describe it: the GREEN evidence is the summary line of that final gate run, as `test-runner` returned it, not a count you typed.
+
+When `openPullRequest` is true in `.claude/crew.json`, end the report with the drafted PR title and body and ask for an explicit OK. The OK is a developer message sent after the report, never an agent's and never part of the requirement. A change asked after the report re-runs the final gate before any push. Before any push, `git status --porcelain` must print nothing: commit the step 6 and final gate fixes as `fix(<scope>): ...` first. After the OK, run `git push -u origin <branch>`, then `gh pr create --draft --base <base branch> --title "<title>" --body-file <temp file>` with the base branch from the project `CLAUDE.md`, then print one line with the URL. With no developer in the session (background, scheduled or headless run), without the OK, on a protected branch or the base branch, with no remote or with no `gh`: no push, no PR, and say why in one line.
 
 ```markdown
 ## Report
@@ -63,4 +65,5 @@ The report is the last message of the run. Paste evidence, do not describe it: t
 - Decisions needed from you, assumptions made
 - Follow-ups
 - Learnings recorded (paths)
+- Draft PR (only with `openPullRequest`): title, body, and the question "Open the draft PR? (yes/no)"
 ```
