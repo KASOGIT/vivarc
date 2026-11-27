@@ -20,7 +20,8 @@ Run from the repo root. No dependencies, no build step. Use `python` instead of 
 |---|---|
 | Install | nothing to install; node is needed for the JS tests |
 | Run | quit Vivaldi, then `./vivarc.py apply` (rebuilds the mod and puts it into Vivaldi) |
-| All tests | `python3 -m unittest discover -s tests` |
+| All tests | `python3 -m unittest discover -s tests` and `node --test tests/*.test.cjs` |
+| Command bar tests | `node --test tests/command_bar_tab.test.cjs` (node suites on `tests/command_bar_harness.cjs`; `unittest discover` does not run them, CI lists each file in `.github/workflows/test.yml`) |
 | One test file | `python3 -m unittest discover -s tests -p test_pins.py` |
 | One test | `python3 -m unittest discover -s tests -p test_pins.py -k <name>` |
 | Type-check | none |
