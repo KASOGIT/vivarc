@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **A folded stack unfolds smoothly** when one of its tabs becomes active, the same way it does when you click it.
 - **The active tab's highlight slides** to the tab you switch to in the open tabs list.
 - **A closed tab folds away**: its row shrinks and fades while the tabs below slide up, instead of vanishing.
 - **Open tabs stay put when the sidebar updates**: a title or page change redraws only that tab's row, so the tab you hover keeps its close button instead of blinking.
