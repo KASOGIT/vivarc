@@ -313,6 +313,8 @@
 }
 #vm-panel .vm-row:is(:hover, :focus-within) .vm-act { width: 20px; margin-left: 0; opacity: 0.75; pointer-events: auto; }
 #vm-panel .vm-row .vm-act:hover { opacity: 1; background-color: color-mix(in srgb, var(--colorFg) 18%, transparent); }
+/* Rows rebuilt under the cursor show their button at once (render adds .vm-settling for a moment); the id and !important beat the reduce-motion rule. */
+#browser #vm-panel .vm-scroll.vm-settling .vm-act { transition: none !important; }
 
 #vm-panel .vm-divider {
   display: flex;
