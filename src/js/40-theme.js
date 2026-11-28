@@ -220,13 +220,13 @@
   const selectSpace = (id) => {
     if (id === activeSpace) return;
     close();
-    const fade = theme.on && activeSpace !== null;
+    const fade = theme.on && activeSpace !== null && !validStops(theme.stops);
     activeSpace = id;
     const current = ++revision;
     pending = Promise.all([store.get(keyFor(id), null), store.get("theme", null)]).then(([saved, legacy]) => {
       if (current !== revision) return;
       theme = { ...DEFAULT, ...(saved || legacy || {}) };
-      apply({ fade: fade && theme.on });
+      apply({ fade: fade && theme.on && !validStops(theme.stops) });
     });
   };
   window.addEventListener("vm-active-space-changed", (event) => selectSpace(event.detail));
