@@ -29,6 +29,7 @@ global.clearTimeout = fakeClearTimeout;
 const pendingTimers = () => timers.filter((t) => !t.cleared && !t.fired);
 const fire = (t) => { assert.ok(!t.cleared && !t.fired, "only a live timer can fire"); t.fired = true; t.fn(); };
 const channels = [];
+const marks = [];
 const classes = new Set();
 const log = [];
 const setClass = (name, on) => {
@@ -45,7 +46,7 @@ browser.classList = {
 global.document = { querySelector: () => browser, createElement: () => new Element(), addEventListener() {}, body: browser };
 global.window = {
   __vm: { store: { get: async (key, fallback) => saved.get(key) ?? fallback, set: async (key, value) => saved.set(key, value) },
-    cssLoaded: true, onShortcut() {}, onMark() {}, leave: (node) => node && node.remove() },
+    cssLoaded: true, onShortcut() {}, onMark: (fn) => marks.push(fn), leave: (node) => node && node.remove() },
   addEventListener: (name, fn) => events[name] = fn,
   setTimeout: fakeSetTimeout,
   clearTimeout: fakeClearTimeout,
@@ -540,6 +541,46 @@ class SpaceTintCrossFade(unittest.TestCase):
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 """.replace("EDIT", edit)
                 run_theme(scenario, PALETTE)
+
+
+    def test_custom_stops_on_either_side_of_a_switch_do_not_fade_but_invalid_stops_do(self):
+        custom, other = [{"hue": 300, "light": 30}], [{"hue": 20, "light": 50}, {"hue": 90, "light": 40}]
+        cases = {
+            "custom to custom": (custom, other, 0),
+            "custom to auto": (custom, None, 0),
+            "auto to custom": (None, custom, 0),
+            "auto to invalid stops": (None, [{"hue": 400, "light": 30}], 1),
+        }
+        for name, (first, second, expected) in cases.items():
+            with self.subTest(name):
+                saved = [["theme:space:0", theme_with(first, hue=250)], ["theme:space:1", theme_with(second, hue=10)],
+                         ["theme:space:2", theme_with(hue=120)], ["theme:space:3", theme_with(hue=200)]]
+                scenario = FADE + r"""
+(async () => {
+  await switchTo(0);
+  const mark = log.length;
+  await switchTo(1);
+  assert.equal(props["--vm-tint"], "hsl(10 28% 20%)");
+  assert.equal(fades(mark), EXPECTED, "the first switch");
+  assert.equal(pendingTimers().length, EXPECTED, "timers after the first switch");
+  await switchTo(2);
+  await expectCrossFade(3, "control");
+})().catch((error) => { console.error(error); process.exitCode = 1; });
+""".replace("EXPECTED", str(expected))
+                run_theme(scenario, saved)
+
+    def test_an_apply_from_on_mark_removes_the_fade_class_at_once(self):
+        scenario = FADE + r"""
+(async () => {
+  assert.equal(marks.length, 1, "the mod registers one onMark callback");
+  await switchTo(0);
+  await switchTo(1);
+  assert.ok(classes.has(FADE), "the fade has started");
+  marks[0](browser);
+  assert.ok(!classes.has(FADE), "an apply from onMark never fades");
+})().catch((error) => { console.error(error); process.exitCode = 1; });
+"""
+        run_theme(scenario, PALETTE)
 
 
 if __name__ == "__main__":
