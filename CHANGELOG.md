@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **The guide page matches Vivarc's look**: neutral surfaces, the same corners and motion, a soft accent glow, light and dark.
 - **The command bar marks what you typed** in each result's title, in bold with an accent underline.
 - **The command bar shows its keys** in a footer (Enter for the picked row's action, arrows, Esc), and an empty bar says what you can search.
 - **Each space's colour now drives the accent and a soft gradient.** Selected tabs, focus rings, switches and drop markers take an accent derived from the space theme, and the sidebar blends the colour into a gradient. Turn the gradient off with **Space gradient** in Vivarc Settings. Near-gray themes keep Vivaldi's accent.
