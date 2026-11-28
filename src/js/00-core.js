@@ -81,10 +81,11 @@
     document.removeEventListener("copy", onCopy);
   };
 
-  // An overlay fades out, then goes: removed on its own transition's end, or after 250 ms if none runs.
+  // An overlay fades out (inert meanwhile), then goes: removed on its own transition's end, or after 250 ms if none runs.
   const leave = (node) => {
     if (!node) return;
     node.classList.add("vm-leaving");
+    node.inert = true;
     let gone = false;
     const done = () => { if (!gone) { gone = true; node.remove(); } };
     node.addEventListener("transitionend", (e) => { if (e.target === node) done(); });
