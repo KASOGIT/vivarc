@@ -17,6 +17,7 @@ globalThis.document = { documentElement: { classList: { add() {} } }, querySelec
 const timers = [];
 globalThis.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; };
 vm.runInThisContext(fs.readFileSync(process.argv[1], "utf8"));
+timers.length = 0; // core schedules its own poll at load
 const leave = (node) => {
   assert.equal(typeof window.__vm.leave, "function", "window.__vm.leave exists");
   return window.__vm.leave(node);

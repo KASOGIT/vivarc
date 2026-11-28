@@ -27,7 +27,7 @@ browser.classList = { toggle(name, force) {
 global.document = { querySelector: () => browser, createElement: () => new Element(), addEventListener() {}, body: browser };
 global.window = {
   __vm: { store: { get: async (key, fallback) => saved.get(key) ?? fallback, set: async (key, value) => saved.set(key, value) },
-    cssLoaded: true, onShortcut() {}, onMark() {} },
+    cssLoaded: true, onShortcut() {}, onMark() {}, leave: (node) => node && node.remove() },
   addEventListener: (name, fn) => events[name] = fn,
 };
 global.BroadcastChannel = undefined;
@@ -110,7 +110,7 @@ class SpaceThemes(unittest.TestCase):
         scenario = r'''
 (async () => {
   const leaves = [], removed = [];
-  window.__vm.leave = (node) => leaves.push(node);
+  window.__vm.leave = (node) => { if (node) leaves.push(node); };
   Element.prototype.remove = function () { removed.push(this); };
   await switchTo(0);
   const pop = await open();
