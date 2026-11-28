@@ -559,9 +559,9 @@
   const collapsedStacks = new Set();
   const selected = new Set();
   let selectAnchor = null;
-  const visibleTabIds = () => [...(panel?.querySelectorAll(".vm-tab[data-tab-id]") ?? [])]
+  const visibleTabIds = () => [...(panel?.querySelectorAll(".vm-tab[data-tab-id]:not(.vm-leaving)") ?? [])]
     .filter((r) => r.offsetParent).map((r) => Number(r.dataset.tabId));
-  const paintSelection = () => panel?.querySelectorAll(".vm-tab[data-tab-id]")
+  const paintSelection = () => panel?.querySelectorAll(".vm-tab[data-tab-id]:not(.vm-leaving)")
     .forEach((r) => r.classList.toggle("vm-selected", selected.has(Number(r.dataset.tabId))));
   const clearSelection = () => { if (!selected.size) return; selected.clear(); selectAnchor = null; paintSelection(); };
   const picks = (e) => (window.__vm.platform === "win" ? e.ctrlKey : e.metaKey);
@@ -1066,10 +1066,24 @@
   const tabSig = (tab) => JSON.stringify([tab.id, tab.title, tab.url, tab.favIconUrl, !!tab.active, !!tab.discarded, tab.audible,
     isMuted(tab), !!window.__vm.tilingOf(tab), selected.has(tab.id), !!icons[originOf(tab.url)]]);
   const stackSig = (id, tabs) => JSON.stringify([stacksOf.nameOf(tabs), tabs.some((t) => t.active), collapsedStacks.has(id), tabs.map(tabSig)]);
+  // Ids of tabs the user closed (chrome.tabs.onRemoved): their top-level row collapses before it goes.
+  const closedIds = new Set();
+  const collapseRow = (node) => {
+    node.style.height = `${node.offsetHeight}px`; // rows only have a min-height: pin the current one so it can transition
+    node.getBoundingClientRect(); // flush the style so the transition starts from it
+    window.__vm.leave(node);
+    node.style.height = "";
+  };
   const syncTabs = (reset, ops, next, built) => {
     if (reset) { view.tabs.replaceChildren(); tabNodes.clear(); }
     for (const { op, key, before } of ops) {
-      if (op === "remove") { tabNodes.get(key).remove(); tabNodes.delete(key); continue; }
+      if (op === "remove") {
+        const node = tabNodes.get(key);
+        tabNodes.delete(key);
+        if (key[0] === "t" && closedIds.delete(Number(key.slice(1)))) collapseRow(node);
+        else node.remove();
+        continue;
+      }
       if (op === "replace") { tabNodes.get(key).replaceWith(built.get(key)); tabNodes.set(key, built.get(key)); continue; }
       const node = op === "insert" ? built.get(key) : tabNodes.get(key);
       view.tabs.insertBefore(node, before === null ? null : tabNodes.get(before));
@@ -1077,6 +1091,7 @@
     }
     // A stack's builder unfolds it when a member is active, so its sig is read again once built.
     tabRows = next.map(({ key, sig, resig }) => ({ key, sig: resig ? resig() : sig }));
+    for (const id of closedIds) if (!tabNodes.has(`t${id}`)) closedIds.delete(id);
   };
 
   const render = () => {
@@ -1446,6 +1461,7 @@
       }, 150);
     };
     chrome.tabs.onRemoved.addListener((id, info) => {
+      if (info?.windowId === window.vivaldiWindowId && !info.isWindowClosing) closedIds.add(id);
       if (info?.windowId === window.vivaldiWindowId && !info.isWindowClosing) leftSpace(id);
     });
     chrome.tabs.onDetached.addListener((id, info) => { if (info?.oldWindowId === window.vivaldiWindowId) leftSpace(id); });

@@ -756,6 +756,18 @@
   @starting-style { opacity: 0; transform: translateY(-4px) scale(0.98); }
 }
 #browser.vm-on .vm-leaving { opacity: 0; pointer-events: none; transition: opacity var(--vm-dur-2) var(--vm-ease-out); }
+/* A closed tab row collapses (JS pins its height first, rows only have a min-height) and fades; the rows below slide up.
+   Every property shares one duration: window.__vm.leave removes the row on the first transitionend. */
+#browser.vm-on #vm-panel .vm-row.vm-tab.vm-leaving {
+  height: 0;
+  min-height: 0;
+  padding-block: 0;
+  margin-block: 0;
+  overflow: hidden;
+  transition: height var(--vm-dur-2) var(--vm-ease-out), min-height var(--vm-dur-2) var(--vm-ease-out),
+    padding-block var(--vm-dur-2) var(--vm-ease-out), margin-block var(--vm-dur-2) var(--vm-ease-out),
+    opacity var(--vm-dur-2) var(--vm-ease-out);
+}
 /* A wrapper keeps opacity 1 so it is no backdrop root: its box fades instead and keeps blurring (Liquid glass). */
 #browser.vm-on :is(#vm-cmd, .vm-set-overlay).vm-leaving { opacity: 1; background-color: transparent; transition: background-color var(--vm-dur-2) var(--vm-ease-out); }
 #browser.vm-on :is(.vm-leaving.vm-menu, .vm-leaving.vm-theme-pop, .vm-leaving .vm-cmd-box, .vm-leaving .vm-set-card) {
