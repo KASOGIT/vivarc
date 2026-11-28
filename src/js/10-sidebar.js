@@ -1068,19 +1068,21 @@
   const stackSig = (id, tabs) => JSON.stringify([stacksOf.nameOf(tabs), tabs.some((t) => t.active), collapsedStacks.has(id), tabs.map(tabSig)]);
   // Ids of tabs the user closed (chrome.tabs.onRemoved): their top-level row collapses before it goes.
   const closedIds = new Set();
-  const collapseRow = (node) => {
-    node.style.height = `${node.offsetHeight}px`; // rows only have a min-height: pin the current one so it can transition
-    node.getBoundingClientRect(); // flush the style so the transition starts from it
-    window.__vm.leave(node);
-    node.style.height = "";
+  const collapseRows = (nodes) => {
+    if (!nodes.length) return;
+    const heights = nodes.map((n) => n.offsetHeight); // rows only have a min-height: pin the current one so it can transition
+    nodes.forEach((n, i) => { n.style.height = `${heights[i]}px`; });
+    view.tabs.getBoundingClientRect(); // flush the style once so every transition starts from it
+    nodes.forEach((n) => { window.__vm.leave(n); n.style.height = ""; });
   };
   const syncTabs = (reset, ops, next, built) => {
     if (reset) { view.tabs.replaceChildren(); tabNodes.clear(); }
+    const closing = [];
     for (const { op, key, before } of ops) {
       if (op === "remove") {
         const node = tabNodes.get(key);
         tabNodes.delete(key);
-        if (key[0] === "t" && closedIds.delete(Number(key.slice(1)))) collapseRow(node);
+        if (key[0] === "t" && closedIds.delete(Number(key.slice(1)))) closing.push(node);
         else node.remove();
         continue;
       }
@@ -1089,6 +1091,7 @@
       view.tabs.insertBefore(node, before === null ? null : tabNodes.get(before));
       tabNodes.set(key, node);
     }
+    collapseRows(closing);
     // A stack's builder unfolds it when a member is active, so its sig is read again once built.
     tabRows = next.map(({ key, sig, resig }) => ({ key, sig: resig ? resig() : sig }));
     for (const id of closedIds) if (!tabNodes.has(`t${id}`)) closedIds.delete(id);
