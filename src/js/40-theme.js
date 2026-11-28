@@ -26,7 +26,14 @@
     && stops.every((s) => s && Number.isInteger(s.hue) && s.hue >= 0 && s.hue <= 359 && Number.isInteger(s.light) && s.light >= 10 && s.light <= 90)
     ? stops : null;
 
-  const shownLight = (light) => (theme.light > 58 ? Math.max(light, 59) : Math.min(light, 58));
+  const scheme = window.matchMedia("(prefers-color-scheme: dark)");
+  // In auto mode a saved light is its dark side (10 to 41): a dark system renders it, a light system renders its complement.
+  const darkSide = (light) => Math.min(41, Math.max(10, Math.min(light, 100 - light)));
+  const renderedLight = (light) => {
+    if (theme.mode !== "auto") return light;
+    return scheme.matches ? darkSide(light) : 100 - darkSide(light);
+  };
+  const shownLight = (light, main = theme.light) => (main > 58 ? Math.max(light, 59) : Math.min(light, 58));
 
   let fadeTimer = null;
 
@@ -47,17 +54,18 @@
       for (const k of ["--vm-tint", "--vm-fg", "--vm-grain", "--vm-noise", "--vm-grad", "--vm-grad-glass"]) style.removeProperty(k);
       return;
     }
-    style.setProperty("--vm-tint", `hsl(${theme.hue} ${theme.sat}% ${theme.light}%)`);
+    const light = renderedLight(theme.light);
+    style.setProperty("--vm-tint", `hsl(${theme.hue} ${theme.sat}% ${light}%)`);
     const custom = validStops(theme.stops);
     if (custom) {
-      const gradient = (alpha) => `linear-gradient(160deg, ${[theme, ...custom].map((c) => `hsl(${c.hue} ${theme.sat}% ${c === theme ? c.light : shownLight(c.light)}%${alpha})`).join(", ")})`;
+      const gradient = (alpha) => `linear-gradient(160deg, ${[theme, ...custom].map((c) => `hsl(${c.hue} ${theme.sat}% ${c === theme ? light : shownLight(renderedLight(c.light), light)}%${alpha})`).join(", ")})`;
       style.setProperty("--vm-grad", gradient(""));
       style.setProperty("--vm-grad-glass", gradient(" / var(--vm-glass-opacity)"));
     } else {
       style.removeProperty("--vm-grad");
       style.removeProperty("--vm-grad-glass");
     }
-    style.setProperty("--vm-fg", fgFor(theme.light));
+    style.setProperty("--vm-fg", fgFor(light));
     style.setProperty("--vm-grain", String(theme.grain / 100 * 0.35));
     style.setProperty("--vm-noise", noise);
   };
@@ -78,7 +86,8 @@
   };
 
   let shield = null; // catches a click on the page, which this document never sees (see the sidebar's menu)
-  const close = () => { window.__vm.leave(pop); pop = null; shield?.remove(); shield = null; };
+  let refresh = null;
+  const close = () => { window.__vm.leave(pop); pop = null; refresh = null; shield?.remove(); shield = null; };
 
   const open = async () => {
     if (!window.__vm.cssLoaded) return;
@@ -91,11 +100,21 @@
     const heading = el("div", "vm-theme-heading", "Theme for this space");
 
     const modes = el("div", "vm-theme-modes");
+    const modeButtons = [];
     for (const [label, light] of [["Dark", 18], ["Light", 88]]) {
       const b = el("button", "vm-theme-mode", label);
-      b.addEventListener("click", () => { theme.light = light; save(); sync(); });
-      modes.append(b);
+      b.addEventListener("click", () => { theme.light = light; delete theme.mode; save(); sync(); });
+      modeButtons.push(b);
     }
+    const autoModeBtn = el("button", "vm-theme-mode", "Auto");
+    autoModeBtn.addEventListener("click", () => {
+      theme.mode = "auto";
+      theme.light = darkSide(theme.light);
+      if (validStops(theme.stops)) theme.stops = theme.stops.map((stop) => ({ ...stop, light: darkSide(stop.light) }));
+      save();
+      sync();
+    });
+    modes.append(...modeButtons, autoModeBtn);
 
     const grad = el("div", "vm-theme-grad");
     const autoBtn = el("button", "vm-theme-mode", "Auto");
@@ -134,11 +153,12 @@
     const nearest = (e) => {
       const [x, y] = fraction(e);
       const r = pad.getBoundingClientRect();
+      const main = renderedLight(theme.light);
       const targets = [theme, ...(validStops(theme.stops) || [])];
       let best = 0;
       let bestDist = Infinity;
       targets.forEach((t, i) => {
-        const d = Math.hypot((t.hue / 360 - x) * r.width, ((90 - (i ? shownLight(t.light) : t.light)) / 80 - y) * r.height);
+        const d = Math.hypot((t.hue / 360 - x) * r.width, ((90 - (i ? shownLight(renderedLight(t.light), main) : main)) / 80 - y) * r.height);
         if (d < bestDist) { bestDist = d; best = i; }
       });
       return best;
@@ -149,7 +169,10 @@
       const target = index === 0 ? theme : theme.stops?.[index - 1];
       if (!target) return;
       target.hue = Math.min(359, Math.round(x * 360));
-      target.light = Math.round(90 - y * 80);
+      const light = Math.round(90 - y * 80);
+      if (theme.mode !== "auto") target.light = light;
+      else if (scheme.matches) target.light = Math.min(41, Math.max(10, light));
+      else target.light = 100 - Math.min(90, Math.max(59, light));
       save();
       sync();
     };
@@ -197,10 +220,15 @@
     const sync = () => {
       const custom = validStops(theme.stops) || [];
       const position = (d, c) => { d.style.left = `${c.hue / 360 * 100}%`; d.style.top = `${(90 - c.light) / 80 * 100}%`; };
-      position(dot, theme);
+      const main = renderedLight(theme.light);
+      position(dot, { hue: theme.hue, light: main });
+      const auto = theme.mode === "auto";
+      modeButtons[0].ariaPressed = String(!auto && theme.light <= 58);
+      modeButtons[1].ariaPressed = String(!auto && theme.light > 58);
+      autoModeBtn.ariaPressed = String(auto);
       stopDots.forEach((d, i) => {
         d.hidden = !custom[i];
-        if (custom[i]) position(d, { hue: custom[i].hue, light: shownLight(custom[i].light) });
+        if (custom[i]) position(d, { hue: custom[i].hue, light: shownLight(renderedLight(custom[i].light), main) });
       });
       autoBtn.ariaPressed = String(!custom.length);
       customBtn.ariaPressed = String(custom.length > 0);
@@ -210,6 +238,7 @@
       grain.input.value = String(theme.grain);
     };
     sync();
+    refresh = sync;
 
     pop.append(heading, modes, pad, swatches, ...(gradientOn ? [grad] : []), intensity.row, grain.row, reset);
     shield = el("div", "vm-menu-shield");
@@ -244,6 +273,7 @@
     apply();
   };
 
+  scheme.addEventListener("change", () => { apply(); refresh?.(); });
   window.__vm.onMark(apply);
   if (window.__vm.activeSpace !== undefined) selectSpace(window.__vm.activeSpace);
 })();
