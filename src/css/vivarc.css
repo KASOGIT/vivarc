@@ -385,6 +385,7 @@
 #vm-cmd .vm-cmd-ico img { width: 100%; height: 100%; object-fit: contain; }
 #vm-cmd .vm-cmd-letter { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: clamp(11px, calc(5.5px + min(0.286vw, 0.509vh)), 13.2px); font-weight: 700; color: #fff; }
 #vm-cmd .vm-cmd-title { overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+#vm-cmd .vm-cmd-match { background: none; color: inherit; font-weight: 650; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--vm-accent) 70%, transparent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
 #vm-cmd .vm-cmd-sub { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; color: color-mix(in srgb, var(--vm-text) 40%, transparent); }
 #vm-cmd .vm-cmd-hint { display: flex; align-items: center; gap: 10px; margin-left: auto; color: color-mix(in srgb, var(--vm-text) 40%, transparent); font-weight: 600; }
 #vm-cmd .vm-cmd-row.sel .vm-cmd-hint { color: #fff; }

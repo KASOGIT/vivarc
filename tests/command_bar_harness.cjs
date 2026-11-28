@@ -36,6 +36,8 @@ async function loadBar(context, settingsOpen = false, autoOpen = true) {
     constructor(tag) { this.tag = tag; this.children = []; this.events = {}; this.style = {}; this.value = ''; }
     get value() { return this._value; }
     set value(v) { this._value = String(v); this.selectionStart = this.selectionEnd = this._value.length; }
+    get textContent() { return this.children.length ? this.children.map(c => c.textContent).join('') : this._text; }
+    set textContent(v) { this._text = v; this.children = []; }
     setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
     append(...items) { this.children.push(...items); }
     replaceChildren(...items) { this.children = items; }
@@ -53,7 +55,7 @@ async function loadBar(context, settingsOpen = false, autoOpen = true) {
     remove() {} focus() {} blur() {} scrollIntoView() {}
   }
   const browser = new Element('body');
-  context.document = { body: browser, querySelector: () => browser, createElement: tag => { const node = new Element(tag); nodes.push(node); return node; } };
+  context.document = { body: browser, querySelector: () => browser, createTextNode: text => ({ nodeType: 3, textContent: String(text) }), createElement: tag => { const node = new Element(tag); nodes.push(node); return node; } };
   context.setTimeout = () => {};
   context.CustomEvent = class {};
   const events = {};
