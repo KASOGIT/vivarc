@@ -208,9 +208,8 @@
   const footerHints = (row, platform) => {
     const mac = platform === "mac";
     return [
-      ...(row ? [{ keys: mac ? "↵" : "Enter", label: ENTER_LABEL[row.type] ?? "Open" }] : []),
+      ...(row && !(row.type === "search" && !row.query) ? [{ keys: mac ? "↵" : "Enter", label: ENTER_LABEL[row.type] ?? "Open" }] : []),
       { keys: "↑↓", label: "Select" },
-      { keys: mac ? "⇥" : "Tab", label: "Complete" },
       { keys: mac ? "esc" : "Esc", label: "Close" },
     ];
   };
@@ -312,7 +311,7 @@
   const render = () => {
     if (!list) return;
     renderFoot();
-    if (!rows.length && !input.value) {
+    if (!rows.length && !input.value.trim()) {
       list.replaceChildren(el("div", "vm-cmd-empty", "Type to search tabs, bookmarks and history, or enter an address."));
       return;
     }
