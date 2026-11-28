@@ -172,6 +172,7 @@
   let bar = null;
   let input = null;
   let list = null;
+  let foot = null;
   let chipHolder = null;
   let targetTab = null;
   let mode = null;
@@ -199,6 +200,26 @@
       else out.push({ text: label[i], match: marked[i] });
     }
     return out.length ? out : [{ text: label, match: false }];
+  };
+  const ENTER_LABEL = {
+    tab: "Switch to Tab", action: "Run", engine: "Search with", search: "Search", suggest: "Search",
+    bookmark: "Open", history: "Open", url: "Open",
+  };
+  const footerHints = (row, platform) => {
+    const mac = platform === "mac";
+    return [
+      ...(row ? [{ keys: mac ? "↵" : "Enter", label: ENTER_LABEL[row.type] ?? "Open" }] : []),
+      { keys: "↑↓", label: "Select" },
+      { keys: mac ? "⇥" : "Tab", label: "Complete" },
+      { keys: mac ? "esc" : "Esc", label: "Close" },
+    ];
+  };
+  const renderFoot = () => {
+    foot?.replaceChildren(...footerHints(rows[selected] ?? null, window.__vm.platform).map((h) => {
+      const item = el("span", "vm-cmd-hint-item");
+      item.append(el("kbd", "vm-cmd-key", h.keys), document.createTextNode(h.label));
+      return item;
+    }));
   };
   const titleOf = (row, query) => {
     const title = el("span", "vm-cmd-title");
@@ -233,7 +254,7 @@
   const close = (removeBlank) => {
     const blank = targetTab;
     bar?.remove();
-    bar = input = list = chipHolder = targetTab = mode = null;
+    bar = input = list = foot = chipHolder = targetTab = mode = null;
     rows = [];
     seq++;
     computedFor = null;
@@ -290,6 +311,11 @@
 
   const render = () => {
     if (!list) return;
+    renderFoot();
+    if (!rows.length && !input.value) {
+      list.replaceChildren(el("div", "vm-cmd-empty", "Type to search tabs, bookmarks and history, or enter an address."));
+      return;
+    }
     list.replaceChildren(...rows.map((row, i) => {
       const item = el("div", `vm-cmd-row${i === selected ? " sel" : ""}`);
       if (row.type === "action" || row.type === "engine") {
@@ -317,6 +343,7 @@
         selected = i;
         list.querySelector(".sel")?.classList.remove("sel");
         item.classList.add("sel");
+        renderFoot();
       });
       item.addEventListener("click", () => run(row));
       return item;
@@ -538,7 +565,8 @@
     input.autocomplete = "off";
     head.append(glyph, chipHolder, input);
     list = el("div", "vm-cmd-list");
-    box.append(head, list);
+    foot = el("div", "vm-cmd-foot");
+    box.append(head, list, foot);
     bar.append(box);
     // A click outside the box closes the bar and still reaches what it was on in the sidebar (a space, a tab),
     // instead of taking two clicks.
@@ -572,7 +600,7 @@
     return true;
   };
 
-  window.__vm.commandBar = { highlight, suggestionRow, splitView, closeSplitView };
+  window.__vm.commandBar = { highlight, footerHints, suggestionRow, splitView, closeSplitView };
   if (!window.addEventListener || !window.__vm?.onShortcut) return;
 
   window.addEventListener("vm-open-command-bar", () => open(null));
