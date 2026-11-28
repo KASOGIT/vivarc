@@ -15,7 +15,7 @@ def resolve(config=None, saved=None):
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class Resolve(unittest.TestCase):
     def test_without_anything_saved_the_defaults_apply(self):
-        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "urlBar": False, "commandBarAddress": False, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
+        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "spaceGradient": True, "urlBar": False, "commandBarAddress": False, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
                                     "archive": False, "archiveHours": 12, "updateCheck": True,
                                     "peek": True, "peekPinned": True, "peekShortcut": "alt", "peekDim": True})
 
@@ -84,6 +84,34 @@ class MarkerClasses(unittest.TestCase):
 
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class SpaceGradient(unittest.TestCase):
+    def classes(self, values):
+        return js("settings.classes(settings.SCHEMA, values)", values=values)
+
+    def test_the_gradient_is_on_by_default_and_a_class_while_on(self):
+        self.assertTrue(resolve().get("spaceGradient"))
+        self.assertTrue(self.classes(resolve()).get("vm-gradient"))
+
+    def test_a_saved_off_drops_the_class(self):
+        values = resolve(saved={"spaceGradient": False})
+        self.assertIs(values.get("spaceGradient"), False)
+        self.assertIs(self.classes(values).get("vm-gradient"), False)
+
+    def test_the_appearance_section_lists_glass_then_its_opacity_then_the_gradient(self):
+        out = js("settings.sections(settings.SCHEMA, config).find((s) => s.title === 'Appearance').items.map((i) => i.key)", config={})
+        self.assertEqual(out, ["glass", "glassOpacity", "spaceGradient"])
+
+    def test_the_hint_is_the_same_on_mac_and_windows(self):
+        for platform in ("mac", "win"):
+            hints = js("settings.SCHEMA.filter((s) => s.key === 'spaceGradient').map((s) => settings.hint(s, platform))", platform=platform)
+            self.assertEqual(hints, ["Blend each space's colour into a soft gradient."], platform)
+
+    def test_the_gradient_row_is_labelled_and_shown_even_with_glass_off(self):
+        shown = js("settings.shownRows(settings.SCHEMA, values).filter((s) => s.key === 'spaceGradient').map((s) => s.label)", values={"glass": False})
+        self.assertEqual(shown, ["Space gradient"])
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class ArchiveHours(unittest.TestCase):
     def test_a_saved_number_of_hours_is_used(self):
         self.assertEqual(resolve(saved={"archiveHours": 48})["archiveHours"], 48)
@@ -143,6 +171,7 @@ class Sections(unittest.TestCase):
 class Hints(unittest.TestCase):
     SAME = {
         "glassOpacity": None,
+        "spaceGradient": "Blend each space's colour into a soft gradient.",
         "urlBar": "Always show the address bar. Off, it appears when you edit the address.",
         "spaceBar": "The row of space tiles at the bottom.",
         "compactBottomBar": "A tighter row for profiles and downloads.",
