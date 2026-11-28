@@ -1024,10 +1024,41 @@
     chrome.tabs.remove(loose.map((t) => t.id));
   };
 
+  // The scroll body and its zones are built once and kept: a render only refills the head, pinned and tabs zones
+  // and swaps the grid, update pill and space bar around the body. Detaching the body would reset its scroll.
+  // The divider and the New Tab row hold no data (they only call clearTabs, unpin and the command bar), so their
+  // listeners are bound once here.
+  let view = null;
+  const buildView = () => {
+    const zone = () => el("div", "vm-zone");
+    const body = el("div", "vm-scroll");
+    const head = zone(), pinned = zone(), tabs = zone();
+    const divider = el("div", "vm-divider");
+    const clear = el("span", "vm-clear", "Clear");
+    clear.addEventListener("click", clearTabs);
+    divider.append(clear);
+    wireDrop(divider, { accept: isBookmark, onDrop: (_zone, data) => unpin(data) });
+    const fresh = el("div", "vm-row vm-newtab");
+    fresh.style.paddingLeft = "8px";
+    fresh.append(el("span", "vm-plus", "+"), el("span", "vm-title", "New Tab"));
+    fresh.addEventListener("click", () => window.dispatchEvent(new CustomEvent("vm-open-command-bar")));
+    wireDrop(fresh, { accept: isBookmark, onDrop: (_zone, data) => unpin(data) });
+    body.append(head, pinned, divider, fresh, tabs);
+    return { body, head, pinned, tabs, grid: null, pill: null, bar: null };
+  };
+  const swapNode = (old, next, place) => {
+    if (old && next) old.replaceWith(next);
+    else if (next) place(next);
+    else old?.remove();
+    return next;
+  };
+
   const render = () => {
     if (!panel) return;
-    const scroll = panel.querySelector(".vm-scroll")?.scrollTop ?? 0;
-    const body = el("div", "vm-scroll");
+    if (!view || view.body.parentNode !== panel) {
+      view = buildView();
+      panel.replaceChildren(view.body);
+    }
     const favLeaves = state.favs ? state.favs.children.filter((c) => !c.children) : [];
     let grid = null;
     if (state.defaultSpace) {
@@ -1054,30 +1085,19 @@
       wireDrop(label, {
         onDrop: async (_zone, data) => insertPinned(data, (state.pinned || await ensureFolder("Pinned")).id, 0),
       });
-      body.append(label);
+      view.head.replaceChildren(label);
+    } else {
+      view.head.replaceChildren();
     }
-    if (state.pinned) state.pinned.children.forEach((c) => body.append(pinnedNode(c, 0)));
+    view.pinned.replaceChildren(...(state.pinned ? state.pinned.children.map((c) => pinnedNode(c, 0)) : []));
 
     const open = state.tabs.filter(isLoose);
-    const divider = el("div", "vm-divider");
-    const clear = el("span", "vm-clear", "Clear");
-    clear.addEventListener("click", clearTabs);
-    divider.append(clear);
-    wireDrop(divider, { accept: isBookmark, onDrop: (_zone, data) => unpin(data) });
-    body.append(divider);
-    const fresh = el("div", "vm-row vm-newtab");
-    fresh.style.paddingLeft = "8px";
-    fresh.append(el("span", "vm-plus", "+"), el("span", "vm-title", "New Tab"));
-    fresh.addEventListener("click", () => window.dispatchEvent(new CustomEvent("vm-open-command-bar")));
-    wireDrop(fresh, { accept: isBookmark, onDrop: (_zone, data) => unpin(data) });
-    body.append(fresh);
-    stacksOf.layout(open).forEach((entry) => body.append(entry.type === "stack" ? tabStack(entry.id, entry.tabs) : tabRow(entry.tab)));
+    view.tabs.replaceChildren(...stacksOf.layout(open).map((entry) => (entry.type === "stack" ? tabStack(entry.id, entry.tabs) : tabRow(entry.tab))));
     for (const id of selected) if (!open.some((t) => t.id === id)) selected.delete(id);
 
-    const pill = updatePill();
-    const bar = spaceBar();
-    panel.replaceChildren(...(grid ? [grid] : []), body, ...(pill ? [pill] : []), ...(bar ? [bar] : []));
-    body.scrollTop = scroll;
+    view.grid = swapNode(view.grid, grid, (node) => panel.insertBefore(node, view.body));
+    view.pill = swapNode(view.pill, updatePill(), (node) => panel.insertBefore(node, view.bar));
+    view.bar = swapNode(view.bar, spaceBar(), (node) => panel.append(node));
     fitHeight();
     if (renderedSpace !== null && renderedSpace !== state.active) animateSpaceChange();
     renderedSpace = state.active;

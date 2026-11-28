@@ -120,6 +120,8 @@
   overflow-y: auto;
   scrollbar-width: none;
 }
+/* The zones inside the scroll body only group nodes for render(): they must not take part in the layout. */
+#vm-panel .vm-zone { display: contents; }
 #vm-panel .vm-favs {
   flex: none;
   display: grid;
