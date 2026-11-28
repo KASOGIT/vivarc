@@ -28,11 +28,12 @@
 }
 
 /* Keyboard focus only (not mouse focus, not text fields: they show a caret or field border). */
-#browser.vm-on :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card) :is(button, [role="button"], [tabindex]:not([tabindex="-1"]), input[type="checkbox"], input[type="range"], .vm-tab, .vm-fav, .vm-menu-item):focus-visible {
+#browser.vm-on :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card) :is(button, [role="button"], [tabindex]:not([tabindex="-1"]), input[type="checkbox"], input[type="range"], select):focus-visible {
   outline: 2px solid var(--vm-accent);
   outline-offset: 2px;
 }
-#browser.vm-on :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card) ::selection { background: color-mix(in srgb, var(--vm-accent) 45%, transparent); }
+#browser.vm-on :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, .vm-rename-float, .vm-space-input) ::selection,
+#browser.vm-on :is(.vm-rename-float, .vm-space-input)::selection { background: color-mix(in srgb, var(--vm-accent) 45%, transparent); }
 
 #browser.vm-hide-workspaces #tabs-tabbar-container .button-toolbar.workspace-popup { display: none; }
 #browser.vm-no-space-bar #vm-panel .vm-space-bar { display: none; }
