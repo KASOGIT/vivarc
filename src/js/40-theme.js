@@ -21,6 +21,7 @@
     const browser = document.querySelector("#browser");
     if (!browser) return;
     browser.classList.toggle("vm-themed", theme.on);
+    browser.classList.toggle("vm-tint-neutral", theme.on && theme.sat < 10);
     const style = browser.style;
     if (!theme.on) {
       for (const k of ["--vm-tint", "--vm-fg", "--vm-grain", "--vm-noise"]) style.removeProperty(k);

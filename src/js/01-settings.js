@@ -11,6 +11,7 @@
       default: false, onClass: "vm-glass" },
     { key: "glassOpacity", section: "Appearance", type: "range", min: 15, max: 95, step: 1, default: 55, unit: "%", needs: "glass", cssVar: "--vm-glass-opacity",
       label: "Glass opacity", low: "Clear", high: "Frosted" },
+    { key: "spaceGradient", section: "Appearance", label: "Space gradient", hint: "Blend each space's colour into a soft gradient.", default: true, onClass: "vm-gradient" },
     { key: "urlBar", section: "Sidebar", label: "URL bar", hint: "Always show the address bar. Off, it appears when you edit the address.",
       default: false, onClass: "vm-url-bar" },
     { key: "commandBarAddress", section: "Sidebar", label: "Edit the address in the command bar", hint: { mac: "Cmd+L opens the address in the command bar, like Arc. Off, it is edited in the sidebar.", win: "Ctrl+L opens the address in the command bar, like Arc. Off, it is edited in the sidebar." },

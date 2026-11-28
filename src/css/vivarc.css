@@ -3,7 +3,7 @@
   --vm-surface: color-mix(in srgb, var(--colorBg, #1c1c20) 90%, black);
   --vm-css: 1; /* read by the JS to confirm this stylesheet is loaded */
   --vm-text: var(--colorFg, #f2f2f5);
-  --vm-sel: color-mix(in srgb, var(--colorHighlightBg, #6b63a0) 40%, var(--vm-surface));
+  --vm-sel: color-mix(in srgb, var(--vm-accent) 40%, var(--vm-surface));
   --vm-r-1: 6px;
   --vm-r-2: 8px;
   --vm-r-3: 12px;
@@ -20,6 +20,9 @@
   --vm-fill-3: color-mix(in srgb, var(--colorFg, #fff) 24%, transparent);
   --vm-accent: var(--colorHighlightBg, #7b8cff);
 }
+/* The accent follows the space theme (40-theme.js); near-gray themes keep Vivaldi's own. */
+#browser.vm-on.vm-themed { --vm-accent: oklch(from var(--vm-tint) clamp(0.5, calc(1.15 - l), 0.75) max(c, 0.1) h); }
+#browser.vm-on.vm-themed.vm-tint-neutral { --vm-accent: var(--colorHighlightBg, #7b8cff); }
 /* The themed sidebar overrides --colorFg on this element, and a custom property resolves var() where it is declared. */
 #browser.vm-on #tabs-tabbar-container {
   --vm-fill-1: color-mix(in srgb, var(--colorFg, #fff) 8%, transparent);
@@ -168,7 +171,7 @@
   font-weight: 600;
   border-radius: var(--vm-r-2);
   cursor: pointer;
-  background-color: color-mix(in srgb, var(--colorHighlightBg, var(--colorFg)) 85%, transparent);
+  background-color: color-mix(in srgb, var(--vm-accent) 85%, transparent);
   color: var(--colorHighlightFg, var(--colorBg));
   transition: filter var(--vm-dur-1);
 }
@@ -230,8 +233,8 @@
 }
 /* Picked tabs (Cmd+click, Shift+click): an outlined, lightly filled row. */
 #vm-panel .vm-tab.vm-selected {
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--colorHighlightBg, #5d7aee) 70%, transparent);
-  background-color: color-mix(in srgb, var(--colorHighlightBg, #5d7aee) 14%, transparent);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--vm-accent) 70%, transparent);
+  background-color: color-mix(in srgb, var(--vm-accent) 14%, transparent);
 }
 
 #vm-panel .vm-ico {
@@ -504,11 +507,11 @@
 
 /* Drag and drop */
 #vm-panel .dragging { opacity: 0.4; }
-#vm-panel .drop-before { box-shadow: inset 0 2px 0 0 var(--colorHighlightBg, #7b8cff); }
-#vm-panel .drop-after { box-shadow: inset 0 -2px 0 0 var(--colorHighlightBg, #7b8cff); }
-#vm-panel .vm-fav.drop-before { box-shadow: inset 2px 0 0 0 var(--colorHighlightBg, #7b8cff); }
-#vm-panel .vm-fav.drop-after { box-shadow: inset -2px 0 0 0 var(--colorHighlightBg, #7b8cff); }
-#vm-panel .drop-into { background-color: color-mix(in srgb, var(--colorHighlightBg, #7b8cff) 35%, transparent); }
+#vm-panel .drop-before { box-shadow: inset 0 2px 0 0 var(--vm-accent); }
+#vm-panel .drop-after { box-shadow: inset 0 -2px 0 0 var(--vm-accent); }
+#vm-panel .vm-fav.drop-before { box-shadow: inset 2px 0 0 0 var(--vm-accent); }
+#vm-panel .vm-fav.drop-after { box-shadow: inset -2px 0 0 0 var(--vm-accent); }
+#vm-panel .drop-into { background-color: color-mix(in srgb, var(--vm-accent) 35%, transparent); }
 #vm-panel .vm-favs:empty { display: none; }
 #browser.vm-dragging #vm-panel .vm-favs:empty {
   display: grid;
@@ -519,7 +522,7 @@
 }
 #vm-panel .vm-favs.drop-before, #vm-panel .vm-favs.drop-after {
   box-shadow: none;
-  outline: 2px dashed var(--colorHighlightBg, #7b8cff);
+  outline: 2px dashed var(--vm-accent);
   outline-offset: -2px;
   border-radius: var(--vm-r-4);
 }
@@ -535,6 +538,12 @@
 /* isolation makes the bar its own stacking context, painted under the page: lift it while the address bar or
    one of its popups (site permission requests) is open, or they are cut off at the sidebar's edge */
 #browser.vm-themed #tabs-tabbar-container:is(:focus-within, :has(.addressfield-popup-container)) { z-index: 1; }
+#browser.vm-themed.vm-gradient #tabs-tabbar-container {
+  background-image: linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30)));
+}
+#browser.vm-themed.vm-gradient.vm-tint-neutral #tabs-tabbar-container {
+  background-image: linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c h));
+}
 #browser.vm-themed #tabs-tabbar-container::after {
   content: "";
   position: absolute;
@@ -610,7 +619,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: var(--colorHighlightBg, #7b8cff);
+  background-color: var(--vm-accent);
 }
 #vm-panel .vm-split-mark { flex: none; opacity: 0.55; font-size: 14px; }
 #vm-panel .vm-sound {
@@ -669,7 +678,7 @@
   transition: opacity var(--vm-dur-1), transform var(--vm-dur-1);
 }
 #browser.vm-on .vm-space-chip:hover { opacity: 1; transform: scale(1.08); }
-#browser.vm-on .vm-space-chip.active { opacity: 1; cursor: default; box-shadow: 0 0 0 2px var(--colorHighlightBg, #7b8cff); transform: none; }
+#browser.vm-on .vm-space-chip.active { opacity: 1; cursor: default; box-shadow: 0 0 0 2px var(--vm-accent); transform: none; }
 #browser.vm-on .vm-space-chip img { width: 100%; height: 100%; object-fit: cover; }
 #browser.vm-on .vm-space-letter { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: #fff; font-weight: 600; font-size: 12px; }
 #browser.vm-on .vm-space-plus { background-color: var(--vm-fill-2); font-size: 16px; line-height: 1; }
@@ -766,13 +775,13 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   transition: transform var(--vm-dur-2);
 }
-#browser.vm-on .vm-set-switch:checked { background: var(--colorHighlightBg, #6b63a0); }
+#browser.vm-on .vm-set-switch:checked { background: var(--vm-accent); }
 #browser.vm-on .vm-set-switch:checked::after { transform: translateX(16px); }
 .vm-set-range { display: block; cursor: default; }
 .vm-set-range:hover { background: none; }
 .vm-set-range-top { display: flex; justify-content: space-between; }
 .vm-set-value { font-weight: 500; opacity: 0.6; font-variant-numeric: tabular-nums; }
-.vm-set-slider { width: 100%; margin: 8px 0 0; accent-color: var(--colorHighlightBg, #6b63a0); }
+.vm-set-slider { width: 100%; margin: 8px 0 0; accent-color: var(--vm-accent); }
 .vm-set-ends { display: flex; justify-content: space-between; margin-top: 2px; opacity: 0.5; font-size: 12px; }
 #browser.vm-on .vm-set-select {
   flex: none;
@@ -815,10 +824,24 @@
   background-image:
     linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 26%),
     radial-gradient(120% 45% at 0% 0%, rgba(255, 255, 255, 0.14), transparent 70%),
-    radial-gradient(90% 40% at 100% 100%, color-mix(in srgb, var(--colorHighlightBg, #7b8cff) 28%, transparent), transparent 70%);
+    radial-gradient(90% 40% at 100% 100%, color-mix(in srgb, var(--vm-accent) 28%, transparent), transparent 70%);
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 #browser.vm-on.vm-glass.vm-themed #tabs-tabbar-container { background-color: color-mix(in srgb, var(--vm-tint) var(--vm-glass-opacity, 55%), transparent) !important; }
+#browser.vm-on.vm-glass.vm-themed.vm-gradient #tabs-tabbar-container {
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 26%),
+    radial-gradient(120% 45% at 0% 0%, rgba(255, 255, 255, 0.14), transparent 70%),
+    radial-gradient(90% 40% at 100% 100%, color-mix(in srgb, var(--vm-accent) 28%, transparent), transparent 70%),
+    linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30)));
+}
+#browser.vm-on.vm-glass.vm-themed.vm-gradient.vm-tint-neutral #tabs-tabbar-container {
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 26%),
+    radial-gradient(120% 45% at 0% 0%, rgba(255, 255, 255, 0.14), transparent 70%),
+    radial-gradient(90% 40% at 100% 100%, color-mix(in srgb, var(--vm-accent) 28%, transparent), transparent 70%),
+    linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c h));
+}
 
 /* Items inside a glass surface are luminous capsules, not more glass: a lit fill and a rim, no blur of their own. */
 #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill) {
@@ -832,14 +855,14 @@
 /* While a favorite is dragged, tiles stay put (a tile that grows under the pointer moves the drop zones) and the drop
    marker shows over the glass rim. */
 #browser.vm-on.vm-dragging #vm-panel .vm-fav:is(:hover, :active) { transform: none; }
-#browser.vm-on.vm-glass #vm-panel .vm-fav.drop-before { box-shadow: var(--vm-lozenge-rim), inset 3px 0 0 0 var(--colorHighlightBg, #7b8cff); }
-#browser.vm-on.vm-glass #vm-panel .vm-fav.drop-after { box-shadow: var(--vm-lozenge-rim), inset -3px 0 0 0 var(--colorHighlightBg, #7b8cff); }
+#browser.vm-on.vm-glass #vm-panel .vm-fav.drop-before { box-shadow: var(--vm-lozenge-rim), inset 3px 0 0 0 var(--vm-accent); }
+#browser.vm-on.vm-glass #vm-panel .vm-fav.drop-after { box-shadow: var(--vm-lozenge-rim), inset -3px 0 0 0 var(--vm-accent); }
 #browser.vm-on.vm-glass #vm-panel .vm-update { box-shadow: var(--vm-lozenge-rim), 0 2px 8px rgba(0, 0, 0, 0.16); }
 #browser.vm-on.vm-glass #vm-panel .vm-row { transition: background var(--vm-dur-2), box-shadow var(--vm-dur-2); }
 #browser.vm-on.vm-glass #vm-panel .vm-row:hover { background: var(--vm-lozenge-soft); }
 #browser.vm-on.vm-glass #vm-panel .vm-row.active { background: var(--vm-lozenge); box-shadow: var(--vm-lozenge-rim); }
 #browser.vm-on.vm-glass .vm-space-chip { box-shadow: var(--vm-lozenge-rim); }
-#browser.vm-on.vm-glass .vm-space-chip.active { box-shadow: var(--vm-lozenge-rim), 0 0 0 2px var(--colorHighlightBg, #7b8cff); }
+#browser.vm-on.vm-glass .vm-space-chip.active { box-shadow: var(--vm-lozenge-rim), 0 0 0 2px var(--vm-accent); }
 #browser.vm-on.vm-glass #vm-cmd .vm-cmd-row.sel { background: var(--vm-lozenge-strong), var(--vm-sel); box-shadow: var(--vm-lozenge-rim); }
 #browser.vm-on.vm-glass :is(.vm-menu-item:hover, .vm-set-row:not(.vm-set-range):hover, .vm-theme-mode) { background: var(--vm-lozenge); box-shadow: var(--vm-lozenge-rim); }
 
@@ -851,6 +874,8 @@
   }
   #browser.vm-on.vm-glass #tabs-tabbar-container { background-color: var(--colorBg, #1c1c20) !important; backdrop-filter: none; }
   #browser.vm-on.vm-glass.vm-themed #tabs-tabbar-container { background-color: var(--vm-tint) !important; }
+  #browser.vm-on.vm-glass.vm-themed.vm-gradient #tabs-tabbar-container { background-image: linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30))); }
+  #browser.vm-on.vm-glass.vm-themed.vm-gradient.vm-tint-neutral #tabs-tabbar-container { background-image: linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c h)); }
 }
 
 /* Peek: keep Arc's controls (close, open in a tab, split view, copy link) and drop the extra menus. */
