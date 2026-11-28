@@ -3,7 +3,7 @@
   const { store } = window.__vm;
   // Colours are picked in OKLCH, a light row at L 0.86 and a deep row at L 0.56, and saved as their HSL equivalent so stored themes keep their format.
   const PRESETS = [
-    ["Paper", "oklch(0.86 0.012 80)", 37, 13, 81], ["Rose", "oklch(0.86 0.07 15)", 357, 90, 87],
+    ["Paper", "oklch(0.86 0.008 80)", 37, 9, 81], ["Rose", "oklch(0.86 0.07 15)", 357, 90, 87],
     ["Amber", "oklch(0.86 0.08 70)", 32, 80, 77], ["Mint", "oklch(0.86 0.08 150)", 131, 46, 78],
     ["Sky", "oklch(0.86 0.07 235)", 203, 87, 81], ["Lilac", "oklch(0.86 0.07 305)", 266, 74, 87],
     ["Graphite", "oklch(0.56 0.02 270)", 224, 7, 47], ["Ruby", "oklch(0.56 0.13 15)", 353, 40, 51],
