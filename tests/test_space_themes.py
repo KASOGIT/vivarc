@@ -77,7 +77,7 @@ class SpaceThemes(unittest.TestCase):
   await switchTo(0);
   assert.equal(props["--vm-tint"], "hsl(250 28% 20%)");
   let pop = await open();
-  pop.children[3].children[3].listeners.click(); // red preset
+  pop.children[3].children[3].listeners.click(); // mint preset
   assert.equal(saved.get("theme:space:0").hue, 131);
   await switchTo(42);
   assert.equal(props["--vm-tint"], "hsl(250 28% 20%)");
@@ -583,12 +583,8 @@ class SpaceTintCrossFade(unittest.TestCase):
         run_theme(scenario, PALETTE)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 OKLCH_PRESETS = [
-    ["Paper", "oklch(0.86 0.012 80)", 37, 13, 81], ["Rose", "oklch(0.86 0.07 15)", 357, 90, 87],
+    ["Paper", "oklch(0.86 0.008 80)", 37, 9, 81], ["Rose", "oklch(0.86 0.07 15)", 357, 90, 87],
     ["Amber", "oklch(0.86 0.08 70)", 32, 80, 77], ["Mint", "oklch(0.86 0.08 150)", 131, 46, 78],
     ["Sky", "oklch(0.86 0.07 235)", 203, 87, 81], ["Lilac", "oklch(0.86 0.07 305)", 266, 74, 87],
     ["Graphite", "oklch(0.56 0.02 270)", 224, 7, 47], ["Ruby", "oklch(0.56 0.13 15)", 353, 40, 51],
@@ -634,9 +630,22 @@ class OklchPresets(unittest.TestCase):
   swatches[3].listeners.click();
   assert.equal(props["--vm-tint"], "hsl(131 46% 78%)");''')
 
+    def test_paper_and_graphite_mark_the_browser_neutral_and_rose_does_not(self):
+        self.run_presets(r'''
+  swatches[0].listeners.click();
+  assert.ok(classes.has("vm-tint-neutral"), "paper is neutral");
+  swatches[1].listeners.click();
+  assert.ok(!classes.has("vm-tint-neutral"), "rose is not neutral");
+  swatches[6].listeners.click();
+  assert.ok(classes.has("vm-tint-neutral"), "graphite is neutral");''')
+
     def test_the_light_row_gets_dark_text_and_the_deep_row_light_text(self):
         self.run_presets(r'''
   for (const [i, fg] of [[0, "#1b1b1f"], [5, "#1b1b1f"], [6, "#f2f2f5"], [11, "#f2f2f5"]]) {
     swatches[i].listeners.click();
     assert.equal(props["--vm-fg"], fg, `swatch ${i}`);
   }''')
+
+
+if __name__ == "__main__":
+    unittest.main()
