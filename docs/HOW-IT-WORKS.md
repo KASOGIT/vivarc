@@ -84,6 +84,7 @@ Things that cost time to find out:
 - Split view is Vivaldi's tab tiling, stored in each tab's `vivExtData` JSON as `tiling: {id, layout, type, index}`. A mod can write it with `chrome.tabs.update(id, {vivExtData})`. Measured on the rendered panes: `row` is side by side, `column` is one above the other. Write all tiles at once, and start a fresh `id` for each split: Vivaldi restores tile groups with the session, and reusing an old group keeps its old layout.
 
 - Archive inactive tabs (`12-archive.js`, settings `archive` and `archiveHours`): every minute each window queries its own tabs and closes those whose `lastAccessed` is older than the limit, except the active tab, Vivaldi-pinned and audible tabs, tabs bound to a pin or favorite (`vivarcPin`) and split-view tabs. A tab with no `lastAccessed` is kept. Closed tabs are not stored anywhere by Vivarc: they come back through `chrome.sessions` (Reopen Closed Tab) or history. Whether `lastAccessed` survives a Vivaldi restart has not been checked; if it resets at launch, tabs only expire after a full run of the limit.
+- The sidebar keeps open-tab rows and stacks across renders: `src/js/09-keyed.js` plans the DOM ops from each row's sig. So anything `tabRow` or `tabStack` reads to build DOM must be in `tabSig` or `stackSig`, and handlers on those rows look the tab up live by id (`liveTab`) instead of trusting the object they were built from. Pinned rows and favourites are still rebuilt each render.
 
 ## Spaces (Vivaldi workspaces)
 

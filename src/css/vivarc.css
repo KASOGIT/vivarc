@@ -218,12 +218,13 @@
   left: anchor(left);
   right: anchor(right);
   height: anchor-size(height);
-  position-visibility: anchors-valid;
   z-index: -1;
   pointer-events: none;
   border-radius: var(--vm-r-3);
   background-color: color-mix(in srgb, var(--colorFg) 15%, transparent);
 }
+/* No top-level active row means no anchor, so hide the indicator. */
+#vm-panel .vm-scroll:not(:has(> .vm-zone-tabs > .vm-tab.active)) > .vm-tab-indicator { display: none; }
 /* Only an active change between two top-level rows slides (10-sidebar.js adds the class); other moves follow at once. */
 #vm-panel .vm-tab-indicator.vm-sliding { transition: top var(--vm-dur-3) var(--vm-ease-spring), height var(--vm-dur-3) var(--vm-ease-spring); }
 #vm-panel .vm-row.discarded { opacity: 0.6; }
