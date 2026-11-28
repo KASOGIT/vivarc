@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Pick your own gradient** for each space: in the theme pop-up, switch Gradient to Custom and drag the extra colours on the pad.
 - **Density, corners and motion** in Settings, Appearance: tighter or roomier rows, sharper or rounder corners, and full, reduced or no motion. Your system's Reduce Motion still applies.
 - **The guide page matches Vivarc's look**: neutral surfaces, the same corners and motion, a soft accent glow, light and dark.
 - **The command bar marks what you typed** in each result's title, in bold with an accent underline.
