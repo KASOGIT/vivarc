@@ -21,6 +21,9 @@
   --vm-fill-3: color-mix(in srgb, var(--colorFg, #fff) 24%, transparent);
   --vm-accent: var(--colorHighlightBg, #7b8cff);
 }
+/* Lets the tint interpolate during a space switch. */
+@property --vm-tint { syntax: "<color>"; inherits: true; initial-value: transparent; }
+#browser.vm-on.vm-tint-fade { transition: --vm-tint var(--vm-dur-3) var(--vm-ease-out); }
 /* The accent follows the space theme (40-theme.js), a step that sits far from the tint's lightness so rings and markers stay visible; near-gray themes keep Vivaldi's own. */
 #browser.vm-on.vm-themed { --vm-accent: oklch(from var(--vm-tint) clamp(0.4, calc((0.62 - l) * 1000), 0.82) max(c, 0.1) h); }
 #browser.vm-on.vm-themed.vm-tint-neutral { --vm-accent: var(--colorHighlightBg, #7b8cff); }
@@ -928,6 +931,7 @@
 #browser.vm-on.vm-reduce-motion #vm-copied { transform: none; }
 #browser.vm-on.vm-reduce-motion :is(.vm-leaving.vm-menu, .vm-leaving.vm-theme-pop, .vm-leaving .vm-cmd-box, .vm-leaving .vm-set-card) { transform: none !important; }
 #browser.vm-on.vm-reduce-motion .vm-set-switch::after { transition: none; }
+#browser.vm-on.vm-reduce-motion.vm-tint-fade { transition: none; }
 #browser.vm-on.vm-motion-off { --vm-dur-1: 0ms; }
 
 /* Density and corners: after the token block, same specificity. */
