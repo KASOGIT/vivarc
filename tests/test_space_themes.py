@@ -143,9 +143,11 @@ class SpaceGradientStops(unittest.TestCase):
 (async () => {
   await switchTo(0);
   assert.equal(props["--vm-grad"], "linear-gradient(160deg, hsl(250 28% 20%), hsl(300 28% 30%))", "valid stops set the gradient first");
+  assert.equal(props["--vm-grad-glass"], "linear-gradient(160deg, hsl(250 28% 20% / var(--vm-glass-opacity)), hsl(300 28% 30% / var(--vm-glass-opacity)))", "and the glass gradient");
   await switchTo(1);
   assert.equal(props["--vm-tint"], "hsl(77 28% 20%)", "the other fields still load");
   assert.ok(!("--vm-grad" in props), "invalid stops remove the gradient");
+  assert.ok(!("--vm-grad-glass" in props), "and the glass gradient");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 """
         run_theme(scenario, saved)
@@ -155,6 +157,7 @@ class SpaceGradientStops(unittest.TestCase):
 (async () => {
   await switchTo(0);
   assert.equal(props["--vm-grad"], "linear-gradient(160deg, hsl(250 28% 20%), hsl(300 28% 30%))");
+  assert.equal(props["--vm-grad-glass"], "linear-gradient(160deg, hsl(250 28% 20% / var(--vm-glass-opacity)), hsl(300 28% 30% / var(--vm-glass-opacity)))");
   assert.equal(props["--vm-tint"], "hsl(250 28% 20%)");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 """
@@ -165,6 +168,7 @@ class SpaceGradientStops(unittest.TestCase):
 (async () => {
   await switchTo(0);
   assert.equal(props["--vm-grad"], "linear-gradient(160deg, hsl(143 65% 40%), hsl(0 65% 10%), hsl(359 65% 90%))");
+  assert.equal(props["--vm-grad-glass"], "linear-gradient(160deg, hsl(143 65% 40% / var(--vm-glass-opacity)), hsl(0 65% 10% / var(--vm-glass-opacity)), hsl(359 65% 90% / var(--vm-glass-opacity)))");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 """
         record = theme_with([{"hue": 0, "light": 10}, {"hue": 359, "light": 90}], hue=143, sat=65, light=40)
@@ -176,6 +180,7 @@ class SpaceGradientStops(unittest.TestCase):
   await switchTo(0);
   assert.equal(props["--vm-tint"], "hsl(250 28% 20%)");
   assert.ok(!("--vm-grad" in props));
+  assert.ok(!("--vm-grad-glass" in props));
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 """
         run_theme(scenario, LEGACY)
@@ -209,8 +214,10 @@ class SpaceGradientStops(unittest.TestCase):
 (async () => {
   await switchTo(0);
   assert.ok("--vm-grad" in props, "on with stops sets it");
+  assert.ok("--vm-grad-glass" in props, "and the glass one");
   await switchTo(1);
   assert.ok(!("--vm-grad" in props), "off removes it");
+  assert.ok(!("--vm-grad-glass" in props), "off removes the glass one");
   assert.ok(!("--vm-tint" in props), "off removes the tint too");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 """
@@ -224,11 +231,14 @@ class SpaceGradientStops(unittest.TestCase):
 (async () => {
   await switchTo(0);
   assert.equal(props["--vm-grad"], "linear-gradient(160deg, hsl(250 28% 20%), hsl(300 28% 30%), hsl(20 28% 50%))");
+  assert.equal(props["--vm-grad-glass"], "linear-gradient(160deg, hsl(250 28% 20% / var(--vm-glass-opacity)), hsl(300 28% 30% / var(--vm-glass-opacity)), hsl(20 28% 50% / var(--vm-glass-opacity)))");
   await switchTo(1);
   assert.ok(!("--vm-grad" in props), "a space without stops removes it");
+  assert.ok(!("--vm-grad-glass" in props), "and the glass one");
   assert.equal(props["--vm-tint"], "hsl(10 28% 20%)");
   await switchTo(2);
   assert.equal(props["--vm-grad"], "linear-gradient(160deg, hsl(120 28% 20%), hsl(90 28% 40%))");
+  assert.equal(props["--vm-grad-glass"], "linear-gradient(160deg, hsl(120 28% 20% / var(--vm-glass-opacity)), hsl(90 28% 40% / var(--vm-glass-opacity)))");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 """
         run_theme(scenario, saved)
@@ -238,11 +248,13 @@ class SpaceGradientStops(unittest.TestCase):
 (async () => {
   await switchTo(0);
   assert.equal(props["--vm-grad"], "linear-gradient(160deg, hsl(250 28% 20%), hsl(300 28% 30%))");
+  assert.ok("--vm-grad-glass" in props, "the glass gradient is set before the reset");
   const pop = await open();
   pop.children.at(-1).listeners.click(); // reset
   assert.equal(saved.get("theme:space:0").on, false);
   assert.equal(saved.get("theme:space:0").stops, undefined);
   assert.ok(!("--vm-grad" in props), "reset removes the gradient");
+  assert.ok(!("--vm-grad-glass" in props), "reset removes the glass gradient");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 """
         run_theme(scenario, [["theme:space:0", theme_with([{"hue": 300, "light": 30}])]])
