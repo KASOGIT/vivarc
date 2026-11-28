@@ -22,7 +22,7 @@
   };
 
   // Ops that turn the rows `prev` into `next` (both lists of {key, sig}): removes, then replaces, then inserts
-  // and moves walking next. `before` is the key of the next row in `next` that is new or stays put, or null for the end. Kept rows on the
+  // and moves walking next. `before` is the key of the first following row that stays put, or null for the end. Kept rows on the
   // longest increasing run of their previous positions stay where they are.
   const plan = (prev, next) => {
     const prevAt = new Map(prev.map((row, i) => [row.key, i]));
@@ -35,11 +35,10 @@
     const kept = next.map((row, i) => i).filter((i) => prevAt.has(next[i].key));
     const stable = lis(kept.map((i) => prevAt.get(next[i].key)));
     const stableAt = new Set([...stable].map((j) => kept[j]));
-    // A row that will move is not a place to insert before: it is not in its final spot when the op runs.
-    const settled = next.map((row, i) => !prevAt.has(row.key) || stableAt.has(i));
+    // Rows are anchored on a stable one only: a row that moves, or is still to come, is not in place when the op runs.
     const beforeOf = (i) => {
       let j = i + 1;
-      while (j < next.length && !settled[j]) j++;
+      while (j < next.length && !stableAt.has(j)) j++;
       return j < next.length ? next[j].key : null;
     };
     next.forEach((row, i) => {

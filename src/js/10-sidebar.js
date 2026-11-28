@@ -1065,26 +1065,18 @@
   const tabNodes = new Map();
   const tabSig = (tab) => JSON.stringify([tab.id, tab.title, tab.url, tab.favIconUrl, !!tab.active, !!tab.discarded, tab.audible,
     isMuted(tab), !!window.__vm.tilingOf(tab), selected.has(tab.id), !!icons[originOf(tab.url)]]);
-  const stackSig = (id, tabs) => JSON.stringify([stacksOf.nameOf(tabs), tabs.some((t) => t.active) || !collapsedStacks.has(id), tabs.map(tabSig)]);
+  const stackSig = (id, tabs) => JSON.stringify([stacksOf.nameOf(tabs), tabs.some((t) => t.active), collapsedStacks.has(id), tabs.map(tabSig)]);
   const syncTabs = (reset, ops, next, built) => {
     if (reset) { view.tabs.replaceChildren(); tabNodes.clear(); }
-    const order = new Map(next.map((row, i) => [row.key, i]));
-    const pending = new Set(ops.filter((o) => o.op === "insert" || o.op === "move").map((o) => o.key));
-    // The row to insert before: the first one after `before` (inclusive) that is already in its place.
-    const anchor = (before) => {
-      if (before === null) return null;
-      for (let i = order.get(before); i < next.length; i++) if (!pending.has(next[i].key)) return tabNodes.get(next[i].key);
-      return null;
-    };
     for (const { op, key, before } of ops) {
       if (op === "remove") { tabNodes.get(key).remove(); tabNodes.delete(key); continue; }
       if (op === "replace") { tabNodes.get(key).replaceWith(built.get(key)); tabNodes.set(key, built.get(key)); continue; }
-      pending.delete(key);
       const node = op === "insert" ? built.get(key) : tabNodes.get(key);
-      view.tabs.insertBefore(node, anchor(before));
+      view.tabs.insertBefore(node, before === null ? null : tabNodes.get(before));
       tabNodes.set(key, node);
     }
-    tabRows = next.map(({ key, sig }) => ({ key, sig }));
+    // A stack's builder unfolds it when a member is active, so its sig is read again once built.
+    tabRows = next.map(({ key, sig, resig }) => ({ key, sig: resig ? resig() : sig }));
   };
 
   const render = () => {
@@ -1128,7 +1120,7 @@
     const open = state.tabs.filter(isLoose);
     const reset = fresh || (renderedSpace !== null && renderedSpace !== state.active);
     const next = stacksOf.layout(open).map((entry) => (entry.type === "stack"
-      ? { key: `s${entry.id}`, sig: stackSig(entry.id, entry.tabs), build: () => tabStack(entry.id, entry.tabs) }
+      ? { key: `s${entry.id}`, sig: stackSig(entry.id, entry.tabs), resig: () => stackSig(entry.id, entry.tabs), build: () => tabStack(entry.id, entry.tabs) }
       : { key: `t${entry.tab.id}`, sig: tabSig(entry.tab), build: () => tabRow(entry.tab) }));
     const ops = window.__vm.keyed.plan(reset ? [] : tabRows, next);
     const built = new Map(ops.filter((o) => o.op === "replace" || o.op === "insert")
