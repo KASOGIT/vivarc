@@ -4,6 +4,26 @@
   --vm-css: 1; /* read by the JS to confirm this stylesheet is loaded */
   --vm-text: var(--colorFg, #f2f2f5);
   --vm-sel: color-mix(in srgb, var(--colorHighlightBg, #6b63a0) 40%, var(--vm-surface));
+  --vm-r-1: 6px;
+  --vm-r-2: 8px;
+  --vm-r-3: 12px;
+  --vm-r-4: 14px;
+  --vm-r-5: 18px;
+  --vm-r-full: 999px;
+  --vm-dur-1: 120ms;
+  --vm-dur-2: 180ms;
+  --vm-dur-3: 240ms;
+  --vm-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --vm-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --vm-fill-1: color-mix(in srgb, var(--colorFg, #fff) 8%, transparent);
+  --vm-fill-2: color-mix(in srgb, var(--colorFg, #fff) 14%, transparent);
+  --vm-fill-3: color-mix(in srgb, var(--colorFg, #fff) 24%, transparent);
+}
+/* The themed sidebar overrides --colorFg on this element, and a custom property resolves var() where it is declared. */
+#browser.vm-on #tabs-tabbar-container {
+  --vm-fill-1: color-mix(in srgb, var(--colorFg, #fff) 8%, transparent);
+  --vm-fill-2: color-mix(in srgb, var(--colorFg, #fff) 14%, transparent);
+  --vm-fill-3: color-mix(in srgb, var(--colorFg, #fff) 24%, transparent);
 }
 
 #browser.vm-hide-workspaces #tabs-tabbar-container .button-toolbar.workspace-popup { display: none; }
@@ -98,15 +118,15 @@
   align-items: center;
   justify-content: center;
   height: 44px;
-  border-radius: 14px;
+  border-radius: var(--vm-r-4);
   cursor: pointer;
   background-color: color-mix(in srgb, var(--colorFg) 10%, transparent);
-  transition: background-color 120ms, transform 120ms;
+  transition: background-color var(--vm-dur-1), transform var(--vm-dur-1);
 }
 #vm-panel .vm-fav:hover { background-color: color-mix(in srgb, var(--colorFg) 17%, transparent); }
 #vm-panel .vm-fav:active { transform: scale(0.96); }
-#vm-panel .vm-fav.active { background-color: color-mix(in srgb, var(--colorFg) 24%, transparent); }
-#vm-panel .vm-fav .vm-ico { width: 24px; height: 24px; border-radius: 6px; }
+#vm-panel .vm-fav.active { background-color: var(--vm-fill-3); }
+#vm-panel .vm-fav .vm-ico { width: 24px; height: 24px; border-radius: var(--vm-r-1); }
 
 #vm-panel .vm-space-bar {
   flex: none;
@@ -121,12 +141,12 @@
   justify-content: center;
   width: 30px;
   height: 28px;
-  border-radius: 9px;
+  border-radius: var(--vm-r-2);
   font-size: 15px;
   cursor: pointer;
   opacity: 0.7;
   background-color: color-mix(in srgb, var(--colorFg) 9%, transparent);
-  transition: background-color 120ms, opacity 120ms;
+  transition: background-color var(--vm-dur-1), opacity var(--vm-dur-1);
 }
 #vm-panel .vm-space-pill:hover { opacity: 1; background-color: color-mix(in srgb, var(--colorFg) 16%, transparent); }
 #vm-panel .vm-space-pill.active { opacity: 1; cursor: default; background-color: color-mix(in srgb, var(--colorFg) 26%, transparent); }
@@ -137,11 +157,11 @@
   text-align: center;
   font-size: 12px;
   font-weight: 600;
-  border-radius: 9px;
+  border-radius: var(--vm-r-2);
   cursor: pointer;
   background-color: color-mix(in srgb, var(--colorHighlightBg, var(--colorFg)) 85%, transparent);
   color: var(--colorHighlightFg, var(--colorBg));
-  transition: filter 120ms;
+  transition: filter var(--vm-dur-1);
 }
 #vm-panel .vm-update:hover { filter: brightness(1.1); }
 #vm-panel .vm-space-plus { font-size: 17px; line-height: 1; opacity: 0.5; }
@@ -158,12 +178,12 @@
   gap: 10px;
   min-height: 34px;
   padding-right: 6px;
-  border-radius: 10px;
+  border-radius: var(--vm-r-3);
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
 }
-#vm-panel .vm-row:hover { background-color: color-mix(in srgb, var(--colorFg) 8%, transparent); }
+#vm-panel .vm-row:hover { background-color: var(--vm-fill-1); }
 #vm-panel .vm-row.active { background-color: color-mix(in srgb, var(--colorFg) 15%, transparent); }
 #vm-panel .vm-row.discarded { opacity: 0.6; }
 #vm-panel .vm-folder-head { font-weight: 600; }
@@ -174,7 +194,7 @@
 #vm-panel .vm-folder-body {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: grid-template-rows var(--vm-dur-3) var(--vm-ease-out);
 }
 #vm-panel .vm-folder.open > .vm-folder-body { grid-template-rows: 1fr; }
 #vm-panel .vm-folder-content { min-height: 0; overflow: hidden; }
@@ -185,7 +205,7 @@
 #vm-panel .vm-stack-head { padding-left: 8px; }
 #vm-panel .vm-stack-glyph svg { width: 18px; height: 18px; }
 #vm-panel .vm-stack-count { flex: none; margin-left: auto; font-size: 11px; font-weight: 600; opacity: 0.55; font-variant-numeric: tabular-nums; }
-#vm-panel .vm-stack-chevron { flex: none; display: flex; margin: 0 4px 0 2px; opacity: 0.55; transition: transform 160ms; }
+#vm-panel .vm-stack-chevron { flex: none; display: flex; margin: 0 4px 0 2px; opacity: 0.55; transition: transform var(--vm-dur-2); }
 #vm-panel .vm-tab-stack.open > .vm-stack-head .vm-stack-chevron { transform: rotate(90deg); }
 #vm-panel .vm-stack-content { position: relative; }
 #vm-panel .vm-stack-content > .vm-tab { padding-left: 30px !important; }
@@ -199,14 +219,10 @@
   border-radius: 1px;
   background-color: color-mix(in srgb, currentColor 18%, transparent);
 }
-@media (prefers-reduced-motion: reduce) { #vm-panel .vm-stack-chevron { transition: none; } }
 /* Picked tabs (Cmd+click, Shift+click): an outlined, lightly filled row. */
 #vm-panel .vm-tab.vm-selected {
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--colorHighlightBg, #5d7aee) 70%, transparent);
   background-color: color-mix(in srgb, var(--colorHighlightBg, #5d7aee) 14%, transparent);
-}
-@media (prefers-reduced-motion: reduce) {
-  #vm-panel .vm-folder-body { transition: none; }
 }
 
 #vm-panel .vm-ico {
@@ -216,7 +232,7 @@
   justify-content: center;
   width: 18px;
   height: 18px;
-  border-radius: 5px;
+  border-radius: var(--vm-r-1);
   overflow: hidden;
 }
 #vm-panel .vm-ico img { width: 100%; height: 100%; object-fit: contain; }
@@ -238,7 +254,7 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  border-radius: 6px;
+  border-radius: var(--vm-r-1);
   font-size: 15px;
   line-height: 1;
   opacity: 0.75;
@@ -258,19 +274,19 @@
   content: "";
   flex: 1;
   height: 1px;
-  background-color: color-mix(in srgb, var(--colorFg) 14%, transparent);
+  background-color: var(--vm-fill-2);
 }
 #vm-panel .vm-clear {
   order: 2;
   padding: 2px 8px;
-  border-radius: 6px;
+  border-radius: var(--vm-r-1);
   font-weight: 600;
   cursor: pointer;
   opacity: 0.5;
-  transition: opacity 120ms;
+  transition: opacity var(--vm-dur-1);
 }
 #vm-panel .vm-divider:hover .vm-clear { opacity: 0.7; }
-#vm-panel .vm-clear:hover { opacity: 1; background-color: color-mix(in srgb, var(--colorFg) 14%, transparent); }
+#vm-panel .vm-clear:hover { opacity: 1; background-color: var(--vm-fill-2); }
 #vm-panel .vm-newtab { opacity: 0.6; }
 #vm-panel .vm-plus { display: flex; justify-content: center; width: 18px; font-size: 18px; line-height: 1; }
 
@@ -279,17 +295,17 @@
   z-index: 100000;
   min-width: 220px;
   padding: 6px;
-  border-radius: 14px;
+  border-radius: var(--vm-r-4);
   font-size: 14px;
   color: var(--vm-text);
   background: var(--vm-surface);
-  border: 1px solid color-mix(in srgb, var(--colorFg, #fff) 14%, transparent);
+  border: 1px solid var(--vm-fill-2);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
 }
-.vm-menu-item { padding: 7px 12px; border-radius: 8px; cursor: pointer; }
-.vm-menu-item:hover { background-color: color-mix(in srgb, var(--colorFg, #fff) 14%, transparent); }
+.vm-menu-item { padding: 7px 12px; border-radius: var(--vm-r-2); cursor: pointer; }
+.vm-menu-item:hover { background-color: var(--vm-fill-2); }
 .vm-menu-item.danger { color: #ff6b6b; }
-.vm-menu-sep { height: 1px; margin: 5px 8px; background-color: color-mix(in srgb, var(--colorFg, #fff) 14%, transparent); }
+.vm-menu-sep { height: 1px; margin: 5px 8px; background-color: var(--vm-fill-2); }
 
 /* Command bar (js/30-command-bar.js). Its sizes grow with the window past 1920 x 1080, by half as much as the
    window, up to 1.2x: clamp(base, base / 2 + base / 2 scaled by the window, base x 1.2) (#70). */
@@ -306,7 +322,7 @@
 #vm-cmd .vm-cmd-box {
   width: min(clamp(680px, calc(340px + min(17.708vw, 31.481vh)), 816px), 92vw);
   overflow: hidden;
-  border-radius: 14px;
+  border-radius: var(--vm-r-4);
   color: var(--vm-text);
   background: var(--vm-surface);
   border: 1px solid color-mix(in srgb, var(--vm-text) 10%, transparent);
@@ -323,7 +339,7 @@
 #vm-cmd .vm-cmd-chips { display: flex; flex: none; }
 #vm-cmd .vm-cmd-chip {
   padding: 2px clamp(12px, calc(6px + min(0.312vw, 0.556vh)), 14.4px);
-  border-radius: 999px;
+  border-radius: var(--vm-r-full);
   font-size: clamp(14px, calc(7px + min(0.365vw, 0.648vh)), 16.8px);
   font-weight: 600;
   color: #fff;
@@ -346,20 +362,20 @@
   gap: clamp(12px, calc(6px + min(0.312vw, 0.556vh)), 14.4px);
   height: clamp(40px, calc(20px + min(1.042vw, 1.852vh)), 48px);
   padding: 0 clamp(10px, calc(5px + min(0.26vw, 0.463vh)), 12px);
-  border-radius: 9px;
+  border-radius: var(--vm-r-2);
   font-size: clamp(14px, calc(7px + min(0.365vw, 0.648vh)), 16.8px);
   cursor: pointer;
   white-space: nowrap;
 }
 #vm-cmd .vm-cmd-row.sel { background: var(--vm-sel); }
-#vm-cmd .vm-cmd-ico { display: flex; flex: none; align-items: center; justify-content: center; width: clamp(20px, calc(10px + min(0.521vw, 0.926vh)), 24px); height: clamp(20px, calc(10px + min(0.521vw, 0.926vh)), 24px); border-radius: 5px; overflow: hidden; }
+#vm-cmd .vm-cmd-ico { display: flex; flex: none; align-items: center; justify-content: center; width: clamp(20px, calc(10px + min(0.521vw, 0.926vh)), 24px); height: clamp(20px, calc(10px + min(0.521vw, 0.926vh)), 24px); border-radius: var(--vm-r-1); overflow: hidden; }
 #vm-cmd .vm-cmd-ico img { width: 100%; height: 100%; object-fit: contain; }
 #vm-cmd .vm-cmd-letter { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: clamp(11px, calc(5.5px + min(0.286vw, 0.509vh)), 13.2px); font-weight: 700; color: #fff; }
 #vm-cmd .vm-cmd-title { overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
 #vm-cmd .vm-cmd-sub { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; color: color-mix(in srgb, var(--vm-text) 40%, transparent); }
 #vm-cmd .vm-cmd-hint { display: flex; align-items: center; gap: 10px; margin-left: auto; color: color-mix(in srgb, var(--vm-text) 40%, transparent); font-weight: 600; }
 #vm-cmd .vm-cmd-row.sel .vm-cmd-hint { color: #fff; }
-#vm-cmd .vm-cmd-arrow { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 7px; background: color-mix(in srgb, var(--vm-text) 8%, transparent); }
+#vm-cmd .vm-cmd-arrow { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: var(--vm-r-1); background: color-mix(in srgb, var(--vm-text) 8%, transparent); }
 #vm-cmd .vm-cmd-glyph svg { width: clamp(16px, calc(8px + min(0.417vw, 0.741vh)), 19.2px); height: clamp(16px, calc(8px + min(0.417vw, 0.741vh)), 19.2px); }
 #vm-cmd .vm-cmd-arrow svg { width: 14px; height: 14px; }
 #vm-cmd .vm-cmd-row.sel .vm-cmd-arrow { background: var(--vm-text); color: var(--vm-surface); }
@@ -376,18 +392,18 @@
   opacity: 0;
   pointer-events: none;
 }
-#vm-switch.in { opacity: 1; pointer-events: auto; transition: opacity 90ms; }
+#vm-switch.in { opacity: 1; pointer-events: auto; transition: opacity var(--vm-dur-1); }
 #vm-switch .vm-sw-panel {
   max-width: 92vw;
   padding: 8px;
-  border-radius: 18px;
+  border-radius: var(--vm-r-5);
   color: var(--vm-text);
   background: var(--vm-surface);
   border: 1px solid color-mix(in srgb, var(--vm-text) 10%, transparent);
   box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
 }
 #vm-switch .vm-sw-strip { display: flex; gap: 4px; }
-#vm-switch .vm-sw-card { flex: none; width: 168px; padding: 8px; border-radius: 12px; cursor: pointer; }
+#vm-switch .vm-sw-card { flex: none; width: 168px; padding: 8px; border-radius: var(--vm-r-3); cursor: pointer; }
 #vm-switch .vm-sw-card.sel { background: var(--vm-sel); }
 #vm-switch .vm-sw-thumb {
   display: flex;
@@ -395,7 +411,7 @@
   justify-content: center;
   height: 112px;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--vm-r-2);
   background: color-mix(in srgb, var(--vm-text) 7%, transparent);
 }
 #vm-switch .vm-sw-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
@@ -410,9 +426,9 @@
   min-width: 0;
   padding: 2px 6px;
   border: 1px solid color-mix(in srgb, var(--colorFg) 30%, transparent);
-  border-radius: 6px;
+  border-radius: var(--vm-r-1);
   outline: 0;
-  background: color-mix(in srgb, var(--colorFg) 8%, transparent);
+  background: var(--vm-fill-1);
   color: inherit;
   font: inherit;
   font-weight: 600;
@@ -424,7 +440,7 @@
   box-sizing: border-box;
   padding: 6px 8px;
   border: 1px solid color-mix(in srgb, var(--vm-text) 30%, transparent);
-  border-radius: 8px;
+  border-radius: var(--vm-r-2);
   outline: 0;
   background: var(--vm-surface);
   color: var(--vm-text);
@@ -453,7 +469,7 @@
   align-items: center;
   gap: 12px;
   padding: 8px 8px 8px 16px;
-  border-radius: 14px;
+  border-radius: var(--vm-r-4);
   font-size: 14px;
   font-weight: 600;
   color: var(--vm-text);
@@ -462,7 +478,7 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   opacity: 0;
   transform: translateY(-6px);
-  transition: opacity 180ms, transform 180ms;
+  transition: opacity var(--vm-dur-2), transform var(--vm-dur-2);
   pointer-events: none;
 }
 #vm-copied.in { opacity: 1; transform: none; }
@@ -472,7 +488,7 @@
   justify-content: center;
   width: 36px;
   height: 30px;
-  border-radius: 8px;
+  border-radius: var(--vm-r-2);
   background: color-mix(in srgb, var(--vm-text) 10%, transparent);
 }
 #vm-copied .vm-copied-icon svg { width: 18px; height: 18px; }
@@ -490,13 +506,13 @@
   min-height: 44px;
   margin-bottom: 8px;
   border: 1px dashed color-mix(in srgb, var(--colorFg) 30%, transparent);
-  border-radius: 14px;
+  border-radius: var(--vm-r-4);
 }
 #vm-panel .vm-favs.drop-before, #vm-panel .vm-favs.drop-after {
   box-shadow: none;
   outline: 2px dashed var(--colorHighlightBg, #7b8cff);
   outline-offset: -2px;
-  border-radius: 14px;
+  border-radius: var(--vm-r-4);
 }
 
 /* Theme editor (40-theme.js) */
@@ -528,7 +544,7 @@
   bottom: 46px;
   width: 290px;
   padding: 12px;
-  border-radius: 16px;
+  border-radius: var(--vm-r-4);
   color: var(--vm-text);
   background: var(--vm-surface);
   border: 1px solid color-mix(in srgb, var(--vm-text) 14%, transparent);
@@ -542,11 +558,11 @@
   flex: 1;
   padding: 6px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--vm-r-2);
   background: color-mix(in srgb, var(--vm-text) 10%, transparent);
 }
 .vm-theme-mode:hover { background: color-mix(in srgb, var(--vm-text) 18%, transparent); }
-.vm-theme-pad { position: relative; height: 130px; border-radius: 12px; cursor: crosshair; touch-action: none; }
+.vm-theme-pad { position: relative; height: 130px; border-radius: var(--vm-r-3); cursor: crosshair; touch-action: none; }
 .vm-theme-dot {
   position: absolute;
   width: 18px;
@@ -567,7 +583,7 @@
   margin-top: 6px;
   padding: 6px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--vm-r-2);
   background: transparent;
   opacity: 0.6;
 }
@@ -595,7 +611,7 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  border-radius: 6px;
+  border-radius: var(--vm-r-1);
   opacity: 0.75;
   cursor: pointer;
 }
@@ -641,21 +657,21 @@
   overflow: hidden;
   cursor: pointer;
   opacity: 0.72;
-  transition: opacity 120ms, transform 120ms;
+  transition: opacity var(--vm-dur-1), transform var(--vm-dur-1);
 }
 #browser.vm-on .vm-space-chip:hover { opacity: 1; transform: scale(1.08); }
 #browser.vm-on .vm-space-chip.active { opacity: 1; cursor: default; box-shadow: 0 0 0 2px var(--colorHighlightBg, #7b8cff); transform: none; }
 #browser.vm-on .vm-space-chip img { width: 100%; height: 100%; object-fit: cover; }
 #browser.vm-on .vm-space-letter { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: #fff; font-weight: 600; font-size: 12px; }
-#browser.vm-on .vm-space-plus { background-color: color-mix(in srgb, var(--colorFg) 14%, transparent); font-size: 16px; line-height: 1; }
+#browser.vm-on .vm-space-plus { background-color: var(--vm-fill-2); font-size: 16px; line-height: 1; }
 #browser.vm-on .vm-space-input {
   width: 120px;
   height: 24px;
   padding: 0 8px;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--vm-r-3);
   outline: 0;
-  background: color-mix(in srgb, var(--colorFg) 14%, transparent);
+  background: var(--vm-fill-2);
   color: inherit;
   font: inherit;
   font-size: 12px;
@@ -678,7 +694,7 @@
   flex-direction: column;
   width: min(520px, 92vw);
   max-height: 84vh;
-  border-radius: 18px;
+  border-radius: var(--vm-r-5);
   color: var(--vm-text);
   background: var(--vm-surface);
   border: 1px solid color-mix(in srgb, var(--vm-text) 12%, transparent);
@@ -696,8 +712,8 @@
   border-block: 1px solid color-mix(in srgb, var(--vm-text) 8%, transparent);
 }
 .vm-set-section-title { margin: 16px 4px 6px; font-size: 11.5px; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.5; }
-.vm-set-group { border-radius: 12px; background: color-mix(in srgb, var(--vm-text) 5%, transparent); overflow: hidden; }
-.vm-set-close, .vm-set-reset { font: inherit; color: inherit; cursor: pointer; border: 0; background: transparent; opacity: 0.6; border-radius: 8px; padding: 4px 8px; }
+.vm-set-group { border-radius: var(--vm-r-3); background: color-mix(in srgb, var(--vm-text) 5%, transparent); overflow: hidden; }
+.vm-set-close, .vm-set-reset { font: inherit; color: inherit; cursor: pointer; border: 0; background: transparent; opacity: 0.6; border-radius: var(--vm-r-2); padding: 4px 8px; }
 .vm-set-close:hover, .vm-set-reset:hover { opacity: 1; background: color-mix(in srgb, var(--vm-text) 10%, transparent); }
 .vm-set-row { display: flex; align-items: center; gap: 16px; padding: 10px 12px; cursor: pointer; }
 .vm-set-row[hidden] { display: none; }
@@ -716,10 +732,10 @@
   height: 22px;
   margin: 0;
   border: 0;
-  border-radius: 11px;
+  border-radius: var(--vm-r-full);
   cursor: pointer;
   background: color-mix(in srgb, var(--vm-text) 22%, transparent);
-  transition: background 150ms;
+  transition: background var(--vm-dur-2);
 }
 #browser.vm-on .vm-set-switch::after {
   content: "";
@@ -731,7 +747,7 @@
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-  transition: transform 150ms;
+  transition: transform var(--vm-dur-2);
 }
 #browser.vm-on .vm-set-switch:checked { background: var(--colorHighlightBg, #6b63a0); }
 #browser.vm-on .vm-set-switch:checked::after { transform: translateX(16px); }
@@ -747,7 +763,7 @@
   font: inherit;
   color: inherit;
   padding: 4px 8px;
-  border-radius: 8px;
+  border-radius: var(--vm-r-2);
   border: 1px solid color-mix(in srgb, var(--vm-text) 18%, transparent);
   background: color-mix(in srgb, var(--vm-text) 7%, transparent);
 }
@@ -767,7 +783,6 @@
   --vm-lozenge: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08));
   --vm-lozenge-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.15));
   --vm-lozenge-rim: inset 0 1px 0 rgba(255, 255, 255, 0.38), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-  --vm-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 #browser.vm-on.vm-glass :is(.vm-menu, #vm-cmd .vm-cmd-box, #vm-switch .vm-sw-panel, .vm-theme-pop, .vm-set-card, #vm-copied) {
   background: var(--vm-glass-sheen), var(--vm-glass-fill);
@@ -792,7 +807,7 @@
 #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill) {
   background: var(--vm-lozenge-soft);
   box-shadow: var(--vm-lozenge-rim), 0 2px 8px rgba(0, 0, 0, 0.16);
-  transition: transform 260ms var(--vm-spring), background 160ms, box-shadow 160ms, opacity 120ms;
+  transition: transform var(--vm-dur-3) var(--vm-ease-spring), background var(--vm-dur-2), box-shadow var(--vm-dur-2), opacity var(--vm-dur-1);
 }
 #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):hover { background: var(--vm-lozenge); transform: translateY(-1px) scale(1.04); }
 #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):active { transform: scale(0.96); }
@@ -803,7 +818,7 @@
 #browser.vm-on.vm-glass #vm-panel .vm-fav.drop-before { box-shadow: var(--vm-lozenge-rim), inset 3px 0 0 0 var(--colorHighlightBg, #7b8cff); }
 #browser.vm-on.vm-glass #vm-panel .vm-fav.drop-after { box-shadow: var(--vm-lozenge-rim), inset -3px 0 0 0 var(--colorHighlightBg, #7b8cff); }
 #browser.vm-on.vm-glass #vm-panel .vm-update { box-shadow: var(--vm-lozenge-rim), 0 2px 8px rgba(0, 0, 0, 0.16); }
-#browser.vm-on.vm-glass #vm-panel .vm-row { transition: background 160ms, box-shadow 160ms; }
+#browser.vm-on.vm-glass #vm-panel .vm-row { transition: background var(--vm-dur-2), box-shadow var(--vm-dur-2); }
 #browser.vm-on.vm-glass #vm-panel .vm-row:hover { background: var(--vm-lozenge-soft); }
 #browser.vm-on.vm-glass #vm-panel .vm-row.active { background: var(--vm-lozenge); box-shadow: var(--vm-lozenge-rim); }
 #browser.vm-on.vm-glass .vm-space-chip { box-shadow: var(--vm-lozenge-rim); }
@@ -820,11 +835,16 @@
   #browser.vm-on.vm-glass #tabs-tabbar-container { background-color: var(--colorBg, #1c1c20) !important; backdrop-filter: none; }
   #browser.vm-on.vm-glass.vm-themed #tabs-tabbar-container { background-color: var(--vm-tint) !important; }
 }
-@media (prefers-reduced-motion: reduce) {
-  #browser.vm-on.vm-glass :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied),
-  #browser.vm-on.vm-glass :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied) * { transition: none !important; }
-  #browser.vm-on.vm-glass #vm-panel :is(.vm-fav, .vm-space-pill):hover { transform: none; }
-}
 
 /* Peek: keep Arc's controls (close, open in a tab, split view, copy link) and drop the extra menus. */
 #browser.vm-on .peek-sidebar-controls :is(.peek-open-actions-menu, .peek-navigation-actions, .peek-translate-actions) { display: none !important; }
+
+/* Reduced motion, for all of Vivarc: nothing moves, fades stay but short. */
+@media (prefers-reduced-motion: reduce) {
+  #browser.vm-on { --vm-dur-2: var(--vm-dur-1); --vm-dur-3: var(--vm-dur-1); }
+  #browser.vm-on :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied),
+  #browser.vm-on :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied) * { transition-property: opacity, background-color, color, box-shadow, border-color !important; transition-duration: var(--vm-dur-1) !important; transition-timing-function: ease !important; }
+  #browser.vm-on :is(.vm-fav, .vm-space-pill, .vm-space-chip):is(:hover, :active) { transform: none !important; }
+  #browser.vm-on #vm-copied { transform: none; }
+  #browser.vm-on .vm-set-switch::after { transition: none; }
+}

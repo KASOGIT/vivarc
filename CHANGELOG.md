@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Reduce Motion applies to all of Vivarc**, not only with Liquid glass on: with the macOS or Windows setting on, nothing slides, scales or bounces (tiles, space chips, the copied toast, folders, the settings switch) and fades stay short. Corner radii and animation timings now follow one scale, so a few corners and durations shift slightly.
+
 ## 0.1.35 - 2026-11-27
 - **Tab completes in the command bar**, like Arc: it accepts the address completed inline, or fills in the row picked with the arrow keys (a suggestion's text, a tab's, bookmark's or history entry's address), and Enter then runs that row. Search shortcuts (`yt` then Tab) keep working, also when an address is completed inline (#192).
 - Fix: **Import from Arc** puts each space's pinned tabs and folders in **Pinned** again. They landed in **Unpinned (today)**, and that day's tabs in **Pinned**, because the importer assumed Arc lists the pinned container first, and it can list the unpinned one first; it now reads Arc's own pinned and unpinned markers. Thanks @Deimokle (#182).
