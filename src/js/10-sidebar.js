@@ -608,7 +608,7 @@
   // A stack's row is its title, not a tab: clicking it folds and unfolds the stack without leaving the tab you are
   // on. The title is the stack's name (Vivaldi's own) or else its first tab's. Its tabs are listed under it alike,
   // along a guide line. A folded stack holding the tab you are on opens, so no open tab is out of sight.
-  const tabStack = (id, tabs) => {
+  const tabStack = (id, tabs, animateOpen) => {
     const wrap = el("div", "vm-folder vm-tab-stack");
     const name = stacksOf.nameOf(tabs);
     const title = name || tabs[0].title || tabs[0].url || "Tab stack";
@@ -638,7 +638,13 @@
       [],
       ["Close Stack", () => chrome.tabs.remove(tabs.map((t) => t.id))],
     ]));
-    if (tabs.some((t) => t.active) && collapsedStacks.delete(id)) wrap.classList.add("vm-auto-open");
+    if (tabs.some((t) => t.active) && collapsedStacks.delete(id) && animateOpen) {
+      // The class only seeds the unfold: dropped once it is done, a node moved later does not replay it.
+      wrap.classList.add("vm-auto-open");
+      const done = () => wrap.classList.remove("vm-auto-open");
+      body.addEventListener("transitionend", (e) => { if (e.target === body && e.propertyName === "grid-template-rows") done(); });
+      setTimeout(done, 400);
+    }
     sync();
     wrap.append(head, body);
     return wrap;
@@ -1155,7 +1161,7 @@
     const open = state.tabs.filter(isLoose);
     const reset = fresh || (renderedSpace !== null && renderedSpace !== state.active);
     const next = stacksOf.layout(open).map((entry) => (entry.type === "stack"
-      ? { key: `s${entry.id}`, sig: stackSig(entry.id, entry.tabs), resig: () => stackSig(entry.id, entry.tabs), build: () => tabStack(entry.id, entry.tabs) }
+      ? { key: `s${entry.id}`, sig: stackSig(entry.id, entry.tabs), resig: () => stackSig(entry.id, entry.tabs), build: () => tabStack(entry.id, entry.tabs, !reset) }
       : { key: `t${entry.tab.id}`, sig: tabSig(entry.tab), build: () => tabRow(entry.tab) }));
     const ops = window.__vm.keyed.plan(reset ? [] : tabRows, next);
     const built = new Map(ops.filter((o) => o.op === "replace" || o.op === "insert")
