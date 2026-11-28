@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Each space's colour now drives the accent and a soft gradient.** Selected tabs, focus rings, switches and drop markers take an accent derived from the space theme, and the sidebar blends the colour into a gradient. Turn the gradient off with **Space gradient** in Vivarc Settings. Near-gray themes keep Vivaldi's accent.
 - **Keyboard focus shows an accent ring** on Vivarc's buttons, switches, sliders and pickers, selected text uses the accent colour, and the Vivarc Settings list gets a thin scrollbar. Fix: the settings switches no longer show a dark notch when on.
 - **Menus, the command bar, the theme editor and Vivarc Settings ease in** when they open, with a light spring, instead of appearing at once. Reduce Motion keeps a short fade.
 - **Reduce Motion applies to all of Vivarc**, not only with Liquid glass on: with the macOS or Windows setting on, nothing slides, scales or bounces (tiles, space chips, the copied toast, folders, the settings switch) and fades stay short. Corner radii and animation timings now follow one scale, so a few corners and durations shift slightly.
