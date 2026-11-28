@@ -182,6 +182,33 @@
   let arrowed = false;
   let pick = null;
   let computedFor = null;
+  let typed = "";
+
+  // Splits a label into segments, marking every occurrence of each word of the query.
+  const highlight = (label, query) => {
+    const words = query.trim().split(/\s+/).filter(Boolean).map((w) => w.toLowerCase());
+    const lower = label.toLowerCase();
+    const marked = new Array(label.length).fill(false);
+    for (const word of words) {
+      for (let at = lower.indexOf(word); at !== -1; at = lower.indexOf(word, at + word.length)) {
+        marked.fill(true, at, at + word.length);
+      }
+    }
+    const out = [];
+    for (let i = 0; i < label.length; i++) {
+      const last = out[out.length - 1];
+      if (last && last.match === marked[i]) last.text += label[i];
+      else out.push({ text: label[i], match: marked[i] });
+    }
+    return out.length ? out : [{ text: label, match: false }];
+  };
+  const titleOf = (label, query) => {
+    const title = el("span", "vm-cmd-title");
+    title.append(...highlight(label, query).map((s) => (s.match
+      ? el("mark", "vm-cmd-match", s.text)
+      : document.createTextNode(s.text))));
+    return title;
+  };
 
   const iconFor = (url, favicon) => {
     const wrap = el("span", "vm-cmd-ico");
@@ -269,13 +296,13 @@
       if (row.type === "action" || row.type === "engine") {
         const glyph = el("span", "vm-cmd-ico vm-cmd-glyph");
         glyph.innerHTML = ACTION_SVG;
-        item.append(glyph, el("span", "vm-cmd-title", row.label));
+        item.append(glyph, titleOf(row.label, typed));
       } else if (row.type === "search" || row.type === "suggest") {
         const glyph = el("span", "vm-cmd-ico vm-cmd-glyph");
         glyph.innerHTML = SEARCH_SVG;
         item.append(glyph, el("span", "vm-cmd-title", row.label));
       } else {
-        item.append(iconFor(row.url, row.favicon), el("span", "vm-cmd-title", row.label));
+        item.append(iconFor(row.url, row.favicon), titleOf(row.label, typed));
         if (row.sub) item.append(el("span", "vm-cmd-sub", `— ${row.sub}`));
       }
       if (row.type === "tab" || row.type === "action" || row.type === "engine") {
@@ -367,6 +394,7 @@
       pick = null;
       arrowed = false;
       computedFor = value;
+      typed = value;
       render();
 
       const suggest = window.__vm.settings.get("searchSuggestions") && !looksLikeUrl(text) && text.length > 1
@@ -394,6 +422,7 @@
     selected = Math.max(0, rows.findIndex(isPick));
     arrowed = false;
     computedFor = value;
+    typed = value;
     render();
   };
 
@@ -544,7 +573,7 @@
     return true;
   };
 
-  window.__vm.commandBar = { suggestionRow, splitView, closeSplitView };
+  window.__vm.commandBar = { highlight, suggestionRow, splitView, closeSplitView };
   if (!window.addEventListener || !window.__vm?.onShortcut) return;
 
   window.addEventListener("vm-open-command-bar", () => open(null));
