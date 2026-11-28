@@ -106,6 +106,26 @@ class SpaceThemes(unittest.TestCase):
 '''
         run_theme(scenario, saved)
 
+    def test_closing_the_pop_up_hands_it_to_leave_and_removes_the_shield_at_once(self):
+        scenario = r'''
+(async () => {
+  const leaves = [], removed = [];
+  window.__vm.leave = (node) => leaves.push(node);
+  Element.prototype.remove = function () { removed.push(this); };
+  await switchTo(0);
+  const pop = await open();
+  const shield = browser.children.at(-2);
+  assert.equal(shield.className, "vm-menu-shield");
+  shield.listeners.mousedown({ preventDefault() {} }); // a click on the page closes the pop-up
+  assert.deepEqual(leaves, [pop], "the pop-up is handed to leave");
+  assert.ok(!removed.includes(pop), "the pop-up is not removed synchronously");
+  assert.ok(removed.includes(shield), "the shield is removed immediately");
+  const again = await open();
+  assert.notEqual(again, pop, "reopening builds a new pop-up at once");
+})().catch((error) => { console.error(error); process.exitCode = 1; });
+'''
+        run_theme(scenario, LEGACY)
+
 
 if __name__ == "__main__":
     unittest.main()

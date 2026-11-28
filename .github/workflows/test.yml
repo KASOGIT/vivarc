@@ -23,4 +23,4 @@ jobs:
       - name: Unit tests
         run: python -m unittest discover -s tests -v
       - name: Command bar tests
-        run: node --test tests/command_bar_windows.test.cjs tests/command_bar_tab.test.cjs tests/command_bar_highlight.test.cjs tests/command_bar_footer.test.cjs
+        run: node --test tests/command_bar_windows.test.cjs tests/command_bar_tab.test.cjs tests/command_bar_highlight.test.cjs tests/command_bar_footer.test.cjs tests/command_bar_exit.test.cjs
