@@ -222,8 +222,9 @@
   pointer-events: none;
   border-radius: var(--vm-r-3);
   background-color: color-mix(in srgb, var(--colorFg) 15%, transparent);
-  transition: top var(--vm-dur-3) var(--vm-ease-spring), height var(--vm-dur-3) var(--vm-ease-spring);
 }
+/* Only an active change between two top-level rows slides (10-sidebar.js adds the class); other moves follow at once. */
+#vm-panel .vm-tab-indicator.vm-sliding { transition: top var(--vm-dur-3) var(--vm-ease-spring), height var(--vm-dur-3) var(--vm-ease-spring); }
 #vm-panel .vm-row.discarded { opacity: 0.6; }
 #vm-panel .vm-folder-head { font-weight: 600; }
 #vm-panel .vm-glyph { display: flex; flex: none; opacity: 0.8; }
