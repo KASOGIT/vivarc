@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Tab buttons fade in** on hover instead of popping in, and the title no longer jumps.
 - **The space colour cross-fades** when you switch between themed spaces. Custom gradients switch at once.
 - **Pick your own gradient** for each space: in the theme pop-up, switch Gradient to Custom and drag the extra colours on the pad.
 - **Density, corners and motion** in Settings, Appearance: tighter or roomier rows, sharper or rounder corners, and full, reduced or no motion. Your system's Reduce Motion still applies.

@@ -265,19 +265,23 @@
 }
 
 #vm-panel .vm-act {
-  display: none;
+  display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 20px;
+  width: 0;
   height: 20px;
+  margin-left: -10px;
+  overflow: hidden;
+  pointer-events: none;
   border-radius: var(--vm-r-1);
   font-size: 15px;
   line-height: 1;
-  opacity: 0.75;
+  opacity: 0;
+  transition: width var(--vm-dur-1) var(--vm-ease-out), margin-left var(--vm-dur-1) var(--vm-ease-out), opacity var(--vm-dur-1) var(--vm-ease-out);
 }
-#vm-panel .vm-row:hover .vm-act { display: flex; }
-#vm-panel .vm-act:hover { opacity: 1; background-color: color-mix(in srgb, var(--colorFg) 18%, transparent); }
+#vm-panel .vm-row:is(:hover, :focus-within) .vm-act { width: 20px; margin-left: 0; opacity: 0.75; pointer-events: auto; }
+#vm-panel .vm-row .vm-act:hover { opacity: 1; background-color: color-mix(in srgb, var(--colorFg) 18%, transparent); }
 
 #vm-panel .vm-divider {
   display: flex;
@@ -625,7 +629,7 @@
 .vm-theme-reset:hover { opacity: 1; background: color-mix(in srgb, var(--vm-text) 10%, transparent); }
 
 #vm-panel .vm-space { display: flex; align-items: center; justify-content: space-between; }
-#vm-panel .vm-space .vm-act { display: flex; opacity: 1; filter: brightness(1.25); }
+#vm-panel .vm-space .vm-act { width: 20px; margin-left: 0; opacity: 1; pointer-events: auto; filter: brightness(1.25); }
 #vm-panel .vm-away-mark { flex: none; opacity: 0.5; margin: 0 -2px 0 -4px; }
 #vm-panel .vm-fav { position: relative; }
 #vm-panel .vm-fav.away::after {
