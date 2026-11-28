@@ -15,7 +15,7 @@ def resolve(config=None, saved=None):
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
 class Resolve(unittest.TestCase):
     def test_without_anything_saved_the_defaults_apply(self):
-        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "spaceGradient": True, "urlBar": False, "commandBarAddress": False, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
+        self.assertEqual(resolve(), {"glass": False, "glassOpacity": 55, "spaceGradient": True, "density": "default", "corners": "default", "motion": "full", "urlBar": False, "commandBarAddress": False, "spaceBar": True, "compactBottomBar": True, "searchSuggestions": True,
                                     "archive": False, "archiveHours": 12, "updateCheck": True,
                                     "peek": True, "peekPinned": True, "peekShortcut": "alt", "peekDim": True})
 
@@ -97,9 +97,9 @@ class SpaceGradient(unittest.TestCase):
         self.assertIs(values.get("spaceGradient"), False)
         self.assertIs(self.classes(values).get("vm-gradient"), False)
 
-    def test_the_appearance_section_lists_glass_then_its_opacity_then_the_gradient(self):
+    def test_the_appearance_section_lists_glass_opacity_gradient_then_density_corners_motion(self):
         out = js("settings.sections(settings.SCHEMA, config).find((s) => s.title === 'Appearance').items.map((i) => i.key)", config={})
-        self.assertEqual(out, ["glass", "glassOpacity", "spaceGradient"])
+        self.assertEqual(out, ["glass", "glassOpacity", "spaceGradient", "density", "corners", "motion"])
 
     def test_the_hint_is_the_same_on_mac_and_windows(self):
         for platform in ("mac", "win"):
@@ -109,6 +109,97 @@ class SpaceGradient(unittest.TestCase):
     def test_the_gradient_row_is_labelled_and_shown_even_with_glass_off(self):
         shown = js("settings.shownRows(settings.SCHEMA, values).filter((s) => s.key === 'spaceGradient').map((s) => s.label)", values={"glass": False})
         self.assertEqual(shown, ["Space gradient"])
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class AppearanceChoices(unittest.TestCase):
+    CHOICES = {
+        "density": ("vm-density", ["compact", "default", "comfortable"], "default"),
+        "corners": ("vm-corners", ["sharp", "default", "round"], "default"),
+        "motion": ("vm-motion", ["full", "reduced", "off"], "full"),
+    }
+
+    def classes(self, values):
+        return js("settings.classes(settings.SCHEMA, values)", values=values)
+
+    def with_prefix(self, classes, prefix):
+        return {k: v for k, v in classes.items() if k.startswith(prefix + "-")}
+
+    def test_each_choice_is_one_class_per_option_true_for_the_chosen_one(self):
+        for key, (prefix, options, _default) in self.CHOICES.items():
+            for chosen in options:
+                with self.subTest(key=key, chosen=chosen):
+                    expected = {f"{prefix}-{o}": o == chosen for o in options}
+                    self.assertEqual(self.with_prefix(self.classes(resolve(saved={key: chosen})), prefix), expected)
+
+    def test_the_defaults_give_density_default_corners_default_and_motion_full(self):
+        classes = self.classes(resolve())
+        self.assertIs(classes.get("vm-density-default"), True)
+        self.assertIs(classes.get("vm-corners-default"), True)
+        self.assertIs(classes.get("vm-motion-full"), True)
+
+    def test_the_defaults_are_the_middle_density_and_corners_and_full_motion(self):
+        values = resolve()
+        self.assertEqual([values.get("density"), values.get("corners"), values.get("motion")], ["default", "default", "full"])
+
+    def test_a_saved_value_outside_the_list_falls_back_to_the_default(self):
+        self.assertEqual(resolve(saved={"density": "huge"}).get("density"), "default")
+        self.assertEqual(resolve(saved={"corners": "square"}).get("corners"), "default")
+        self.assertEqual(resolve(saved={"motion": "slow"}).get("motion"), "full")
+        self.assertEqual(resolve(saved={"motion": True}).get("motion"), "full")
+
+    def test_a_saved_value_from_the_list_is_kept(self):
+        self.assertEqual(resolve(saved={"density": "compact"}).get("density"), "compact")
+        self.assertEqual(resolve(saved={"corners": "round"}).get("corners"), "round")
+        self.assertEqual(resolve(saved={"motion": "off"}).get("motion"), "off")
+
+    def test_a_fallback_value_still_marks_the_default_class(self):
+        classes = self.classes(resolve(saved={"density": "huge"}))
+        self.assertEqual(self.with_prefix(classes, "vm-density"), {"vm-density-compact": False, "vm-density-default": True, "vm-density-comfortable": False})
+
+    def test_a_choice_without_a_class_prefix_adds_no_class(self):
+        self.assertEqual(self.classes(resolve(saved={"peekShortcut": "shift"})), self.classes(resolve()))
+        self.assertFalse([k for k in self.classes(resolve()) if "shift" in k or "alt" in k])
+
+    def test_the_settings_are_choices_with_these_labels_options_and_prefixes(self):
+        out = js("settings.SCHEMA.filter((s) => ['density', 'corners', 'motion'].includes(s.key)).map((s) => [s.key, s.type, s.label, s.default, s.options, s.classPrefix])")
+        self.assertEqual(out, [
+            ["density", "choice", "Density", "default", [["compact", "Compact"], ["default", "Default"], ["comfortable", "Comfortable"]], "vm-density"],
+            ["corners", "choice", "Corners", "default", [["sharp", "Sharp"], ["default", "Default"], ["round", "Round"]], "vm-corners"],
+            ["motion", "choice", "Motion", "full", [["full", "Full"], ["reduced", "Reduced"], ["off", "Off"]], "vm-motion"],
+        ])
+
+    def test_the_rows_are_shown_without_any_other_setting_or_install(self):
+        shown = js("settings.shownRows(settings.visible(settings.SCHEMA, config), values).map((s) => s.key)", config={}, values={"glass": False})
+        for key in self.CHOICES:
+            self.assertIn(key, shown)
+
+    def test_the_hints_are_the_same_on_both_platforms_for_density_and_corners(self):
+        hint = lambda key, platform: js("(() => { const item = settings.SCHEMA.find((s) => s.key === key); return item ? settings.hint(item, platform) : null; })()", key=key, platform=platform)
+        for platform in ("mac", "win"):
+            self.assertEqual(hint("density", platform), "Height of the rows in the sidebar.", platform)
+            self.assertEqual(hint("corners", platform), "Roundness of rows, menus and dialogs.", platform)
+
+    def test_the_motion_hint_names_the_system_option_for_each_platform(self):
+        hint = lambda platform: js("(() => { const item = settings.SCHEMA.find((s) => s.key === 'motion'); return item ? settings.hint(item, platform) : null; })()", platform=platform)
+        self.assertEqual(hint("mac"), "Reduced keeps fades and drops movement. Reduce Motion in macOS settings always applies.")
+        self.assertEqual(hint("win"), "Reduced keeps fades and drops movement. Turning off animation effects in Windows always applies.")
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
+class ReduceMotion(unittest.TestCase):
+    def reduce(self, motion, system):
+        return js("typeof settings.reduceMotion === 'function' ? settings.reduceMotion({ motion }, system) : 'reduceMotion is missing'", motion=motion, system=system)
+
+    def test_full_motion_follows_the_system(self):
+        self.assertIs(self.reduce("full", False), False)
+        self.assertIs(self.reduce("full", True), True)
+
+    def test_reduced_and_off_reduce_whatever_the_system_says(self):
+        self.assertIs(self.reduce("reduced", False), True)
+        self.assertIs(self.reduce("off", False), True)
+        self.assertIs(self.reduce("off", True), True)
+        self.assertIs(self.reduce("reduced", True), True)
 
 
 @unittest.skipUnless(shutil.which("node"), "node is needed to test the sidebar's JavaScript")
@@ -172,6 +263,8 @@ class Hints(unittest.TestCase):
     SAME = {
         "glassOpacity": None,
         "spaceGradient": "Blend each space's colour into a soft gradient.",
+        "density": "Height of the rows in the sidebar.",
+        "corners": "Roundness of rows, menus and dialogs.",
         "urlBar": "Always show the address bar. Off, it appears when you edit the address.",
         "spaceBar": "The row of space tiles at the bottom.",
         "compactBottomBar": "A tighter row for profiles and downloads.",
@@ -196,10 +289,14 @@ class Hints(unittest.TestCase):
             "mac": "Translucent, blurred sidebar, menus and dialogs. Follows Reduce Transparency.",
             "win": "Translucent, blurred sidebar, menus and dialogs.",
         },
+        "motion": {
+            "mac": "Reduced keeps fades and drops movement. Reduce Motion in macOS settings always applies.",
+            "win": "Reduced keeps fades and drops movement. Turning off animation effects in Windows always applies.",
+        },
     }
 
     def hint(self, key, platform):
-        return js("settings.hint(settings.SCHEMA.find((s) => s.key === key), platform)", key=key, platform=platform)
+        return js("(() => { const item = settings.SCHEMA.find((s) => s.key === key); return item ? settings.hint(item, platform) : null; })()", key=key, platform=platform)
 
     def test_the_shortcut_and_glass_hints_follow_the_platform(self):
         for key, by_platform in self.BY_PLATFORM.items():

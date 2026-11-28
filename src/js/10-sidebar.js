@@ -23,7 +23,7 @@
   const animateSpaceChange = () => {
     spaceAnimations.forEach((animation) => animation.cancel());
     spaceAnimations = [];
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (document.querySelector("#browser")?.classList.contains("vm-reduce-motion")) return;
     const page = document.querySelector("#webpage-stack");
     if (panel?.animate) spaceAnimations.push(panel.animate(
       [{ opacity: 0.72, transform: "translateY(4px)" }, { opacity: 1, transform: "translateY(0)" }],
@@ -1327,7 +1327,7 @@
   window.addEventListener("vm-update", render);
   window.addEventListener("vm-command-bar-opened", () => {
     const scroller = panel?.querySelector(".vm-scroll");
-    scroller?.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" });
+    scroller?.scrollTo({ top: scroller.scrollHeight, behavior: document.querySelector("#browser")?.classList.contains("vm-reduce-motion") ? "auto" : "smooth" });
   });
 
   const start = () => {
