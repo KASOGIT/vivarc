@@ -21,6 +21,12 @@ browser.style = {
   setProperty: (k, v) => { props[k] = v; log.push(`set:${k}=${v}`); },
   removeProperty: (k) => { delete props[k]; log.push(`rm:${k}`); },
 };
+const media = {
+  matches: process.argv[4] === "dark", listeners: [],
+  addEventListener(name, fn) { if (name === "change") this.listeners.push(fn); },
+  removeEventListener() {},
+  flip(matches) { this.matches = matches; this.listeners.forEach((fn) => fn({ matches, media: "(prefers-color-scheme: dark)" })); },
+};
 const timers = [];
 const fakeSetTimeout = (fn, delay) => { timers.push({ id: timers.length + 1, fn, delay, cleared: false, fired: false }); return timers.length; };
 const fakeClearTimeout = (id) => { const t = timers.find((x) => x.id === id); if (t) t.cleared = true; };
@@ -50,7 +56,9 @@ global.window = {
   addEventListener: (name, fn) => events[name] = fn,
   setTimeout: fakeSetTimeout,
   clearTimeout: fakeClearTimeout,
+  matchMedia: (query) => query === "(prefers-color-scheme: dark)" ? media : { matches: false, addEventListener() {}, removeEventListener() {} },
 };
+global.matchMedia = window.matchMedia;
 global.BroadcastChannel = process.argv[3] === "channel" ? class { constructor() { channels.push(this); } postMessage() {} } : undefined;
 vm.runInThisContext(fs.readFileSync(process.argv[1], "utf8"));
 const tick = () => new Promise((resolve) => setImmediate(resolve));
@@ -61,9 +69,9 @@ const open = async () => { events["vm-open-theme"](); await tick(); return brows
 LEGACY = [["theme", {"on": True, "hue": 250, "sat": 28, "light": 20, "grain": 30}]]
 
 
-def run_theme(scenario, saved, channel=False):
+def run_theme(scenario, saved, channel=False, dark=False):
     path = os.path.join(os.path.dirname(__file__), "..", "src", "js", "40-theme.js")
-    args = ["node", "-e", HARNESS + scenario, path, json.dumps(saved)] + (["channel"] if channel else [])
+    args = ["node", "-e", HARNESS + scenario, path, json.dumps(saved), "channel" if channel else "-", "dark" if dark else "light"]
     done = subprocess.run(args, capture_output=True, text=True)
     if done.returncode:
         raise AssertionError(done.stderr)
@@ -645,6 +653,122 @@ class OklchPresets(unittest.TestCase):
     swatches[i].listeners.click();
     assert.equal(props["--vm-fg"], fg, `swatch ${i}`);
   }''')
+
+
+
+MODES_ROW = r"""
+const modeButton = (pop, text) => {
+  const row = pop.children.find((c) => c.className === "vm-theme-modes");
+  const found = row.children.find((c) => c.textContent === text);
+  assert.ok(found, `the modes row has a ${text} button`);
+  return found;
+};
+const pressed = (pop) => ["Dark", "Light", "Auto"].map((t) => modeButton(pop, t).ariaPressed).join(",");
+"""
+
+
+def auto(**fields):
+    return theme_with(mode="auto", **fields)
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the theme editor")
+class SpaceAutoMode(unittest.TestCase):
+    def check(self, record, body, dark=False):
+        scenario = MODES_ROW + "(async () => {\n  await switchTo(0);\n" + body + "\n})().catch((error) => { console.error(error); process.exitCode = 1; });"
+        run_theme(scenario, [["theme:space:0", record]], dark=dark)
+
+    def test_auto_renders_the_lighter_side_when_the_system_is_light(self):
+        self.check(auto(), r"""
+  assert.equal(props["--vm-tint"], "hsl(250 28% 80%)");
+  assert.equal(props["--vm-fg"], "#1b1b1f");""")
+
+    def test_auto_renders_the_darker_side_when_the_system_is_dark(self):
+        self.check(auto(), r"""
+  assert.equal(props["--vm-tint"], "hsl(250 28% 20%)");
+  assert.equal(props["--vm-fg"], "#f2f2f5");""", dark=True)
+
+    def test_auto_mirrors_a_light_colour_in_both_appearances(self):
+        self.check(auto(light=88), r"""assert.equal(props["--vm-tint"], "hsl(250 28% 88%)");""")
+        self.check(auto(light=88), r"""
+  assert.equal(props["--vm-tint"], "hsl(250 28% 12%)");
+  assert.equal(props["--vm-fg"], "#f2f2f5");""", dark=True)
+
+    def test_auto_leaves_the_saved_record_unchanged(self):
+        self.check(auto(light=88), r"""
+  const pop = await open();
+  const grain = pop.children.at(-2).children[1];
+  grain.value = "50";
+  grain.listeners.input();
+  const record = saved.get("theme:space:0");
+  assert.equal(record.light, 88);
+  assert.equal(record.mode, "auto");
+  assert.equal(record.grain, 50);
+  assert.equal(props["--vm-tint"], "hsl(250 28% 12%)");""", dark=True)
+
+    def test_auto_mirrors_the_stops_before_the_contrast_clamp(self):
+        cases = [(20, 30, False, 80, 70), (20, 30, True, 20, 30), (88, 20, False, 88, 80), (88, 20, True, 12, 20)]
+        for main, stop, dark, tint, rendered in cases:
+            with self.subTest(main=main, stop=stop, dark=dark):
+                grad = f"linear-gradient(160deg, hsl(250 28% {tint}%), hsl(300 28% {rendered}%))"
+                glass = f"linear-gradient(160deg, hsl(250 28% {tint}% / var(--vm-glass-opacity)), hsl(300 28% {rendered}% / var(--vm-glass-opacity)))"
+                self.check(auto(stops=[{"hue": 300, "light": stop}], light=main),
+                           f'  assert.equal(props["--vm-grad"], {json.dumps(grad)});\n  assert.equal(props["--vm-grad-glass"], {json.dumps(glass)});', dark=dark)
+
+    def test_a_fixed_theme_ignores_the_system_appearance(self):
+        for record in (theme_with(), theme_with(mode="fixed"), theme_with(mode="dark"), theme_with(mode=None)):
+            for dark in (False, True):
+                with self.subTest(mode=record.get("mode"), dark=dark):
+                    self.check(record, r"""
+  assert.equal(props["--vm-tint"], "hsl(250 28% 20%)");
+  assert.equal(props["--vm-fg"], "#f2f2f5");""", dark=dark)
+
+    def test_a_system_appearance_change_reapplies_the_active_theme(self):
+        self.check(auto(stops=[{"hue": 300, "light": 30}]), r"""
+  assert.equal(props["--vm-tint"], "hsl(250 28% 80%)");
+  media.flip(true);
+  assert.equal(props["--vm-tint"], "hsl(250 28% 20%)");
+  assert.equal(props["--vm-fg"], "#f2f2f5");
+  assert.equal(props["--vm-grad"], "linear-gradient(160deg, hsl(250 28% 20%), hsl(300 28% 30%))");
+  media.flip(false);
+  assert.equal(props["--vm-tint"], "hsl(250 28% 80%)");
+  assert.equal(props["--vm-fg"], "#1b1b1f");""")
+
+    def test_the_auto_button_saves_auto_and_keeps_light(self):
+        self.check(theme_with(light=30), r"""
+  const pop = await open();
+  modeButton(pop, "Auto").listeners.click();
+  const record = saved.get("theme:space:0");
+  assert.equal(record.mode, "auto");
+  assert.equal(record.light, 30);""")
+
+    def test_dark_and_light_save_their_light_and_drop_the_mode(self):
+        self.check(auto(), r"""
+  const pop = await open();
+  modeButton(pop, "Dark").listeners.click();
+  assert.equal(saved.get("theme:space:0").light, 18);
+  assert.equal(saved.get("theme:space:0").mode, undefined);
+  modeButton(pop, "Auto").listeners.click();
+  modeButton(pop, "Light").listeners.click();
+  assert.equal(saved.get("theme:space:0").light, 88);
+  assert.equal(saved.get("theme:space:0").mode, undefined);""")
+
+    def test_the_active_mode_button_is_pressed(self):
+        cases = [(theme_with(light=20), "true,false,false"), (theme_with(light=58), "true,false,false"),
+                 (theme_with(light=59), "false,true,false"), (theme_with(light=88), "false,true,false"),
+                 (auto(light=20), "false,false,true"), (auto(light=88), "false,false,true")]
+        for record, expected in cases:
+            with self.subTest(mode=record.get("mode"), light=record["light"]):
+                self.check(record, f'  const pop = await open();\n  assert.equal(pressed(pop), "{expected}");')
+
+    def test_pressed_follows_the_clicks(self):
+        self.check(theme_with(light=20), r"""
+  const pop = await open();
+  modeButton(pop, "Auto").listeners.click();
+  assert.equal(pressed(pop), "false,false,true");
+  modeButton(pop, "Light").listeners.click();
+  assert.equal(pressed(pop), "false,true,false");
+  modeButton(pop, "Dark").listeners.click();
+  assert.equal(pressed(pop), "true,false,false");""")
 
 
 if __name__ == "__main__":
