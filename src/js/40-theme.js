@@ -1,9 +1,14 @@
 // Vivarc theme editor: each space has its own tint, shade and grain, saved in the profile.
 (() => {
   const { store } = window.__vm;
+  // Colours are picked in OKLCH, a light row at L 0.86 and a deep row at L 0.56, and saved as their HSL equivalent so stored themes keep their format.
   const PRESETS = [
-    ["#efe9e4", 30, 20, 90], ["#e89bbb", 335, 55, 75], ["#a0739f", 305, 25, 54], ["#e0626e", 355, 65, 62],
-    ["#ef8c5f", 18, 80, 65], ["#f2d56b", 47, 85, 68], ["#6fe3a0", 143, 65, 65], ["#7db7dc", 203, 55, 67], ["#6d6a92", 245, 18, 48],
+    ["Paper", "oklch(0.86 0.012 80)", 37, 13, 81], ["Rose", "oklch(0.86 0.07 15)", 357, 90, 87],
+    ["Amber", "oklch(0.86 0.08 70)", 32, 80, 77], ["Mint", "oklch(0.86 0.08 150)", 131, 46, 78],
+    ["Sky", "oklch(0.86 0.07 235)", 203, 87, 81], ["Lilac", "oklch(0.86 0.07 305)", 266, 74, 87],
+    ["Graphite", "oklch(0.56 0.02 270)", 224, 7, 47], ["Ruby", "oklch(0.56 0.13 15)", 353, 40, 51],
+    ["Ochre", "oklch(0.56 0.12 65)", 34, 81, 35], ["Forest", "oklch(0.56 0.11 150)", 136, 37, 38],
+    ["Ocean", "oklch(0.56 0.11 245)", 206, 55, 45], ["Violet", "oklch(0.56 0.12 305)", 269, 32, 53],
   ];
   const DEFAULT = { on: false, hue: 250, sat: 28, light: 20, grain: 30 };
   let theme = { ...DEFAULT };
@@ -164,9 +169,10 @@
     });
 
     const swatches = el("div", "vm-theme-swatches");
-    for (const [color, hue, sat, light] of PRESETS) {
+    for (const [name, color, hue, sat, light] of PRESETS) {
       const s = el("button", "vm-theme-swatch");
       s.style.backgroundColor = color;
+      s.title = name;
       s.addEventListener("click", () => { Object.assign(theme, { hue, sat, light }); save(); sync(); });
       swatches.append(s);
     }

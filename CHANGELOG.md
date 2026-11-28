@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Twelve new space colours**, picked in OKLCH so each row matches in brightness: six soft tones and six deep ones.
 - **Tab buttons fade in** on hover instead of popping in, and the title no longer jumps.
 - **The space colour cross-fades** when you switch between themed spaces. Custom gradients switch at once.
 - **Pick your own gradient** for each space: in the theme pop-up, switch Gradient to Custom and drag the extra colours on the pad.
