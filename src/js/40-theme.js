@@ -23,9 +23,18 @@
 
   const shownLight = (light) => (theme.light > 58 ? Math.max(light, 59) : Math.min(light, 58));
 
-  const apply = () => {
+  let fadeTimer = null;
+
+  const apply = (options) => {
     const browser = document.querySelector("#browser");
     if (!browser) return;
+    clearTimeout(fadeTimer);
+    if (options?.fade === true) {
+      browser.classList.add("vm-tint-fade");
+      fadeTimer = setTimeout(() => browser.classList.remove("vm-tint-fade"), 300);
+    } else {
+      browser.classList.remove("vm-tint-fade");
+    }
     browser.classList.toggle("vm-themed", theme.on);
     browser.classList.toggle("vm-tint-neutral", theme.on && theme.sat < 10);
     const style = browser.style;
@@ -211,12 +220,13 @@
   const selectSpace = (id) => {
     if (id === activeSpace) return;
     close();
+    const fade = theme.on && activeSpace !== null && !validStops(theme.stops);
     activeSpace = id;
     const current = ++revision;
     pending = Promise.all([store.get(keyFor(id), null), store.get("theme", null)]).then(([saved, legacy]) => {
       if (current !== revision) return;
       theme = { ...DEFAULT, ...(saved || legacy || {}) };
-      apply();
+      apply({ fade: fade && theme.on && !validStops(theme.stops) });
     });
   };
   window.addEventListener("vm-active-space-changed", (event) => selectSpace(event.detail));
