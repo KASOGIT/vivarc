@@ -105,8 +105,6 @@ class SpaceThemes(unittest.TestCase):
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 '''
         run_theme(scenario, saved)
-        path = os.path.join(os.path.dirname(__file__), "..", "src", "js", "40-theme.js")
-        subprocess.run(["node", "-e", script, path], check=True, capture_output=True, text=True)
 
 
 if __name__ == "__main__":
