@@ -21,6 +21,7 @@ def apply(prev_keys, ops):
         elif o["op"] in ("insert", "move"):
             if o["op"] == "move":
                 keys.remove(o["key"])
+            assert o["before"] is None or o["before"] in keys, f"anchor {o['before']} is not in {keys} when {o} runs"
             at = len(keys) if o["before"] is None else keys.index(o["before"])
             keys.insert(at, o["key"])
     return keys
@@ -63,7 +64,13 @@ class Keyed(unittest.TestCase):
         self.assertEqual(len(ops), 2 + count(ops, "insert") + count(ops, "move"))
 
     def test_an_empty_list_gets_every_row_inserted_in_order(self):
-        self.assertEqual(plan([], rows("ab")), [{"op": "insert", "key": "a", "before": "b"}, {"op": "insert", "key": "b", "before": None}])
+        self.assertEqual(plan([], rows("ab")), [{"op": "insert", "key": "a", "before": None}, {"op": "insert", "key": "b", "before": None}])
+
+    def test_rows_added_at_the_front_anchor_on_the_first_stable_row(self):
+        self.assertEqual(plan(rows("ab"), rows("xyab")), [{"op": "insert", "key": "x", "before": "a"}, {"op": "insert", "key": "y", "before": "a"}])
+
+    def test_an_insert_anchors_on_a_stable_row_not_on_a_row_that_moves(self):
+        self.assertEqual(plan(rows("abc"), rows("cxab")), [{"op": "move", "key": "c", "before": "a"}, {"op": "insert", "key": "x", "before": "a"}])
 
     def test_an_emptied_list_removes_every_row_in_order(self):
         self.assertEqual(plan(rows("ab"), []), [{"op": "remove", "key": "a"}, {"op": "remove", "key": "b"}])
