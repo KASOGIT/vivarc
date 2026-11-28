@@ -186,13 +186,11 @@
 
   // Splits a label into segments, marking every occurrence of each word of the query.
   const highlight = (label, query) => {
-    const words = query.trim().split(/\s+/).filter(Boolean).map((w) => w.toLowerCase());
-    const lower = label.toLowerCase();
+    const words = query.trim().split(/\s+/).filter(Boolean);
     const marked = new Array(label.length).fill(false);
     for (const word of words) {
-      for (let at = lower.indexOf(word); at !== -1; at = lower.indexOf(word, at + word.length)) {
-        marked.fill(true, at, at + word.length);
-      }
+      const re = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+      for (let m = re.exec(label); m; m = re.exec(label)) marked.fill(true, m.index, m.index + m[0].length);
     }
     const out = [];
     for (let i = 0; i < label.length; i++) {
@@ -202,9 +200,10 @@
     }
     return out.length ? out : [{ text: label, match: false }];
   };
-  const titleOf = (label, query) => {
+  const titleOf = (row, query) => {
     const title = el("span", "vm-cmd-title");
-    title.append(...highlight(label, query).map((s) => (s.match
+    const typedRow = row.label.toLowerCase() === query.trim().toLowerCase();
+    title.append(...highlight(row.label, row.type === "engine" || typedRow ? "" : query).map((s) => (s.match
       ? el("mark", "vm-cmd-match", s.text)
       : document.createTextNode(s.text))));
     return title;
@@ -296,13 +295,13 @@
       if (row.type === "action" || row.type === "engine") {
         const glyph = el("span", "vm-cmd-ico vm-cmd-glyph");
         glyph.innerHTML = ACTION_SVG;
-        item.append(glyph, titleOf(row.label, typed));
+        item.append(glyph, titleOf(row, typed));
       } else if (row.type === "search" || row.type === "suggest") {
         const glyph = el("span", "vm-cmd-ico vm-cmd-glyph");
         glyph.innerHTML = SEARCH_SVG;
         item.append(glyph, el("span", "vm-cmd-title", row.label));
       } else {
-        item.append(iconFor(row.url, row.favicon), titleOf(row.label, typed));
+        item.append(iconFor(row.url, row.favicon), titleOf(row, typed));
         if (row.sub) item.append(el("span", "vm-cmd-sub", `— ${row.sub}`));
       }
       if (row.type === "tab" || row.type === "action" || row.type === "engine") {
