@@ -1,6 +1,6 @@
 # Design polish: modern look, fluid motion, personal vibe, polished details
 
-Status: decided. Ready for /feature, one PR at a time.
+Status: scope decided. PR 1 is ready for `/feature`; the other PRs need the spec work listed under Decision first.
 
 ## Question
 
@@ -27,19 +27,21 @@ What design changes and features would make Vivarc look modern, move fluidly, fe
 - Colour: three root tokens `--vm-surface`, `--vm-text`, `--vm-sel` mixed in sRGB from Vivaldi's `--colorBg`, `--colorFg`, `--colorHighlightBg` (`vivarc.css:3-6`). Hardcoded fallbacks throughout.
 - Radii: 13 distinct values (8px x8, 14px x6, 6px x5, 12px x4, 9px x3, then 5, 7, 10, 11, 16, 18, 1, 999). No scale.
 - Motion: 7 durations (90 to 260ms), mostly default `ease`. One spring curve, only under `.vm-glass` (`vivarc.css:770`). No `@keyframes`, no `@starting-style`. Menus (`:277`) and the command bar (`:296-314`) have no transition: they appear and vanish instantly.
-- Reduced motion handled at `:202`, `:208`, `:823` only, the last one gated on `.vm-glass`. Reduced transparency and contrast handled only under `.vm-glass` (`:814`).
-- Per-space theme: HSL record `{on, hue, sat, light, grain}` saved in IndexedDB as `theme:space:<id>`, 9 hardcoded presets, flat `--vm-tint` background on `#tabs-tabbar-container`, foreground flips hard at lightness 58, grain via an `feTurbulence` data URI (`40-theme.js:4-32`). No gradient, no cross-fade between spaces.
+- Reduced motion: `:202` (stack chevron) and `:208` (folder body) set `transition: none`; `:823-827`, only under `.vm-glass`, sets `transition: none !important` on the panel, command bar, menus, theme pop-up, settings card and toast, and cancels the hover `transform` on favourites and the space pill. Reduced transparency and contrast handled only under `.vm-glass` (`:814-822`).
+- Space switch already animates in JS: `animateSpaceChange` (`10-sidebar.js:20-35`) runs Web Animations on the panel (opacity 0.72 to 1, `translateY(4px)`, 220ms, `cubic-bezier(0.22, 1, 0.36, 1)`) and the page (opacity 0.9 to 1, 180ms), cancels on a new switch and skips under Reduce Motion. The tint itself switches instantly. CSS tokens do not reach these JS literals.
+- Per-space theme: HSL record `{on, hue, sat, light, grain}` saved in IndexedDB as `theme:space:<id>`, 9 hardcoded presets, flat `--vm-tint` background on `#tabs-tabbar-container`, foreground flips hard at lightness 58, grain via an `feTurbulence` data URI (`40-theme.js:4-32`). No gradient.
 - Liquid glass: opt-in, covers menus, command box, switcher, theme pop-up, settings card, toast (`vivarc.css:757-827`). Sidebar glass is faked with gradients.
-- Settings: Appearance has two entries, Liquid glass and Glass opacity (`01-settings.js`).
+- Settings: Appearance has two entries, Liquid glass and Glass opacity (`01-settings.js:10-13`). SCHEMA entries take `key`, `section`, `label`, `hint` (string or `{mac, win}`), `default`, `onClass`/`offClass`, `cssVar`, `needs`, `requires`, `fromConfig`; types `range` and `choice` (with `options`) exist. `vivarc.py` reads `~/.vivarc/config.json` but only settings with `fromConfig` use it, so new settings stay out of the installer.
+- No test asserts CSS text; tests only check the stylesheet is bundled (`tests/test_install_flow.py:112`, `tests/test_vivarc.py:280`).
 - Start page: its own purple palette with inline styles, ignores Vivaldi's theme and the space tint. It is a `file://` copy made by the installer (`vivarc.py:566`) and its URL lives in a user bookmark, so it cannot read the mod's store.
 
-### Code shape that gates motion work (verified)
+### Code shape that gates motion work (verified unless marked)
 
 - The sidebar rebuilds every row on each refresh: `render()` builds a fresh `.vm-scroll` body with a new `tabRow` per tab, then `panel.replaceChildren(...)` (`10-sidebar.js:1027-1079`, 80ms debounce). Entry animations on rows would replay on every tab event; a sliding active pill and close-collapse need stable, keyed nodes first.
 - The command bar list is rebuilt the same way (`20-command-bar.js:267`).
-- Overlays close with a synchronous `.remove()` (`20-command-bar.js:207`, `40-theme.js:51`, `10-sidebar.js:239`, `45-settings.js:17`). Exit animations need deferred removal; the command bar harness stubs `setTimeout` and `remove`.
+- Overlays close with a synchronous `.remove()` (`20-command-bar.js:209`, `40-theme.js:51`, `10-sidebar.js:239`, `45-settings.js:17`). Exit animations need deferred removal. Unchecked: the command bar harness stubs `setTimeout` and `remove`.
 - Saved themes need no migration if new fields are additive: loading spreads the record over `DEFAULT` (`40-theme.js:144`). `tests/test_space_themes.py:37,42` pins `--vm-tint` to `hsl(250 28% 20%)`.
-- A token built from `var(--colorFg)` resolves where it is declared; the themed sidebar overrides `--colorFg` on `#tabs-tabbar-container`, so fill tokens must be declared there too.
+- A token built from `var(--colorFg)` resolves where it is declared; the themed sidebar overrides `--colorFg` on `#tabs-tabbar-container` (`vivarc.css:505`), so fill tokens must be declared there too.
 
 ### Repo rules
 
@@ -69,7 +71,7 @@ Effort: S (under a day, CSS only), M (JS + tests), L (refactor). Esc: needs a go
 | M1 | Entry transitions on menus, command bar, theme pop-up, settings | S | | `@starting-style`, no JS. Exit stays instant. |
 | M2 | Exit transitions on the same overlays | M | | Deferred `.remove()` in four places, harness changes. |
 | M3 | Spring easing via `linear()` | S | | Replaces the cubic-bezier overshoot; tuning in a window. |
-| M4 | Tint cross-fade on space switch | S | | `@property --vm-tint`. Risk: recalculates the whole UI subtree per frame and may lag the theme pad drag. Spike first. |
+| M4 | Tint cross-fade on space switch | S | | The panel already fades on switch (`animateSpaceChange`); the tint still jumps. `@property --vm-tint`, enabled only during a switch so the theme pad drag stays instant. Risk: recalculates the whole UI subtree per frame. Spike first. |
 | M5 | Folder and stack expand to `height: auto` | S | | `interpolate-size: allow-keywords`. Folders already ease; stacks check. |
 | M6 | Keyed sidebar render | L | Esc | `10-sidebar.js` is 1427 lines. Unlocks M7 to M9. |
 | M7 | Tab close collapse (row shrinks before removal) | M | after M6 | |
@@ -108,6 +110,8 @@ Effort: S (under a day, CSS only), M (JS + tests), L (refactor). Esc: needs a go
 
 ## Recommendation
 
+Written before the maintainer's answers; the Decision section below supersedes it.
+
 Option A. Ship the S items that need no escalation first, in this order:
 
 1. `refactor(css): radius, motion and fill tokens` (L1, D4). `vivarc.css`. Visual check.
@@ -127,6 +131,7 @@ Round 1 answers from the maintainer (2026-11-28):
 - Structure: option A, tokens first.
 - In scope beyond the first seven PRs: P1 user-picked gradients, P3 Appearance controls, M2 overlay exit motion, M4 space cross-fade (after a perf spike), M6 keyed sidebar render with M7 close-collapse and M8 sliding active pill.
 - Derived gradient (L2) ships behind a new Appearance switch. Stored themes stay unchanged.
+- Round 3: P2 OKLCH presets, M5 smooth stack expand, D5 hover-reveal close, P5 auto light/dark per space added.
 - Out of scope: P6 Boosts, P7 compact sidebar, M9 sliding command bar selection, M10 view transitions, L4 real sidebar glass.
 
 Roadmap, one PR each, in order. Items marked Esc were approved in scope here but still get their spec reviewed before `/feature` starts, since they add stored data or change architecture.
@@ -136,7 +141,7 @@ Roadmap, one PR each, in order. Items marked Esc were approved in scope here but
 | 1 | `refactor(css): radius, motion and fill tokens` | L1, D4 | `vivarc.css` | visual |
 | 2 | `feat(motion): entry transitions for menus, command bar, theme pop-up and settings` | M1, M3 | `vivarc.css` | visual |
 | 3 | `feat(theme): accent focus rings, selection colour and thin scrollbars` | D1, D6 | `vivarc.css` | visual |
-| 4 | `feat(theme): accent and gradient derived from the space tint` | L2, L3, P4 | `vivarc.css`, `01-settings.js`, tests | node (setting), visual |
+| 4 | `feat(theme): accent and gradient derived from the space tint` | L2, L3, P4 | `vivarc.css`, `01-settings.js`, `40-theme.js`, `tests/test_space_themes.py` | node (setting, neutral class), visual |
 | 5 | `feat(command-bar): highlight the matched text` | D2 | `20-command-bar.js`, CSS, `tests/command_bar_*.test.cjs` | node |
 | 6 | `feat(command-bar): key hint footer and empty state` | D3 | same | node |
 | 7 | `feat(start): restyle the guide page with the shared tokens` | L5 | `src/start/index.html` | visual |
@@ -147,8 +152,25 @@ Roadmap, one PR each, in order. Items marked Esc were approved in scope here but
 | 12 | `refactor(sidebar): keyed render` (Esc) | M6 | `10-sidebar.js` | node, drag check |
 | 13 | `feat(sidebar): collapse a closing tab row` | M7 | `10-sidebar.js`, CSS | visual |
 | 14 | `feat(sidebar): sliding active-tab indicator` | M8 | `10-sidebar.js`, CSS | visual |
+| 15 | `feat(sidebar): smooth stack expand` | M5 | `vivarc.css` | visual |
+| 16 | `feat(sidebar): fade in the tab close button on hover` | D5 | `vivarc.css` | visual |
+| 17 | `feat(theme): presets curated in OKLCH` | P2 | `40-theme.js`, `tests/test_space_themes.py` (pop-up child positions) | node |
+| 18 | `feat(theme): follow the system appearance per space` (Esc) | P5 | `40-theme.js`, CSS, `tests/test_space_themes.py` | node |
+
+PRs 15 and 16 are CSS only and can land any time after PR 1. PR 17 lands after PR 4 so presets are tuned against the derived accent and gradient. PR 18 lands after PR 10 so both stored-field changes share one review of the theme record.
 
 PR 12 gets its own `/research` round (architecture-planner) before `/feature`: it touches drag, stacks and favourites.
+
+Spec status before `/feature`:
+
+- Ready: PR 1.
+- Literal spec here, tuned in a window during the PR: PR 2, PR 4.
+- Draft, finish the spec first: PR 9, PR 10, PR 18 (new optional field, e.g. `mode: "dark" | "light" | "auto"`, absent means today's behaviour).
+- Spike first: PR 11.
+- Own research round: PR 12.
+- No spec yet, write one at the start of the PR (small, scoped by the idea row): PR 3, 5, 6, 7, 8, 13, 14, 15, 16, 17.
+
+Defaults chosen by the planner, not the maintainer, open to override: the accent (L3) is not behind the gradient switch; under glass, the glass layers stack above the gradient.
 
 ## Spec (literals)
 
@@ -158,32 +180,38 @@ Declared on `#browser.vm-on` and again on `#browser.vm-on #tabs-tabbar-container
 
 - Radii: `--vm-r-1: 6px` (absorbs 5, 6, 7), `--vm-r-2: 8px` (8, 9), `--vm-r-3: 12px` (10, 11, 12), `--vm-r-4: 14px` (14, 16), `--vm-r-5: 18px`, `--vm-r-full: 999px` (also the 11px switch). The 1px guide line stays literal.
 - Durations: `--vm-dur-1: 120ms` (90, 120), `--vm-dur-2: 180ms` (150, 160, 180), `--vm-dur-3: 240ms` (220, 260).
-- Easing: `--vm-ease-out: cubic-bezier(0.22, 1, 0.36, 1)` (already at `vivarc.css:177`, `10-sidebar.js:23`), `--vm-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1)` (moved from `:770` to the root). A `linear()` spring replaces it in PR 2 once tuned.
+- Easing: `--vm-ease-out: cubic-bezier(0.22, 1, 0.36, 1)` (already at `vivarc.css:177` and in JS at `10-sidebar.js:30`), `--vm-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1)` (moved from `:770` to the root). A `linear()` spring replaces it in PR 2 once tuned.
+- JS motion literals in `animateSpaceChange` (`10-sidebar.js:28-34`) stay as they are; they already match the scale (220ms is between dur-2 and dur-3, keep it). No JS change in PR 1.
 - Fills: `--vm-fill-1: color-mix(in srgb, var(--colorFg) 8%, transparent)`, `--vm-fill-2` 14%, `--vm-fill-3` 24%.
-- One `@media (prefers-reduced-motion: reduce)` block sets the three durations to `0ms`, replacing `:202`, `:208`, `:823-825`. One `prefers-reduced-transparency` block for all of Vivarc.
+- Reduced motion, one policy for all of Vivarc, stated once here and reused by PR 2, 8, 9 and 11: no movement (no transform transitions, no hover scale, no translate or scale on entry or exit), opacity changes stay but at `--vm-dur-1`.
+  - One `@media (prefers-reduced-motion: reduce)` block on `#browser.vm-on`: `--vm-dur-2` and `--vm-dur-3` set to `var(--vm-dur-1)`; `transition-property` limited to `opacity, background-color, color, box-shadow` on the overlay and row selectors; the hover `transform: none` from `:826` generalised beyond `.vm-glass`.
+  - It replaces `:202`, `:208` and `:823-827`. The folder body (`:208`) animates height: it gets `transition: none` explicitly, since height is movement.
+- One `prefers-reduced-transparency` / `prefers-contrast: more` block covers all of Vivarc, keeping today's glass fallbacks (`:814-822`).
 
 ### PR 2, overlay entry
 
 - Selectors: `.vm-menu`, `#vm-cmd .vm-cmd-box`, `.vm-theme-pop`, `.vm-set-card`.
 - `transition: opacity var(--vm-dur-2) var(--vm-ease-out), transform var(--vm-dur-2) var(--vm-ease-spring)`.
 - `--vm-ease-spring` becomes a `linear(...)` curve pasted from the Linear Easing Generator (a light spring, no visible bounce), tuned in a window.
-- Under reduced motion: opacity only, no transform.
 - `@starting-style { opacity: 0; transform: translateY(-4px) scale(0.98); }`.
+- Under reduced motion: the PR 1 policy (fade only).
 - No JS change; exit stays instant.
 
 ### PR 4, derived palette
 
 - JS keeps writing `--vm-tint` as `hsl(H S% L%)`; stored records unchanged.
 - `--vm-accent: oklch(from var(--vm-tint) clamp(0.45, l, 0.75) max(c, 0.12) h)` under `.vm-themed`, used by `.vm-selected`, drop markers, the checked switch, focus rings and `--vm-sel`. Starting values, tuned in a window against all 9 presets.
+- Near-gray tints have no usable hue (an achromatic colour in `oklch(from ...)` gets hue 0, so the forced chroma lands on red). `40-theme.js` `apply()` adds `vm-tint-neutral` on `#browser` when `sat < 10`; under it, `--vm-accent` falls back to `var(--colorHighlightBg)` and the gradient keeps hue (`h` unchanged, no `+ 30`). Node test: `sat: 5` sets the class, `sat: 28` does not, `on: false` removes it.
 - `#browser.vm-themed #tabs-tabbar-container { background-image: linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30))); }`.
 - Under `.vm-glass.vm-themed`, the glass rule also sets `background-image` on that element (`vivarc.css:783`). Default: the glass layers stack above the gradient in one comma-separated `background-image`, gradient last. Confirm visually.
-- The gradient applies only under a class from a new Appearance setting: `{ key: "spaceGradient", label: "Space gradient", onClass: "vm-gradient", default: true }` in `01-settings.js` SCHEMA. On by default, so themed spaces change look after the update: note it in `CHANGELOG.md`. The accent (L3) is not behind the switch.
+- The gradient applies only under a class from a new Appearance setting, placed after `glassOpacity`: `{ key: "spaceGradient", section: "Appearance", label: "Space gradient", hint: "Blend each space's colour into a soft gradient.", default: true, onClass: "vm-gradient" }` in `01-settings.js` SCHEMA. No `fromConfig`, so the installer is untouched. On by default, so themed spaces change look after the update: note it in `CHANGELOG.md`. The accent (L3) is not behind the switch.
 
 ### PR 9, Appearance controls (draft)
 
 - `density`: compact / default / comfortable, sets `--vm-row-h` to 28 / 32 / 36px (values to confirm against the current row height).
 - `corners`: sharp / default / round, multiplies the radius scale by 0.5 / 1 / 1.4 through one `--vm-r-k` factor.
-- `motion`: full / reduced / off, sets a class that zeroes `--vm-dur-*` (off) or drops transforms (reduced). System Reduce Motion always wins.
+- `motion`: full / reduced / off. Reduced applies the PR 1 reduced-motion policy through a class; off also sets `--vm-dur-1` to `0ms`. System Reduce Motion always wins over full.
+- All three use `type: "choice"`. Open: whether a choice setting can drive `cssVar` or a class per option today, or `01-settings.js` needs a small extension. Read it when finishing this spec.
 
 ### PR 10, user-picked gradient (draft)
 
@@ -196,7 +224,7 @@ Declared on `#browser.vm-on` and again on `#browser.vm-on #tabs-tabbar-container
 - Theme (node, `tests/test_space_themes.py`): `{on:true, hue:250, sat:28, light:20, grain:30}` still yields `--vm-tint: hsl(250 28% 20%)`; a legacy `theme` record still applies to a space with none; `on:false` removes every theme property, including any new one.
 - Command bar highlight (node): query `git` on `GitHub` marks characters 0 to 3; no match marks nothing; matching ignores case; the label is never injected as HTML.
 - Settings, if any is added: default value, class or cssVar output, one section, a hint for macOS and Windows.
-- CSS PRs (visual, throwaway profile after `./vivarc.py apply`): glass on and off, themed and unthemed, all 9 presets, macOS Reduce Motion and Reduce Transparency on, a favourite drag, address bar popups over the themed sidebar.
+- CSS PRs (visual, throwaway profile after `./vivarc.py apply`): glass on and off, themed and unthemed, all 9 presets plus Intensity 0 (gray tint), macOS Reduce Motion and Reduce Transparency on, a favourite drag, address bar popups over the themed sidebar.
 
 ## Open questions
 
