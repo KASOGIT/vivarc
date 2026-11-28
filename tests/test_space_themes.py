@@ -17,20 +17,40 @@ class Element {
 }
 const props = {};
 const browser = new Element();
-browser.style = { setProperty: (k, v) => props[k] = v, removeProperty: (k) => delete props[k] };
+browser.style = {
+  setProperty: (k, v) => { props[k] = v; log.push(`set:${k}=${v}`); },
+  removeProperty: (k) => { delete props[k]; log.push(`rm:${k}`); },
+};
+const timers = [];
+const fakeSetTimeout = (fn, delay) => { timers.push({ id: timers.length + 1, fn, delay, cleared: false, fired: false }); return timers.length; };
+const fakeClearTimeout = (id) => { const t = timers.find((x) => x.id === id); if (t) t.cleared = true; };
+global.setTimeout = fakeSetTimeout;
+global.clearTimeout = fakeClearTimeout;
+const pendingTimers = () => timers.filter((t) => !t.cleared && !t.fired);
+const fire = (t) => { assert.ok(!t.cleared && !t.fired, "only a live timer can fire"); t.fired = true; t.fn(); };
+const channels = [];
 const classes = new Set();
-browser.classList = { toggle(name, force) {
-  const on = force === undefined ? !classes.has(name) : !!force;
+const log = [];
+const setClass = (name, on) => {
   if (on) classes.add(name); else classes.delete(name);
+  log.push((on ? "class+:" : "class-:") + name);
   return on;
-}, contains: (name) => classes.has(name) };
+};
+browser.classList = {
+  toggle: (name, force) => setClass(name, force === undefined ? !classes.has(name) : !!force),
+  add: (...names) => names.forEach((name) => setClass(name, true)),
+  remove: (...names) => names.forEach((name) => setClass(name, false)),
+  contains: (name) => classes.has(name),
+};
 global.document = { querySelector: () => browser, createElement: () => new Element(), addEventListener() {}, body: browser };
 global.window = {
   __vm: { store: { get: async (key, fallback) => saved.get(key) ?? fallback, set: async (key, value) => saved.set(key, value) },
     cssLoaded: true, onShortcut() {}, onMark() {}, leave: (node) => node && node.remove() },
   addEventListener: (name, fn) => events[name] = fn,
+  setTimeout: fakeSetTimeout,
+  clearTimeout: fakeClearTimeout,
 };
-global.BroadcastChannel = undefined;
+global.BroadcastChannel = process.argv[3] === "channel" ? class { constructor() { channels.push(this); } postMessage() {} } : undefined;
 vm.runInThisContext(fs.readFileSync(process.argv[1], "utf8"));
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 const switchTo = async (space) => { events["vm-active-space-changed"]({ detail: space }); await tick(); };
@@ -40,9 +60,10 @@ const open = async () => { events["vm-open-theme"](); await tick(); return brows
 LEGACY = [["theme", {"on": True, "hue": 250, "sat": 28, "light": 20, "grain": 30}]]
 
 
-def run_theme(scenario, saved):
+def run_theme(scenario, saved, channel=False):
     path = os.path.join(os.path.dirname(__file__), "..", "src", "js", "40-theme.js")
-    done = subprocess.run(["node", "-e", HARNESS + scenario, path, json.dumps(saved)], capture_output=True, text=True)
+    args = ["node", "-e", HARNESS + scenario, path, json.dumps(saved)] + (["channel"] if channel else [])
+    done = subprocess.run(args, capture_output=True, text=True)
     if done.returncode:
         raise AssertionError(done.stderr)
 
@@ -356,6 +377,169 @@ class SpaceGradientStops(unittest.TestCase):
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 """
         run_theme(scenario, [["theme:space:0", theme_with()], ["theme:space:1", theme_with()]])
+
+
+FADE = r"""
+const FADE = "vm-tint-fade";
+const fades = (from = 0) => log.slice(from).filter((e) => e === "class+:" + FADE).length;
+const expectCrossFade = async (to, label) => {
+  const mark = log.length;
+  await switchTo(to);
+  assert.equal(fades(mark), 1, label + ": an on to on switch fades");
+};
+"""
+
+PALETTE = [["theme:space:0", theme_with(hue=250)], ["theme:space:1", theme_with(hue=10)], ["theme:space:2", theme_with(hue=120)],
+           ["theme:space:3", theme_with(hue=200)]]
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the theme editor")
+class SpaceTintCrossFade(unittest.TestCase):
+    def test_a_switch_between_two_themed_spaces_adds_the_class_before_the_new_tint_and_removes_it_after_300ms(self):
+        scenario = FADE + r"""
+(async () => {
+  await switchTo(0);
+  assert.equal(pendingTimers().length, 0, "no timer after the first selection");
+  const mark = log.length;
+  await switchTo(1);
+  const since = log.slice(mark);
+  const fadeAt = since.indexOf("class+:" + FADE);
+  const tintAt = since.findIndex((e) => e === "set:--vm-tint=hsl(10 28% 20%)");
+  assert.ok(fadeAt >= 0, "the fade class is added");
+  assert.ok(tintAt >= 0, "the new tint is set");
+  assert.ok(fadeAt < tintAt, "the class goes on before the tint changes");
+  const live = pendingTimers();
+  assert.equal(live.length, 1, "one removal is scheduled");
+  assert.equal(live[0].delay, 300);
+  assert.ok(classes.has(FADE), "the class stays while the timer is pending");
+  fire(live[0]);
+  assert.ok(!classes.has(FADE), "the timer removes the class");
+  assert.equal(props["--vm-tint"], "hsl(10 28% 20%)");
+})().catch((error) => { console.error(error); process.exitCode = 1; });
+"""
+        run_theme(scenario, PALETTE)
+
+    def test_a_second_switch_within_300ms_cancels_the_pending_removal_and_schedules_a_new_one(self):
+        scenario = FADE + r"""
+(async () => {
+  await switchTo(0);
+  await switchTo(1);
+  const first = pendingTimers();
+  assert.equal(first.length, 1);
+  await switchTo(2);
+  assert.equal(props["--vm-tint"], "hsl(120 28% 20%)");
+  assert.ok(first[0].cleared, "the first removal is cancelled with clearTimeout");
+  const live = pendingTimers();
+  assert.equal(live.length, 1, "exactly one removal is left");
+  assert.notEqual(live[0], first[0]);
+  assert.equal(live[0].delay, 300);
+  assert.ok(classes.has(FADE), "the class stays on while the last timer is pending");
+  fire(live[0]);
+  assert.ok(!classes.has(FADE), "the last timer removes it");
+})().catch((error) => { console.error(error); process.exitCode = 1; });
+"""
+        run_theme(scenario, PALETTE)
+
+    def test_the_first_space_selection_does_not_fade(self):
+        scenario = FADE + r"""
+(async () => {
+  await switchTo(0);
+  assert.equal(fades(), 0, "no previous space");
+  assert.equal(pendingTimers().length, 0);
+  assert.equal(props["--vm-tint"], "hsl(250 28% 20%)");
+  await expectCrossFade(1, "control");
+})().catch((error) => { console.error(error); process.exitCode = 1; });
+"""
+        run_theme(scenario, PALETTE)
+
+    def test_a_switch_from_a_space_whose_theme_is_off_does_not_fade(self):
+        saved = [["theme:space:0", theme_with(on=False)], *PALETTE[1:]]
+        scenario = FADE + r"""
+(async () => {
+  await switchTo(0);
+  const mark = log.length;
+  await switchTo(1);
+  assert.equal(props["--vm-tint"], "hsl(10 28% 20%)");
+  assert.equal(fades(mark), 0, "off to on does not fade");
+  assert.equal(pendingTimers().length, 0);
+  await expectCrossFade(2, "control");
+})().catch((error) => { console.error(error); process.exitCode = 1; });
+"""
+        run_theme(scenario, saved)
+
+    def test_a_switch_to_a_space_whose_theme_is_off_does_not_fade(self):
+        saved = [PALETTE[0], ["theme:space:1", theme_with(on=False)], *PALETTE[2:]]
+        scenario = FADE + r"""
+(async () => {
+  await switchTo(0);
+  const mark = log.length;
+  await switchTo(1);
+  assert.ok(!("--vm-tint" in props), "the tint is removed");
+  assert.equal(fades(mark), 0, "on to off does not fade");
+  assert.equal(pendingTimers().length, 0);
+  await switchTo(2);
+  await expectCrossFade(3, "control");
+})().catch((error) => { console.error(error); process.exitCode = 1; });
+"""
+        run_theme(scenario, saved)
+
+    def test_an_edit_from_the_pop_up_does_not_fade(self):
+        edits = {
+            "preset swatch": "pop.children[3].children[3].listeners.click();",
+            "Dark button": "pop.children[1].children[0].listeners.click();",
+            "Light button": "pop.children[1].children[1].listeners.click();",
+        }
+        for name, edit in edits.items():
+            with self.subTest(name):
+                scenario = FADE + r"""
+(async () => {
+  await switchTo(0);
+  const pop = await open();
+  const mark = log.length;
+  const before = props["--vm-tint"];
+  EDIT
+  assert.notEqual(props["--vm-tint"], before, "the edit changed the tint");
+  assert.equal(fades(mark), 0, "an edit does not fade");
+  assert.equal(pendingTimers().length, 0, "and schedules nothing");
+  await expectCrossFade(1, "control");
+})().catch((error) => { console.error(error); process.exitCode = 1; });
+""".replace("EDIT", edit)
+                run_theme(scenario, PALETTE)
+
+    def test_an_update_from_another_window_does_not_fade(self):
+        scenario = FADE + r"""
+(async () => {
+  await switchTo(0);
+  assert.equal(channels.length, 1, "the mod listens on a BroadcastChannel");
+  const mark = log.length;
+  channels[0].onmessage({ data: { space: 0, theme: { on: true, hue: 100, sat: 28, light: 20, grain: 30 } } });
+  assert.equal(props["--vm-tint"], "hsl(100 28% 20%)", "the update is applied");
+  assert.equal(fades(mark), 0, "a remote update does not fade");
+  assert.equal(pendingTimers().length, 0);
+  await expectCrossFade(1, "control");
+})().catch((error) => { console.error(error); process.exitCode = 1; });
+"""
+        run_theme(scenario, PALETTE, channel=True)
+
+    def test_an_edit_after_a_fade_has_started_removes_the_class_at_once(self):
+        edits = {
+            "preset swatch": "pop.children[3].children[3].listeners.click();",
+            "Dark button": "pop.children[1].children[0].listeners.click();",
+            "grain slider": 'const input = pop.children.at(-2).children[1]; input.value = "50"; input.listeners.input();',
+        }
+        for name, edit in edits.items():
+            with self.subTest(name):
+                scenario = FADE + r"""
+(async () => {
+  await switchTo(0);
+  await switchTo(1);
+  assert.ok(classes.has(FADE), "the fade has started");
+  const pop = await open();
+  EDIT
+  assert.ok(!classes.has(FADE), "the edit removes the class before the timer fires");
+})().catch((error) => { console.error(error); process.exitCode = 1; });
+""".replace("EDIT", edit)
+                run_theme(scenario, PALETTE)
 
 
 if __name__ == "__main__":
