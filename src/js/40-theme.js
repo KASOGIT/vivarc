@@ -28,15 +28,19 @@
     browser.classList.toggle("vm-tint-neutral", theme.on && theme.sat < 10);
     const style = browser.style;
     if (!theme.on) {
-      for (const k of ["--vm-tint", "--vm-fg", "--vm-grain", "--vm-noise", "--vm-grad"]) style.removeProperty(k);
+      for (const k of ["--vm-tint", "--vm-fg", "--vm-grain", "--vm-noise", "--vm-grad", "--vm-grad-glass"]) style.removeProperty(k);
       return;
     }
     style.setProperty("--vm-tint", `hsl(${theme.hue} ${theme.sat}% ${theme.light}%)`);
     const custom = validStops(theme.stops);
     if (custom) {
-      const colours = [theme, ...custom].map((c) => `hsl(${c.hue} ${theme.sat}% ${c.light}%)`);
-      style.setProperty("--vm-grad", `linear-gradient(160deg, ${colours.join(", ")})`);
-    } else style.removeProperty("--vm-grad");
+      const gradient = (alpha) => `linear-gradient(160deg, ${[theme, ...custom].map((c) => `hsl(${c.hue} ${theme.sat}% ${c.light}%${alpha})`).join(", ")})`;
+      style.setProperty("--vm-grad", gradient(""));
+      style.setProperty("--vm-grad-glass", gradient(" / var(--vm-glass-opacity)"));
+    } else {
+      style.removeProperty("--vm-grad");
+      style.removeProperty("--vm-grad-glass");
+    }
     style.setProperty("--vm-fg", fgFor(theme.light));
     style.setProperty("--vm-grain", String(theme.grain / 100 * 0.35));
     style.setProperty("--vm-noise", noise);

@@ -871,14 +871,14 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 26%),
     radial-gradient(120% 45% at 0% 0%, rgba(255, 255, 255, 0.14), transparent 70%),
     radial-gradient(90% 40% at 100% 100%, color-mix(in srgb, var(--vm-accent) 28%, transparent), transparent 70%),
-    var(--vm-grad, linear-gradient(160deg, color-mix(in srgb, var(--vm-tint) var(--vm-glass-opacity, 55%), transparent), color-mix(in srgb, oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30)) var(--vm-glass-opacity, 55%), transparent)));
+    var(--vm-grad-glass, linear-gradient(160deg, color-mix(in srgb, var(--vm-tint) var(--vm-glass-opacity, 55%), transparent), color-mix(in srgb, oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30)) var(--vm-glass-opacity, 55%), transparent)));
 }
 #browser.vm-on.vm-glass.vm-themed.vm-gradient.vm-tint-neutral #tabs-tabbar-container {
   background-image:
     linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 26%),
     radial-gradient(120% 45% at 0% 0%, rgba(255, 255, 255, 0.14), transparent 70%),
     radial-gradient(90% 40% at 100% 100%, color-mix(in srgb, var(--vm-accent) 28%, transparent), transparent 70%),
-    var(--vm-grad, linear-gradient(160deg, color-mix(in srgb, var(--vm-tint) var(--vm-glass-opacity, 55%), transparent), color-mix(in srgb, oklch(from var(--vm-tint) calc(l * 0.86) c h) var(--vm-glass-opacity, 55%), transparent)));
+    var(--vm-grad-glass, linear-gradient(160deg, color-mix(in srgb, var(--vm-tint) var(--vm-glass-opacity, 55%), transparent), color-mix(in srgb, oklch(from var(--vm-tint) calc(l * 0.86) c h) var(--vm-glass-opacity, 55%), transparent)));
 }
 
 /* Items inside a glass surface are luminous capsules, not more glass: a lit fill and a rim, no blur of their own. */
