@@ -1078,6 +1078,7 @@
         },
       });
     }
+    const head = [];
     if (state.space) {
       const label = el("div", "vm-space");
       label.append(el("span", "vm-space-name", spacesOf.label(state.space)));
@@ -1085,19 +1086,22 @@
       wireDrop(label, {
         onDrop: async (_zone, data) => insertPinned(data, (state.pinned || await ensureFolder("Pinned")).id, 0),
       });
-      view.head.replaceChildren(label);
-    } else {
-      view.head.replaceChildren();
+      head.push(label);
     }
-    view.pinned.replaceChildren(...(state.pinned ? state.pinned.children.map((c) => pinnedNode(c, 0)) : []));
-
+    const pinned = state.pinned ? state.pinned.children.map((c) => pinnedNode(c, 0)) : [];
     const open = state.tabs.filter(isLoose);
-    view.tabs.replaceChildren(...stacksOf.layout(open).map((entry) => (entry.type === "stack" ? tabStack(entry.id, entry.tabs) : tabRow(entry.tab))));
-    for (const id of selected) if (!open.some((t) => t.id === id)) selected.delete(id);
+    const rows = stacksOf.layout(open).map((entry) => (entry.type === "stack" ? tabStack(entry.id, entry.tabs) : tabRow(entry.tab)));
+    const pill = updatePill();
+    const bar = spaceBar();
 
+    // Everything is built: only now touch the DOM, so a throw above leaves the previous sidebar intact.
+    for (const id of selected) if (!open.some((t) => t.id === id)) selected.delete(id);
+    view.head.replaceChildren(...head);
+    view.pinned.replaceChildren(...pinned);
+    view.tabs.replaceChildren(...rows);
     view.grid = swapNode(view.grid, grid, (node) => panel.insertBefore(node, view.body));
-    view.pill = swapNode(view.pill, updatePill(), (node) => panel.insertBefore(node, view.bar));
-    view.bar = swapNode(view.bar, spaceBar(), (node) => panel.append(node));
+    view.pill = swapNode(view.pill, pill, (node) => panel.insertBefore(node, view.bar));
+    view.bar = swapNode(view.bar, bar, (node) => panel.append(node));
     fitHeight();
     if (renderedSpace !== null && renderedSpace !== state.active) animateSpaceChange();
     renderedSpace = state.active;
