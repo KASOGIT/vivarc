@@ -842,9 +842,8 @@
 /* Reduced motion, for all of Vivarc: nothing moves, fades stay but short. */
 @media (prefers-reduced-motion: reduce) {
   #browser.vm-on { --vm-dur-2: var(--vm-dur-1); --vm-dur-3: var(--vm-dur-1); }
-  #browser.vm-on #vm-panel :is(.vm-stack-chevron, .vm-folder-body) { transition: none; }
   #browser.vm-on :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied),
-  #browser.vm-on :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied) * { transition-property: opacity, background-color, color, box-shadow, border-color !important; }
+  #browser.vm-on :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied) * { transition-property: opacity, background-color, color, box-shadow, border-color !important; transition-duration: var(--vm-dur-1) !important; transition-timing-function: ease !important; }
   #browser.vm-on :is(.vm-fav, .vm-space-pill, .vm-space-chip):is(:hover, :active) { transform: none !important; }
   #browser.vm-on #vm-copied { transform: none; }
   #browser.vm-on .vm-set-switch::after { transition: none; }
