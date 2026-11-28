@@ -118,8 +118,11 @@
   padding: 0 4px;
   overflow-x: hidden;
   overflow-y: auto;
+  overflow-anchor: none;
   scrollbar-width: none;
 }
+/* The zones inside the scroll body only group nodes for render(): they must not take part in the layout. */
+#vm-panel .vm-zone { display: contents; }
 #vm-panel .vm-favs {
   flex: none;
   display: grid;
