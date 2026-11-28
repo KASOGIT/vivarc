@@ -39,30 +39,39 @@ const footerHints = async (row, platform) => JSON.parse(JSON.stringify((await ba
 const hint = (keys, label) => ({ keys, label });
 const tabRow = [{ id: 7, title: 'GitHub', url: 'https://github.com/' }];
 
-test('footerHints lists Enter, Select, Complete, Close with the mac keys', async () => {
+test('footerHints lists Enter, Select, Close with the mac keys', async () => {
   assert.deepEqual(await footerHints({ type: 'tab' }, 'mac'), [
-    hint('↵', 'Switch to Tab'), hint('↑↓', 'Select'), hint('⇥', 'Complete'), hint('esc', 'Close'),
+    hint('↵', 'Switch to Tab'), hint('↑↓', 'Select'), hint('esc', 'Close'),
   ]);
 });
 
 test('footerHints uses the Windows key names on win', async () => {
   assert.deepEqual(await footerHints({ type: 'url' }, 'win'), [
-    hint('Enter', 'Open'), hint('↑↓', 'Select'), hint('Tab', 'Complete'), hint('Esc', 'Close'),
+    hint('Enter', 'Open'), hint('↑↓', 'Select'), hint('Esc', 'Close'),
   ]);
 });
 
 test('footerHints without a row has no Enter hint', async () => {
-  assert.deepEqual(await footerHints(null, 'mac'), [hint('↑↓', 'Select'), hint('⇥', 'Complete'), hint('esc', 'Close')]);
+  assert.deepEqual(await footerHints(null, 'mac'), [hint('↑↓', 'Select'), hint('esc', 'Close')]);
+});
+
+test('footerHints gives a search row with an empty query no Enter hint', async () => {
+  assert.deepEqual(await footerHints({ type: 'search', query: '' }, 'mac'), [hint('↑↓', 'Select'), hint('esc', 'Close')]);
+});
+
+test('footerHints keeps the Search hint for a search row with a query', async () => {
+  assert.deepEqual((await footerHints({ type: 'search', query: 'git' }, 'mac'))[0], hint('↵', 'Search'));
 });
 
 test('footerHints names the Enter action after the row type', async () => {
-  const expected = {
-    tab: 'Switch to Tab', action: 'Run', engine: 'Search with', search: 'Search', suggest: 'Search',
-    bookmark: 'Open', history: 'Open', url: 'Open',
-  };
-  for (const [type, label] of Object.entries(expected)) {
-    assert.deepEqual((await footerHints({ type }, 'mac'))[0], hint('↵', label), type);
-  }
+  assert.deepEqual((await footerHints({ type: 'tab' }, 'mac'))[0], hint('↵', 'Switch to Tab'));
+  assert.deepEqual((await footerHints({ type: 'action' }, 'mac'))[0], hint('↵', 'Run'));
+  assert.deepEqual((await footerHints({ type: 'engine' }, 'mac'))[0], hint('↵', 'Search with'));
+  assert.deepEqual((await footerHints({ type: 'search', query: 'x' }, 'mac'))[0], hint('↵', 'Search'));
+  assert.deepEqual((await footerHints({ type: 'suggest', query: 'x' }, 'mac'))[0], hint('↵', 'Search'));
+  assert.deepEqual((await footerHints({ type: 'bookmark' }, 'mac'))[0], hint('↵', 'Open'));
+  assert.deepEqual((await footerHints({ type: 'history' }, 'mac'))[0], hint('↵', 'Open'));
+  assert.deepEqual((await footerHints({ type: 'url' }, 'mac'))[0], hint('↵', 'Open'));
 });
 
 test('the box has a footer after the list with one vm-cmd-key per hint', async () => {
@@ -71,14 +80,14 @@ test('the box has a footer after the list with one vm-cmd-key per hint', async (
   const names = b.box.children.map(c => c.className);
   assert.ok(names.indexOf('vm-cmd-foot') > names.indexOf('vm-cmd-list'), `box children: ${names}`);
   assert.deepEqual(b.hints(), [
-    hint('↵', 'Switch to Tab'), hint('↑↓', 'Select'), hint('⇥', 'Complete'), hint('esc', 'Close'),
+    hint('↵', 'Switch to Tab'), hint('↑↓', 'Select'), hint('esc', 'Close'),
   ]);
 });
 
 test('the footer uses the Windows key names when the platform is win', async () => {
   const b = await bar({ tabs: tabRow, platform: 'win' });
   await b.type('git');
-  assert.deepEqual(b.hints().map(h => h.keys), ['Enter', '↑↓', 'Tab', 'Esc']);
+  assert.deepEqual(b.hints().map(h => h.keys), ['Enter', '↑↓', 'Esc']);
 });
 
 test('the footer Enter hint follows the selected row', async () => {
@@ -93,6 +102,22 @@ test('with nothing typed and no rows the list shows the empty state', async () =
   const b = await bar();
   assert.deepEqual(b.list.children.map(c => c.className), ['vm-cmd-empty']);
   assert.equal(b.list.children[0].textContent, 'Type to search tabs, bookmarks and history, or enter an address.');
+});
+
+test('a whitespace-only input with no rows shows the empty state', async () => {
+  const b = await bar();
+  await b.type('   ');
+  assert.deepEqual(b.list.children.map(c => c.className), ['vm-cmd-empty']);
+});
+
+test('hovering another row updates the footer Enter label', async () => {
+  const b = await bar({ tabs: tabRow });
+  await b.type('git');
+  assert.equal(b.hints()[0].label, 'Switch to Tab');
+  const searchRow = b.list.children.find(r => r.children.some(c => c.className === 'vm-cmd-title' && c.textContent === 'git'));
+  assert.ok(searchRow, 'no search row');
+  searchRow.events.mousemove();
+  assert.equal(b.hints()[0].label, 'Search');
 });
 
 test('the empty state is gone once rows exist', async () => {
