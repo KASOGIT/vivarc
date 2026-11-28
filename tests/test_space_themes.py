@@ -78,20 +78,20 @@ class SpaceThemes(unittest.TestCase):
   assert.equal(props["--vm-tint"], "hsl(250 28% 20%)");
   let pop = await open();
   pop.children[3].children[3].listeners.click(); // red preset
-  assert.equal(saved.get("theme:space:0").hue, 355);
+  assert.equal(saved.get("theme:space:0").hue, 131);
   await switchTo(42);
   assert.equal(props["--vm-tint"], "hsl(250 28% 20%)");
   pop = await open();
-  pop.children[3].children[6].listeners.click(); // green preset
-  assert.equal(saved.get("theme:space:42").hue, 143);
+  pop.children[3].children[9].listeners.click(); // forest preset
+  assert.equal(saved.get("theme:space:42").hue, 136);
   await switchTo(0);
-  assert.equal(props["--vm-tint"], "hsl(355 65% 62%)");
+  assert.equal(props["--vm-tint"], "hsl(131 46% 78%)");
   pop = await open();
   pop.children.at(-1).listeners.click();
   assert.equal(saved.get("theme:space:0").on, false);
-  assert.equal(saved.get("theme:space:42").hue, 143);
+  assert.equal(saved.get("theme:space:42").hue, 136);
   await switchTo(42);
-  assert.equal(props["--vm-tint"], "hsl(143 65% 65%)");
+  assert.equal(props["--vm-tint"], "hsl(136 37% 38%)");
   assert.equal(saved.get("theme").hue, 250);
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 '''
@@ -585,3 +585,58 @@ class SpaceTintCrossFade(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+OKLCH_PRESETS = [
+    ["Paper", "oklch(0.86 0.012 80)", 37, 13, 81], ["Rose", "oklch(0.86 0.07 15)", 357, 90, 87],
+    ["Amber", "oklch(0.86 0.08 70)", 32, 80, 77], ["Mint", "oklch(0.86 0.08 150)", 131, 46, 78],
+    ["Sky", "oklch(0.86 0.07 235)", 203, 87, 81], ["Lilac", "oklch(0.86 0.07 305)", 266, 74, 87],
+    ["Graphite", "oklch(0.56 0.02 270)", 224, 7, 47], ["Ruby", "oklch(0.56 0.13 15)", 353, 40, 51],
+    ["Ochre", "oklch(0.56 0.12 65)", 34, 81, 35], ["Forest", "oklch(0.56 0.11 150)", 136, 37, 38],
+    ["Ocean", "oklch(0.56 0.11 245)", 206, 55, 45], ["Violet", "oklch(0.56 0.12 305)", 269, 32, 53],
+]
+
+
+@unittest.skipUnless(shutil.which("node"), "node is needed to test the theme editor")
+class OklchPresets(unittest.TestCase):
+    def run_presets(self, body):
+        table = json.dumps(OKLCH_PRESETS)
+        run_theme("const PRESETS = %s;\n(async () => {\n  await switchTo(0);\n  const pop = await open();\n"
+                  "  const swatches = pop.children[3].children;\n%s\n})().catch((error) => { console.error(error); process.exitCode = 1; });"
+                  % (table, body), LEGACY)
+
+    def test_the_swatch_container_has_twelve_swatches(self):
+        self.run_presets("  assert.equal(swatches.length, 12);")
+
+    def test_each_swatch_shows_its_oklch_colour_as_background(self):
+        self.run_presets(r'''
+  assert.equal(swatches.length, 12);
+  PRESETS.forEach(([, color], i) => assert.equal(swatches[i].style.backgroundColor, color, `swatch ${i}`));''')
+
+    def test_each_swatch_has_a_title_naming_it(self):
+        self.run_presets(r'''
+  assert.equal(swatches.length, 12);
+  PRESETS.forEach(([name], i) => assert.equal(swatches[i].title, name, `swatch ${i}`));''')
+
+    def test_clicking_a_swatch_saves_its_hsl_equivalent_and_keeps_on_and_grain(self):
+        self.run_presets(r'''
+  for (const i of [0, 5, 6, 11]) {
+    swatches[i].listeners.click();
+    const [, , hue, sat, light] = PRESETS[i];
+    const record = saved.get("theme:space:0");
+    assert.deepEqual({ hue: record.hue, sat: record.sat, light: record.light }, { hue, sat, light }, `swatch ${i}`);
+    assert.equal(record.on, true, `swatch ${i} on`);
+    assert.equal(record.grain, 30, `swatch ${i} grain`);
+  }''')
+
+    def test_the_mint_swatch_sets_the_tint(self):
+        self.run_presets(r'''
+  swatches[3].listeners.click();
+  assert.equal(props["--vm-tint"], "hsl(131 46% 78%)");''')
+
+    def test_the_light_row_gets_dark_text_and_the_deep_row_light_text(self):
+        self.run_presets(r'''
+  for (const [i, fg] of [[0, "#1b1b1f"], [5, "#1b1b1f"], [6, "#f2f2f5"], [11, "#f2f2f5"]]) {
+    swatches[i].listeners.click();
+    assert.equal(props["--vm-fg"], fg, `swatch ${i}`);
+  }''')
