@@ -546,10 +546,10 @@
    one of its popups (site permission requests) is open, or they are cut off at the sidebar's edge */
 #browser.vm-themed #tabs-tabbar-container:is(:focus-within, :has(.addressfield-popup-container)) { z-index: 1; }
 #browser.vm-themed.vm-gradient #tabs-tabbar-container {
-  background-image: linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30)));
+  background-image: var(--vm-grad, linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30))));
 }
 #browser.vm-themed.vm-gradient.vm-tint-neutral #tabs-tabbar-container {
-  background-image: linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c h));
+  background-image: var(--vm-grad, linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c h)));
 }
 #browser.vm-themed #tabs-tabbar-container::after {
   content: "";
@@ -587,6 +587,11 @@
   background: color-mix(in srgb, var(--vm-text) 10%, transparent);
 }
 .vm-theme-mode:hover { background: color-mix(in srgb, var(--vm-text) 18%, transparent); }
+.vm-theme-grad { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; }
+.vm-theme-grad-label { flex: 1; opacity: 0.7; }
+.vm-theme-grad .vm-theme-mode { flex: none; padding: 6px 10px; }
+.vm-theme-grad .vm-theme-mode[hidden] { display: none; }
+.vm-theme-mode[aria-pressed="true"] { background: color-mix(in srgb, var(--vm-text) 26%, transparent); }
 .vm-theme-pad { position: relative; height: 130px; border-radius: var(--vm-r-3); cursor: crosshair; touch-action: none; }
 .vm-theme-dot {
   position: absolute;
@@ -598,6 +603,8 @@
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
   pointer-events: none;
 }
+.vm-theme-dot-stop { border-width: 2px; border-color: var(--vm-accent); }
+.vm-theme-dot[hidden] { display: none; }
 .vm-theme-swatches { display: flex; justify-content: space-between; margin: 12px 2px; }
 .vm-theme-swatch { width: 22px; height: 22px; border: 0; border-radius: 50%; }
 .vm-theme-slider { display: flex; align-items: center; gap: 10px; margin: 8px 2px; }
@@ -864,14 +871,14 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 26%),
     radial-gradient(120% 45% at 0% 0%, rgba(255, 255, 255, 0.14), transparent 70%),
     radial-gradient(90% 40% at 100% 100%, color-mix(in srgb, var(--vm-accent) 28%, transparent), transparent 70%),
-    linear-gradient(160deg, color-mix(in srgb, var(--vm-tint) var(--vm-glass-opacity, 55%), transparent), color-mix(in srgb, oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30)) var(--vm-glass-opacity, 55%), transparent));
+    var(--vm-grad, linear-gradient(160deg, color-mix(in srgb, var(--vm-tint) var(--vm-glass-opacity, 55%), transparent), color-mix(in srgb, oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30)) var(--vm-glass-opacity, 55%), transparent)));
 }
 #browser.vm-on.vm-glass.vm-themed.vm-gradient.vm-tint-neutral #tabs-tabbar-container {
   background-image:
     linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 26%),
     radial-gradient(120% 45% at 0% 0%, rgba(255, 255, 255, 0.14), transparent 70%),
     radial-gradient(90% 40% at 100% 100%, color-mix(in srgb, var(--vm-accent) 28%, transparent), transparent 70%),
-    linear-gradient(160deg, color-mix(in srgb, var(--vm-tint) var(--vm-glass-opacity, 55%), transparent), color-mix(in srgb, oklch(from var(--vm-tint) calc(l * 0.86) c h) var(--vm-glass-opacity, 55%), transparent));
+    var(--vm-grad, linear-gradient(160deg, color-mix(in srgb, var(--vm-tint) var(--vm-glass-opacity, 55%), transparent), color-mix(in srgb, oklch(from var(--vm-tint) calc(l * 0.86) c h) var(--vm-glass-opacity, 55%), transparent)));
 }
 
 /* Items inside a glass surface are luminous capsules, not more glass: a lit fill and a rim, no blur of their own. */
@@ -905,8 +912,8 @@
   }
   #browser.vm-on.vm-glass #tabs-tabbar-container { background-color: var(--colorBg, #1c1c20) !important; backdrop-filter: none; }
   #browser.vm-on.vm-glass.vm-themed #tabs-tabbar-container { background-color: var(--vm-tint) !important; }
-  #browser.vm-on.vm-glass.vm-themed.vm-gradient #tabs-tabbar-container { background-image: linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30))); }
-  #browser.vm-on.vm-glass.vm-themed.vm-gradient.vm-tint-neutral #tabs-tabbar-container { background-image: linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c h)); }
+  #browser.vm-on.vm-glass.vm-themed.vm-gradient #tabs-tabbar-container { background-image: var(--vm-grad, linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30)))); }
+  #browser.vm-on.vm-glass.vm-themed.vm-gradient.vm-tint-neutral #tabs-tabbar-container { background-image: var(--vm-grad, linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c h))); }
 }
 
 /* Peek: keep Arc's controls (close, open in a tab, split view, copy link) and drop the extra menus. */
