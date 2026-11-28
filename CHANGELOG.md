@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Open tabs stay put when the sidebar updates**: a title or page change redraws only that tab's row, so the tab you hover keeps its close button instead of blinking.
 - **Spaces can follow your system's light or dark mode**: pick Auto in the theme pop-up and the space colour flips with it.
 - **Twelve new space colours**, picked in OKLCH so each row matches in brightness: six soft tones and six deep ones.
 - **Tab buttons fade in** on hover instead of popping in, and the title no longer jumps.
