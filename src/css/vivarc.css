@@ -830,6 +830,22 @@
   border-color: transparent;
   box-shadow: var(--vm-glass-rim), 0 18px 50px rgba(0, 0, 0, 0.35);
 }
+/* Under Liquid glass any opacity below 1 on a backdrop-filter element, or on an ancestor, kills its blur. A leaving
+   glass surface stays at opacity 1: its fill, rim, shadow and blur ease out and its children fade. The doubled
+   #browser outranks the glass rule above (an id inside its :is list). */
+#browser#browser.vm-on.vm-glass :is(.vm-leaving.vm-menu, .vm-leaving.vm-theme-pop, .vm-leaving .vm-cmd-box, .vm-leaving .vm-set-card) {
+  opacity: 1;
+  background-color: transparent;
+  background-image: none;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: blur(0) saturate(1);
+  transition: background-color var(--vm-dur-2) var(--vm-ease-out), border-color var(--vm-dur-2) var(--vm-ease-out), box-shadow var(--vm-dur-2) var(--vm-ease-out), backdrop-filter var(--vm-dur-2) var(--vm-ease-out), transform var(--vm-dur-2) var(--vm-ease-out);
+}
+#browser#browser.vm-on.vm-glass :is(.vm-leaving.vm-menu, .vm-leaving.vm-theme-pop, .vm-leaving .vm-cmd-box, .vm-leaving .vm-set-card) > * {
+  opacity: 0;
+  transition: opacity var(--vm-dur-2) var(--vm-ease-out);
+}
 #browser.vm-on.vm-glass #tabs-tabbar-container {
   background-color: color-mix(in srgb, var(--colorBg, #1c1c20) var(--vm-glass-opacity, 55%), transparent) !important;
   backdrop-filter: var(--vm-glass-blur);
