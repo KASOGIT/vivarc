@@ -60,7 +60,7 @@ async function loadBar(context, settingsOpen = false, autoOpen = true) {
   context.CustomEvent = class {};
   const events = {};
   Object.assign(context.window, { addEventListener: (name, fn) => events[name] = fn, dispatchEvent() {} });
-  Object.assign(context.window.__vm, { config: {}, cssLoaded: true, settings: { get: () => true, isOpen: () => settingsOpen }, normalise: x => x, shortcut: x => x, keys: { commandBar: "ctrl+t" }, peek: { withoutPeekTabs: (tabs) => tabs }, onShortcut(fn) { context.shortcut = fn; } });
+  Object.assign(context.window.__vm, { leave: n => n && n.remove(), config: {}, cssLoaded: true, settings: { get: () => true, isOpen: () => settingsOpen }, normalise: x => x, shortcut: x => x, keys: { commandBar: "ctrl+t" }, peek: { withoutPeekTabs: (tabs) => tabs }, onShortcut(fn) { context.shortcut = fn; } });
   vm.runInContext(source('20-command-bar.js'), context);
   context.openBar = events['vm-open-command-bar'];
   context.nodes = nodes;
