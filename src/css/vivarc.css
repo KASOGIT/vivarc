@@ -20,8 +20,8 @@
   --vm-fill-3: color-mix(in srgb, var(--colorFg, #fff) 24%, transparent);
   --vm-accent: var(--colorHighlightBg, #7b8cff);
 }
-/* The accent follows the space theme (40-theme.js); near-gray themes keep Vivaldi's own. */
-#browser.vm-on.vm-themed { --vm-accent: oklch(from var(--vm-tint) clamp(0.5, calc(1.15 - l), 0.75) max(c, 0.1) h); }
+/* The accent follows the space theme (40-theme.js), a step that sits far from the tint's lightness so rings and markers stay visible; near-gray themes keep Vivaldi's own. */
+#browser.vm-on.vm-themed { --vm-accent: oklch(from var(--vm-tint) clamp(0.4, calc((0.62 - l) * 1000), 0.82) max(c, 0.1) h); }
 #browser.vm-on.vm-themed.vm-tint-neutral { --vm-accent: var(--colorHighlightBg, #7b8cff); }
 /* The themed sidebar overrides --colorFg on this element, and a custom property resolves var() where it is declared. */
 #browser.vm-on #tabs-tabbar-container {
@@ -171,7 +171,8 @@
   font-weight: 600;
   border-radius: var(--vm-r-2);
   cursor: pointer;
-  background-color: color-mix(in srgb, var(--vm-accent) 85%, transparent);
+  /* Stays on Vivaldi's highlight: --colorHighlightFg is the foreground made for that colour. */
+  background-color: color-mix(in srgb, var(--colorHighlightBg, #7b8cff) 85%, transparent);
   color: var(--colorHighlightFg, var(--colorBg));
   transition: filter var(--vm-dur-1);
 }
@@ -833,14 +834,14 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 26%),
     radial-gradient(120% 45% at 0% 0%, rgba(255, 255, 255, 0.14), transparent 70%),
     radial-gradient(90% 40% at 100% 100%, color-mix(in srgb, var(--vm-accent) 28%, transparent), transparent 70%),
-    linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30)));
+    linear-gradient(160deg, color-mix(in srgb, var(--vm-tint) var(--vm-glass-opacity, 55%), transparent), color-mix(in srgb, oklch(from var(--vm-tint) calc(l * 0.86) c calc(h + 30)) var(--vm-glass-opacity, 55%), transparent));
 }
 #browser.vm-on.vm-glass.vm-themed.vm-gradient.vm-tint-neutral #tabs-tabbar-container {
   background-image:
     linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 26%),
     radial-gradient(120% 45% at 0% 0%, rgba(255, 255, 255, 0.14), transparent 70%),
     radial-gradient(90% 40% at 100% 100%, color-mix(in srgb, var(--vm-accent) 28%, transparent), transparent 70%),
-    linear-gradient(160deg, var(--vm-tint), oklch(from var(--vm-tint) calc(l * 0.86) c h));
+    linear-gradient(160deg, color-mix(in srgb, var(--vm-tint) var(--vm-glass-opacity, 55%), transparent), color-mix(in srgb, oklch(from var(--vm-tint) calc(l * 0.86) c h) var(--vm-glass-opacity, 55%), transparent));
 }
 
 /* Items inside a glass surface are luminous capsules, not more glass: a lit fill and a rim, no blur of their own. */
