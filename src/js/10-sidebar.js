@@ -1120,6 +1120,14 @@
     for (const id of closedIds) if (!tabNodes.has(`t${id}`)) closedIds.delete(id);
   };
 
+  // Pinned rows are rebuilt on every render: for a moment a row under the cursor is not :hover, so its button would blink.
+  let settleTimer = 0;
+  const settle = () => {
+    view.body.classList.add("vm-settling");
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => view.body.classList.remove("vm-settling"), 120);
+  };
+
   const render = () => {
     if (!panel) return;
     let fresh = false;
@@ -1183,6 +1191,7 @@
     if (reset) stopSliding();
     else if (lastActiveTop !== null && activeTop !== null && activeTop !== lastActiveTop && tabNodes.has(`t${lastActiveTop}`)) startSliding();
     lastActiveTop = activeTop;
+    settle();
     fitHeight();
     if (renderedSpace !== null && renderedSpace !== state.active) animateSpaceChange();
     renderedSpace = state.active;
