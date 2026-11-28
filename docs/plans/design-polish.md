@@ -219,6 +219,20 @@ Declared on `#browser.vm-on` and again on `#browser.vm-on #tabs-tabbar-container
 - JS writes `--vm-grad` as a `linear-gradient(160deg, ...)` string when `stops` exists; CSS prefers `--vm-grad` over the derived one.
 - Editor: a second and third handle on the existing hue/lightness pad.
 
+### PR 12 to 15, keyed sidebar render (research round, 2026-11-28)
+
+Findings (`architecture-planner`):
+- `render()` (`10-sidebar.js:1027-1084`) rebuilds the whole panel with `createElement` and one `panel.replaceChildren`, recreating `.vm-scroll` and restoring scroll by hand. No test loads the module.
+- Folders and stacks already animate on click (grid `0fr`/`1fr`). Only a stack that auto-opens at render jumps.
+- The hover-reveal close button (PR 16) is CSS only.
+- The sliding indicator needs a persistent scroller and one indicator node, not keyed rows. Only the collapsing close row needs a row to outlive its data.
+- Hazards: closures over `tab.index`, `tabs` and drag payloads; row structure varies with state; rename relies on a rebuild; node state (`dataset.tabId`, drag classes, favicon fallbacks); a row leaving the list is not always a closed tab (pin binding, stacking, space switch).
+
+Decision (maintainer, 2026-11-28):
+- Staged: PR 12 builds the scroll body and zones once (no behaviour change). PR 12b reuses open-tab rows by tab id. Pinned rows and favourites keep the rebuild.
+- PR 14: the indicator slides between open-tab rows only.
+- PR 15: animate only a stack that opens itself on re-render. No `interpolate-size`.
+
 ## Test plan
 
 - Theme (node, `tests/test_space_themes.py`): `{on:true, hue:250, sat:28, light:20, grain:30}` still yields `--vm-tint: hsl(250 28% 20%)`; a legacy `theme` record still applies to a space with none; `on:false` removes every theme property, including any new one.
