@@ -6,8 +6,8 @@
 <title>Welcome to Vivarc</title>
 <style>
   :root {
-    --r-1: 6px; --r-2: 8px; --r-3: 12px; --r-4: 14px; --r-full: 999px;
-    --dur-1: 120ms; --dur-2: 180ms;
+    --r-1: 6px; --r-4: 14px; --r-full: 999px;
+    --dur-2: 180ms;
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
     --bg: #161618;
     --card: #1f1f22;
@@ -27,7 +27,7 @@
     }
   }
   * { box-sizing: border-box; }
-  ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+  ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); color: var(--text); }
   body {
     margin: 0;
     min-height: 100vh;
@@ -40,7 +40,6 @@
   h1 { margin: 0 0 8px; font-size: 40px; letter-spacing: -0.02em; text-wrap: balance; }
   h1 span { color: var(--accent); }
   h2 { margin: 48px 0 14px; font-size: 20px; }
-  a { color: var(--accent); text-underline-offset: 3px; }
   .lead { margin: 0; color: var(--muted); font-size: 18px; text-wrap: pretty; }
   .lead.note { margin-top: 14px; font-size: 14.5px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
@@ -80,7 +79,7 @@
   footer { margin-top: 56px; color: var(--muted); font-size: 13.5px; }
   code { padding: 1px 6px; border-radius: var(--r-1); background: var(--card); border: 1px solid var(--line); font-size: 13px; }
   @media (prefers-reduced-motion: no-preference) {
-    main { animation: rise 360ms var(--ease-out) both; }
+    main { animation: rise 240ms var(--ease-out) both; }
     @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
   }
 </style>
