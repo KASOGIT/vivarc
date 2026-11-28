@@ -1035,10 +1035,24 @@
   // The divider and the New Tab row hold no data (they only call clearTabs, unpin and the command bar), so their
   // listeners are bound once here.
   let view = null;
+  // The indicator only transitions while .vm-sliding is on (an active change between two top-level rows): any other
+  // movement of its anchor (a row above collapsing, a stack expanding) must follow the row at once.
+  let slideTimer = 0;
+  const stopSliding = () => {
+    clearTimeout(slideTimer);
+    view?.indicator.classList.remove("vm-sliding");
+  };
+  const startSliding = () => {
+    stopSliding();
+    view.indicator.classList.add("vm-sliding");
+    slideTimer = setTimeout(stopSliding, 400);
+  };
+  let lastActiveTop = null;
   const buildView = () => {
     const zone = () => el("div", "vm-zone");
     const body = el("div", "vm-scroll");
     const head = zone(), pinned = zone(), tabs = zone();
+    tabs.classList.add("vm-zone-tabs");
     const divider = el("div", "vm-divider");
     const clear = el("span", "vm-clear", "Clear");
     clear.addEventListener("click", clearTabs);
@@ -1049,8 +1063,11 @@
     fresh.append(el("span", "vm-plus", "+"), el("span", "vm-title", "New Tab"));
     fresh.addEventListener("click", () => window.dispatchEvent(new CustomEvent("vm-open-command-bar")));
     wireDrop(fresh, { accept: isBookmark, onDrop: (_zone, data) => unpin(data) });
-    body.append(head, pinned, divider, fresh, tabs);
-    return { body, head, pinned, tabs, grid: null, pill: null, bar: null };
+    const indicator = el("div", "vm-tab-indicator");
+    indicator.setAttribute("aria-hidden", "true");
+    indicator.addEventListener("transitionend", (e) => { if (e.propertyName === "top") stopSliding(); });
+    body.append(head, pinned, divider, fresh, tabs, indicator);
+    return { body, head, pinned, tabs, indicator, grid: null, pill: null, bar: null };
   };
   const swapNode = (old, next, place) => {
     if (old && next) old.replaceWith(next);
@@ -1073,7 +1090,7 @@
     const heights = nodes.map((n) => n.offsetHeight); // rows only have a min-height: pin the current one so it can transition
     nodes.forEach((n, i) => { n.style.height = `${heights[i]}px`; });
     view.tabs.getBoundingClientRect(); // flush the style once so every transition starts from it
-    nodes.forEach((n) => { window.__vm.leave(n); n.style.height = ""; });
+    nodes.forEach((n) => { n.classList.remove("active"); window.__vm.leave(n); n.style.height = ""; });
   };
   const syncTabs = (reset, ops, next, built) => {
     if (reset) { view.tabs.replaceChildren(); tabNodes.clear(); }
@@ -1154,6 +1171,12 @@
     view.grid = swapNode(view.grid, grid, (node) => panel.insertBefore(node, view.body));
     view.pill = swapNode(view.pill, pill, (node) => panel.insertBefore(node, view.bar));
     view.bar = swapNode(view.bar, bar, (node) => panel.append(node));
+    const activeTab = open.find((t) => t.active);
+    const activeTop = activeTab && tabNodes.has(`t${activeTab.id}`) ? activeTab.id : null;
+    // A previous active row that is gone (closed, collapsing) is not a slide origin: the indicator follows the new row at once.
+    if (reset) stopSliding();
+    else if (lastActiveTop !== null && activeTop !== null && activeTop !== lastActiveTop && tabNodes.has(`t${lastActiveTop}`)) startSliding();
+    lastActiveTop = activeTop;
     fitHeight();
     if (renderedSpace !== null && renderedSpace !== state.active) animateSpaceChange();
     renderedSpace = state.active;

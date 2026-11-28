@@ -120,6 +120,8 @@
   overflow-y: auto;
   overflow-anchor: none;
   scrollbar-width: none;
+  position: relative;
+  isolation: isolate;
 }
 /* The zones inside the scroll body only group nodes for render(): they must not take part in the layout. */
 #vm-panel .vm-zone { display: contents; }
@@ -205,6 +207,26 @@
 }
 #vm-panel .vm-row:hover { background-color: var(--vm-fill-1); }
 #vm-panel .vm-row.active { background-color: color-mix(in srgb, var(--colorFg) 15%, transparent); }
+/* The active top-level tab is highlighted by one indicator that slides between rows (anchor positioning); the row
+   itself stays clear. It sits last in .vm-scroll, behind the rows (z-index -1 inside the scroll's isolated context). */
+#vm-panel .vm-zone-tabs > .vm-tab.active { anchor-name: --vm-active-tab; background-color: transparent; }
+#vm-panel .vm-zone-tabs > .vm-tab.active.vm-selected { background-color: color-mix(in srgb, var(--vm-accent) 14%, transparent); }
+#vm-panel .vm-tab-indicator {
+  position: absolute;
+  position-anchor: --vm-active-tab;
+  top: anchor(top);
+  left: anchor(left);
+  right: anchor(right);
+  height: anchor-size(height);
+  z-index: -1;
+  pointer-events: none;
+  border-radius: var(--vm-r-3);
+  background-color: color-mix(in srgb, var(--colorFg) 15%, transparent);
+}
+/* No top-level active row means no anchor, so hide the indicator. */
+#vm-panel .vm-scroll:not(:has(> .vm-zone-tabs > .vm-tab.active)) > .vm-tab-indicator { display: none; }
+/* Only an active change between two top-level rows slides (10-sidebar.js adds the class); other moves follow at once. */
+#vm-panel .vm-tab-indicator.vm-sliding { transition: top var(--vm-dur-3) var(--vm-ease-spring), height var(--vm-dur-3) var(--vm-ease-spring); }
 #vm-panel .vm-row.discarded { opacity: 0.6; }
 #vm-panel .vm-folder-head { font-weight: 600; }
 #vm-panel .vm-glyph { display: flex; flex: none; opacity: 0.8; }
@@ -927,6 +949,9 @@
 #browser.vm-on.vm-glass #vm-panel .vm-row { transition: background var(--vm-dur-2), box-shadow var(--vm-dur-2); }
 #browser.vm-on.vm-glass #vm-panel .vm-row:hover { background: var(--vm-lozenge-soft); }
 #browser.vm-on.vm-glass #vm-panel .vm-row.active { background: var(--vm-lozenge); box-shadow: var(--vm-lozenge-rim); }
+#browser.vm-on.vm-glass #vm-panel .vm-zone-tabs > .vm-tab.active { background: transparent; box-shadow: none; }
+#browser.vm-on.vm-glass #vm-panel .vm-zone-tabs > .vm-tab.active.vm-selected { background: color-mix(in srgb, var(--vm-accent) 14%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--vm-accent) 70%, transparent); }
+#browser.vm-on.vm-glass #vm-panel .vm-tab-indicator { background: var(--vm-lozenge); box-shadow: var(--vm-lozenge-rim); }
 #browser.vm-on.vm-glass .vm-space-chip { box-shadow: var(--vm-lozenge-rim); }
 #browser.vm-on.vm-glass .vm-space-chip.active { box-shadow: var(--vm-lozenge-rim), 0 0 0 2px var(--vm-accent); }
 #browser.vm-on.vm-glass #vm-cmd .vm-cmd-row.sel { background: var(--vm-lozenge-strong), var(--vm-sel); box-shadow: var(--vm-lozenge-rim); }
