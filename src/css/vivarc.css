@@ -369,6 +369,10 @@
 }
 #vm-cmd input::placeholder { color: color-mix(in srgb, var(--vm-text) 40%, transparent); }
 #vm-cmd .vm-cmd-list { max-height: 58vh; overflow-y: auto; padding: clamp(6px, calc(3px + min(0.156vw, 0.278vh)), 7.2px); scrollbar-width: none; }
+#vm-cmd .vm-cmd-foot { display: flex; gap: 14px; justify-content: flex-end; padding: 7px 14px; border-top: 1px solid var(--vm-fill-1); font-size: 11.5px; opacity: 0.7; }
+#vm-cmd .vm-cmd-hint-item { display: inline-flex; align-items: center; gap: 5px; }
+#vm-cmd .vm-cmd-key { font: inherit; font-size: 11px; min-width: 18px; padding: 1px 5px; border-radius: var(--vm-r-1); background: var(--vm-fill-2); text-align: center; }
+#vm-cmd .vm-cmd-empty { padding: 14px 12px; opacity: 0.6; text-align: center; }
 #vm-cmd .vm-cmd-row {
   display: flex;
   align-items: center;
