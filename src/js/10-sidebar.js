@@ -1090,7 +1090,7 @@
     const heights = nodes.map((n) => n.offsetHeight); // rows only have a min-height: pin the current one so it can transition
     nodes.forEach((n, i) => { n.style.height = `${heights[i]}px`; });
     view.tabs.getBoundingClientRect(); // flush the style once so every transition starts from it
-    nodes.forEach((n) => { window.__vm.leave(n); n.style.height = ""; });
+    nodes.forEach((n) => { n.classList.remove("active"); window.__vm.leave(n); n.style.height = ""; });
   };
   const syncTabs = (reset, ops, next, built) => {
     if (reset) { view.tabs.replaceChildren(); tabNodes.clear(); }
@@ -1173,7 +1173,9 @@
     view.bar = swapNode(view.bar, bar, (node) => panel.append(node));
     const activeTab = open.find((t) => t.active);
     const activeTop = activeTab && tabNodes.has(`t${activeTab.id}`) ? activeTab.id : null;
-    if (!reset && lastActiveTop !== null && activeTop !== null && activeTop !== lastActiveTop) startSliding();
+    // A previous active row that is gone (closed, collapsing) is not a slide origin: the indicator follows the new row at once.
+    if (reset) stopSliding();
+    else if (lastActiveTop !== null && activeTop !== null && activeTop !== lastActiveTop && tabNodes.has(`t${lastActiveTop}`)) startSliding();
     lastActiveTop = activeTop;
     fitHeight();
     if (renderedSpace !== null && renderedSpace !== state.active) animateSpaceChange();

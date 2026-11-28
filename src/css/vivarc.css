@@ -210,6 +210,7 @@
 /* The active top-level tab is highlighted by one indicator that slides between rows (anchor positioning); the row
    itself stays clear. It sits last in .vm-scroll, behind the rows (z-index -1 inside the scroll's isolated context). */
 #vm-panel .vm-zone-tabs > .vm-tab.active { anchor-name: --vm-active-tab; background-color: transparent; }
+#vm-panel .vm-zone-tabs > .vm-tab.active.vm-selected { background-color: color-mix(in srgb, var(--vm-accent) 14%, transparent); }
 #vm-panel .vm-tab-indicator {
   position: absolute;
   position-anchor: --vm-active-tab;
@@ -948,6 +949,7 @@
 #browser.vm-on.vm-glass #vm-panel .vm-row:hover { background: var(--vm-lozenge-soft); }
 #browser.vm-on.vm-glass #vm-panel .vm-row.active { background: var(--vm-lozenge); box-shadow: var(--vm-lozenge-rim); }
 #browser.vm-on.vm-glass #vm-panel .vm-zone-tabs > .vm-tab.active { background: transparent; box-shadow: none; }
+#browser.vm-on.vm-glass #vm-panel .vm-zone-tabs > .vm-tab.active.vm-selected { background: color-mix(in srgb, var(--vm-accent) 14%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--vm-accent) 70%, transparent); }
 #browser.vm-on.vm-glass #vm-panel .vm-tab-indicator { background: var(--vm-lozenge); box-shadow: var(--vm-lozenge-rim); }
 #browser.vm-on.vm-glass .vm-space-chip { box-shadow: var(--vm-lozenge-rim); }
 #browser.vm-on.vm-glass .vm-space-chip.active { box-shadow: var(--vm-lozenge-rim), 0 0 0 2px var(--vm-accent); }
