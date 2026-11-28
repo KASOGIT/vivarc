@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Menus, the command bar, the theme editor and Vivarc Settings ease in** when they open, with a light spring, instead of appearing at once. Reduce Motion keeps a short fade.
 - **Reduce Motion applies to all of Vivarc**, not only with Liquid glass on: with the macOS or Windows setting on, nothing slides, scales or bounces (tiles, space chips, the copied toast, folders, the settings switch) and fades stay short. Corner radii and animation timings now follow one scale, so a few corners and durations shift slightly.
 
 ## 0.1.35 - 2026-11-27

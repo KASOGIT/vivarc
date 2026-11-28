@@ -252,7 +252,7 @@
     shield.addEventListener("mousedown", (e) => { e.preventDefault(); closeMenu(); });
     shield.addEventListener("contextmenu", (e) => { e.preventDefault(); closeMenu(); });
     (document.querySelector("#browser") || document.body).append(shield, menu);
-    const { width, height } = menu.getBoundingClientRect();
+    const width = menu.offsetWidth, height = menu.offsetHeight;
     menu.style.left = `${Math.min(event.clientX, window.innerWidth - width - 8)}px`;
     menu.style.top = `${Math.min(event.clientY, window.innerHeight - height - 8)}px`;
   };
