@@ -3,6 +3,7 @@
 (() => {
   // hint: one string, or { mac, win } when it names a key or a system option.
   // onClass / offClass: a marker class on #browser while the setting is on / off (the stylesheet reacts to it).
+  // classPrefix (choice settings): one class per option, <prefix>-<value>, on for the chosen one.
   // needs: the row shows only while that other setting is on. requires: the row shows only when the install config
   // has that flag (Peek is optional, see 03-peek.js). section: the heading it sits under, in SECTIONS order.
   const SECTIONS = ["Appearance", "Sidebar", "Tabs", "Link preview", "General"];
@@ -12,6 +13,15 @@
     { key: "glassOpacity", section: "Appearance", type: "range", min: 15, max: 95, step: 1, default: 55, unit: "%", needs: "glass", cssVar: "--vm-glass-opacity",
       label: "Glass opacity", low: "Clear", high: "Frosted" },
     { key: "spaceGradient", section: "Appearance", label: "Space gradient", hint: "Blend each space's colour into a soft gradient.", default: true, onClass: "vm-gradient" },
+    { key: "density", section: "Appearance", type: "choice", default: "default", classPrefix: "vm-density",
+      options: [["compact", "Compact"], ["default", "Default"], ["comfortable", "Comfortable"]],
+      label: "Density", hint: "Height of the rows in the sidebar." },
+    { key: "corners", section: "Appearance", type: "choice", default: "default", classPrefix: "vm-corners",
+      options: [["sharp", "Sharp"], ["default", "Default"], ["round", "Round"]],
+      label: "Corners", hint: "Roundness of rows, menus and dialogs." },
+    { key: "motion", section: "Appearance", type: "choice", default: "full", classPrefix: "vm-motion",
+      options: [["full", "Full"], ["reduced", "Reduced"], ["off", "Off"]],
+      label: "Motion", hint: { mac: "Reduced keeps fades and drops movement. Reduce Motion in macOS settings always applies.", win: "Reduced keeps fades and drops movement. Turning off animation effects in Windows always applies." } },
     { key: "urlBar", section: "Sidebar", label: "URL bar", hint: "Always show the address bar. Off, it appears when you edit the address.",
       default: false, onClass: "vm-url-bar" },
     { key: "commandBarAddress", section: "Sidebar", label: "Edit the address in the command bar", hint: { mac: "Cmd+L opens the address in the command bar, like Arc. Off, it is edited in the sidebar.", win: "Ctrl+L opens the address in the command bar, like Arc. Off, it is edited in the sidebar." },
@@ -54,7 +64,10 @@
   const classes = (schema, values) => Object.fromEntries(schema.flatMap((s) => [
     ...(s.onClass ? [[s.onClass, !!values[s.key]]] : []),
     ...(s.offClass ? [[s.offClass, !values[s.key]]] : []),
+    ...(s.classPrefix ? s.options.map(([value]) => [`${s.classPrefix}-${value}`, values[s.key] === value]) : []),
   ]));
+
+  const reduceMotion = (values, systemReduce) => values.motion !== "full" || !!systemReduce;
 
   const visible = (schema, config) => schema.filter((s) => !s.requires || !!config?.[s.requires]);
 
@@ -67,7 +80,7 @@
   // A hint is one string, or { mac, win } when the text names a key or a system option.
   const hint = (item, platform) => (typeof item.hint === "object" ? item.hint[platform] : item.hint) ?? null;
 
-  const api = { SCHEMA, resolve, classes, vars, visible, sections, shownRows, hint };
+  const api = { SCHEMA, resolve, classes, vars, visible, sections, shownRows, hint, reduceMotion };
   window.__vm.settings = api;
   if (!window.__vm.store) return;
 
@@ -81,7 +94,9 @@
   let saved = cached();
   let values = resolve(SCHEMA, config, saved);
 
+  const systemMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const apply = (browser) => {
+    browser.classList.toggle("vm-reduce-motion", reduceMotion(values, systemMotion.matches));
     for (const [name, on] of Object.entries(classes(SCHEMA, values))) browser.classList.toggle(name, on);
     for (const [name, value] of Object.entries(vars(SCHEMA, values))) browser.style.setProperty(name, value);
   };
@@ -103,6 +118,10 @@
     reset: () => { update({}); persist(); },
   });
 
+  systemMotion.addEventListener("change", () => {
+    const browser = document.querySelector("#browser");
+    if (browser) apply(browser);
+  });
   channel.onmessage = (e) => update(e.data);
   window.__vm.onMark(apply);
   store.get("settings", {}).then(update);

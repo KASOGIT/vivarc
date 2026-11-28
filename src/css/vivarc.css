@@ -9,6 +9,7 @@
   --vm-r-3: 12px;
   --vm-r-4: 14px;
   --vm-r-5: 18px;
+  --vm-row-h: 34px;
   --vm-r-full: 999px;
   --vm-dur-1: 120ms;
   --vm-dur-2: 180ms;
@@ -189,7 +190,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 34px;
+  min-height: var(--vm-row-h);
   padding-right: 6px;
   border-radius: var(--vm-r-3);
   cursor: pointer;
@@ -911,13 +912,19 @@
 /* Peek: keep Arc's controls (close, open in a tab, split view, copy link) and drop the extra menus. */
 #browser.vm-on .peek-sidebar-controls :is(.peek-open-actions-menu, .peek-navigation-actions, .peek-translate-actions) { display: none !important; }
 
-/* Reduced motion, for all of Vivarc: nothing moves, fades stay but short. */
-@media (prefers-reduced-motion: reduce) {
-  #browser.vm-on { --vm-dur-2: var(--vm-dur-1); --vm-dur-3: var(--vm-dur-1); }
-  #browser.vm-on :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied),
-  #browser.vm-on :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied) * { transition-property: opacity, background-color, color, box-shadow, border-color !important; transition-duration: var(--vm-dur-1) !important; transition-timing-function: ease !important; }
-  #browser.vm-on :is(.vm-fav, .vm-space-pill, .vm-space-chip):is(:hover, :active) { transform: none !important; }
-  #browser.vm-on #vm-copied { transform: none; }
-  #browser.vm-on :is(.vm-leaving.vm-menu, .vm-leaving.vm-theme-pop, .vm-leaving .vm-cmd-box, .vm-leaving .vm-set-card) { transform: none !important; }
-  #browser.vm-on .vm-set-switch::after { transition: none; }
-}
+/* Reduced motion, for all of Vivarc: nothing moves, fades stay but short. The class follows both the system
+   setting and the Motion setting. */
+#browser.vm-on.vm-reduce-motion { --vm-dur-2: var(--vm-dur-1); --vm-dur-3: var(--vm-dur-1); }
+#browser.vm-on.vm-reduce-motion :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied),
+#browser.vm-on.vm-reduce-motion :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied) * { transition-property: opacity, background-color, color, box-shadow, border-color !important; transition-duration: var(--vm-dur-1) !important; transition-timing-function: ease !important; }
+#browser.vm-on.vm-reduce-motion :is(.vm-fav, .vm-space-pill, .vm-space-chip):is(:hover, :active) { transform: none !important; }
+#browser.vm-on.vm-reduce-motion #vm-copied { transform: none; }
+#browser.vm-on.vm-reduce-motion :is(.vm-leaving.vm-menu, .vm-leaving.vm-theme-pop, .vm-leaving .vm-cmd-box, .vm-leaving .vm-set-card) { transform: none !important; }
+#browser.vm-on.vm-reduce-motion .vm-set-switch::after { transition: none; }
+#browser.vm-on.vm-motion-off { --vm-dur-1: 0ms; }
+
+/* Density and corners: after the token block, same specificity. */
+#browser.vm-on.vm-density-compact { --vm-row-h: 30px; }
+#browser.vm-on.vm-density-comfortable { --vm-row-h: 38px; }
+#browser.vm-on.vm-corners-sharp { --vm-r-1: 3px; --vm-r-2: 4px; --vm-r-3: 6px; --vm-r-4: 7px; --vm-r-5: 9px; }
+#browser.vm-on.vm-corners-round { --vm-r-1: 8px; --vm-r-2: 11px; --vm-r-3: 17px; --vm-r-4: 20px; --vm-r-5: 25px; }
