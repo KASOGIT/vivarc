@@ -49,6 +49,14 @@ assert.ok(node.classes.has("vm-leaving"), "class vm-leaving added");
 assert.equal(node.removed, 0, "not removed yet");
 """)
 
+    def test_the_leaving_node_is_inert_at_once(self):
+        run_core(r"""
+const node = fakeNode();
+leave(node);
+assert.equal(node.inert, true, "inert set before removal");
+assert.equal(node.removed, 0);
+""")
+
     def test_transitionend_on_the_node_removes_it_once(self):
         run_core(r"""
 const node = fakeNode();
