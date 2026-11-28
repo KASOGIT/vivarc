@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Spaces can follow your system's light or dark mode**: pick Auto in the theme pop-up and the space colour flips with it.
 - **Twelve new space colours**, picked in OKLCH so each row matches in brightness: six soft tones and six deep ones.
 - **Tab buttons fade in** on hover instead of popping in, and the title no longer jumps.
 - **The space colour cross-fades** when you switch between themed spaces. Custom gradients switch at once.
