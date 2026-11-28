@@ -49,7 +49,7 @@
   };
 
   let shield = null; // catches a click on the page, which this document never sees (see the sidebar's menu)
-  const close = () => { pop?.remove(); pop = null; shield?.remove(); shield = null; };
+  const close = () => { window.__vm.leave(pop); pop = null; shield?.remove(); shield = null; };
 
   const open = async () => {
     if (!window.__vm.cssLoaded) return;

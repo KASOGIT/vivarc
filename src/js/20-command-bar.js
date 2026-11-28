@@ -252,7 +252,7 @@
 
   const close = (removeBlank) => {
     const blank = targetTab;
-    bar?.remove();
+    window.__vm.leave(bar);
     bar = input = list = foot = chipHolder = targetTab = mode = null;
     rows = [];
     seq++;

@@ -14,7 +14,7 @@
   };
 
   const forget = () => { unsubs.forEach((off) => off()); unsubs = []; };
-  const close = () => { overlay?.remove(); overlay = null; forget(); };
+  const close = () => { window.__vm.leave(overlay); overlay = null; forget(); };
 
   const textOf = (item) => {
     const text = el("div", "vm-set-text");

@@ -726,10 +726,15 @@
   font-size: 13.5px;
   overflow: hidden;
 }
-/* Overlays ease in when they open (exit stays instant). */
+/* Overlays ease in when they open and fade out when they close (window.__vm.leave adds .vm-leaving). */
 :is(.vm-menu, #vm-cmd .vm-cmd-box, .vm-theme-pop, .vm-set-card) {
   transition: opacity var(--vm-dur-2) var(--vm-ease-out), transform var(--vm-dur-3) var(--vm-ease-spring);
   @starting-style { opacity: 0; transform: translateY(-4px) scale(0.98); }
+}
+#browser.vm-on .vm-leaving { opacity: 0; pointer-events: none; transition: opacity var(--vm-dur-2) var(--vm-ease-out); }
+#browser.vm-on :is(.vm-leaving.vm-menu, .vm-leaving.vm-theme-pop, .vm-leaving .vm-cmd-box, .vm-leaving .vm-set-card) {
+  transform: translateY(-4px) scale(0.98);
+  transition: transform var(--vm-dur-2) var(--vm-ease-out), opacity var(--vm-dur-2) var(--vm-ease-out);
 }
 .vm-set-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 10px 18px; }
 .vm-set-title { font-size: 16px; font-weight: 650; text-wrap: balance; }
@@ -894,5 +899,6 @@
   #browser.vm-on :is(#vm-panel, #vm-cmd, .vm-menu, .vm-theme-pop, .vm-set-card, #vm-copied) * { transition-property: opacity, background-color, color, box-shadow, border-color !important; transition-duration: var(--vm-dur-1) !important; transition-timing-function: ease !important; }
   #browser.vm-on :is(.vm-fav, .vm-space-pill, .vm-space-chip):is(:hover, :active) { transform: none !important; }
   #browser.vm-on #vm-copied { transform: none; }
+  #browser.vm-on :is(.vm-leaving.vm-menu, .vm-leaving.vm-theme-pop, .vm-leaving .vm-cmd-box, .vm-leaving .vm-set-card) { transform: none !important; }
   #browser.vm-on .vm-set-switch::after { transition: none; }
 }

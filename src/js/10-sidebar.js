@@ -236,7 +236,7 @@
   // click anywhere closes the menu.
   let menu = null;
   let shield = null;
-  const closeMenu = () => { menu?.remove(); menu = null; shield?.remove(); shield = null; };
+  const closeMenu = () => { window.__vm.leave(menu); menu = null; shield?.remove(); shield = null; };
   const showMenu = (event, items) => {
     event.preventDefault();
     event.stopPropagation();
