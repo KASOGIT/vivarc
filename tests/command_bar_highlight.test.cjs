@@ -3,9 +3,9 @@ const assert = require('node:assert/strict');
 const { setup, loadBar } = require('./command_bar_harness.cjs');
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
-async function bar({ tabs = [] } = {}) {
+async function bar({ tabs = [], keepEngines = false } = {}) {
   const env = setup();
-  env.reply.templateUrls = [];
+  if (!keepEngines) env.reply.templateUrls = [];
   env.context.chrome.tabs.query = async () => tabs;
   const input = await loadBar(env.context);
   await flush();
@@ -48,6 +48,14 @@ test('highlight marks every occurrence of a repeated match', async () => {
   ]);
 });
 
+test('highlight merges overlapping matches of different words', async () => {
+  assert.deepEqual(await highlight('abcd', 'abc bcd'), [seg('abcd', true)]);
+});
+
+test('highlight takes indices from the original string when lowercasing changes its length', async () => {
+  assert.deepEqual(await highlight('İstanbul Haber', 'haber'), [seg('İstanbul ', false), seg('Haber', true)]);
+});
+
 test('highlight treats regex characters in the query as literal text', async () => {
   assert.deepEqual(await highlight('a.b (c)', '(c'), [seg('a.b ', false), seg('(c', true), seg(')', false)]);
 });
@@ -78,4 +86,20 @@ test('the search-for-what-you-typed row is not marked', async () => {
   const searchTitle = b.titles().find(t => t.textContent === 'git');
   assert.ok(searchTitle, 'no search row');
   assert.equal(searchTitle.children.filter(c => c.className === 'vm-cmd-match').length, 0);
+});
+
+test('a row whose title equals the typed text is not marked', async () => {
+  const b = await bar({ tabs: [{ id: 7, title: 'GitHub', url: 'https://github.com/' }] });
+  await b.type('github.com');
+  const open = b.titles().find(t => t.textContent === 'github.com');
+  assert.ok(open, 'no typed-URL row');
+  assert.equal(open.children.filter(c => c.className === 'vm-cmd-match').length, 0);
+});
+
+test('the engine row is rendered without marks', async () => {
+  const b = await bar({ keepEngines: true });
+  await b.type('c');
+  const engine = b.titles().find(t => t.textContent === 'Search Chosen');
+  assert.ok(engine, 'no engine row');
+  assert.equal(engine.children.filter(c => c.className === 'vm-cmd-match').length, 0);
 });
