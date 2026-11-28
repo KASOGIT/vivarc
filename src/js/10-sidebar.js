@@ -1039,6 +1039,7 @@
     const zone = () => el("div", "vm-zone");
     const body = el("div", "vm-scroll");
     const head = zone(), pinned = zone(), tabs = zone();
+    tabs.classList.add("vm-zone-tabs");
     const divider = el("div", "vm-divider");
     const clear = el("span", "vm-clear", "Clear");
     clear.addEventListener("click", clearTabs);
@@ -1049,7 +1050,9 @@
     fresh.append(el("span", "vm-plus", "+"), el("span", "vm-title", "New Tab"));
     fresh.addEventListener("click", () => window.dispatchEvent(new CustomEvent("vm-open-command-bar")));
     wireDrop(fresh, { accept: isBookmark, onDrop: (_zone, data) => unpin(data) });
-    body.append(head, pinned, divider, fresh, tabs);
+    const indicator = el("div", "vm-tab-indicator");
+    indicator.setAttribute("aria-hidden", "true");
+    body.append(head, pinned, divider, fresh, tabs, indicator);
     return { body, head, pinned, tabs, grid: null, pill: null, bar: null };
   };
   const swapNode = (old, next, place) => {
