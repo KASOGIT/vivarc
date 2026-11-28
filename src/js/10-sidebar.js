@@ -638,7 +638,7 @@
       [],
       ["Close Stack", () => chrome.tabs.remove(tabs.map((t) => t.id))],
     ]));
-    if (tabs.some((t) => t.active)) collapsedStacks.delete(id);
+    if (tabs.some((t) => t.active) && collapsedStacks.delete(id)) wrap.classList.add("vm-auto-open");
     sync();
     wrap.append(head, body);
     return wrap;

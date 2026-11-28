@@ -248,6 +248,13 @@
 #vm-panel .vm-stack-count { flex: none; margin-left: auto; font-size: 11px; font-weight: 600; opacity: 0.55; font-variant-numeric: tabular-nums; }
 #vm-panel .vm-stack-chevron { flex: none; display: flex; margin: 0 4px 0 2px; opacity: 0.55; transition: transform var(--vm-dur-2); }
 #vm-panel .vm-tab-stack.open > .vm-stack-head .vm-stack-chevron { transform: rotate(90deg); }
+/* A folded stack that opens by itself (one of its tabs became active) is a fresh node built already open: start it folded so it unfolds like a click. */
+#vm-panel .vm-tab-stack.vm-auto-open.open > .vm-folder-body {
+  @starting-style { grid-template-rows: 0fr; }
+}
+#vm-panel .vm-tab-stack.vm-auto-open.open > .vm-stack-head .vm-stack-chevron {
+  @starting-style { transform: none; }
+}
 #vm-panel .vm-stack-content { position: relative; }
 #vm-panel .vm-stack-content > .vm-tab { padding-left: 30px !important; }
 #vm-panel .vm-stack-content::before {
