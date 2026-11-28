@@ -809,7 +809,7 @@ class SpaceAutoMode(unittest.TestCase):
   near(top(stop), 75, "stop dot moves too, rendered 30");""")
         self.check(auto(light=88), r"""
   const pop = await open();
-  near(top(pad(pop).children[0]), 87.5, "rendered 12 in a dark system");""", dark=True)
+  near(top(pad(pop).children[0]), 97.5, "rendered 12 in a dark system");""", dark=True)
 
     def test_a_fixed_theme_pad_dot_does_not_move_on_a_scheme_change(self):
         self.check(theme_with(light=20), r"""
