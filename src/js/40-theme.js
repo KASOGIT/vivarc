@@ -21,6 +21,8 @@
     && stops.every((s) => s && Number.isInteger(s.hue) && s.hue >= 0 && s.hue <= 359 && Number.isInteger(s.light) && s.light >= 10 && s.light <= 90)
     ? stops : null;
 
+  const shownLight = (light) => (theme.light > 58 ? Math.max(light, 59) : Math.min(light, 58));
+
   const apply = () => {
     const browser = document.querySelector("#browser");
     if (!browser) return;
@@ -34,7 +36,7 @@
     style.setProperty("--vm-tint", `hsl(${theme.hue} ${theme.sat}% ${theme.light}%)`);
     const custom = validStops(theme.stops);
     if (custom) {
-      const gradient = (alpha) => `linear-gradient(160deg, ${[theme, ...custom].map((c) => `hsl(${c.hue} ${theme.sat}% ${c.light}%${alpha})`).join(", ")})`;
+      const gradient = (alpha) => `linear-gradient(160deg, ${[theme, ...custom].map((c) => `hsl(${c.hue} ${theme.sat}% ${c === theme ? c.light : shownLight(c.light)}%${alpha})`).join(", ")})`;
       style.setProperty("--vm-grad", gradient(""));
       style.setProperty("--vm-grad-glass", gradient(" / var(--vm-glass-opacity)"));
     } else {
@@ -103,6 +105,7 @@
     });
     removeBtn.addEventListener("click", () => { theme.stops = theme.stops.slice(0, -1); save(); sync(); });
     grad.append(el("span", "vm-theme-grad-label", "Gradient"), autoBtn, customBtn, addBtn, removeBtn);
+    const gradientOn = !!document.querySelector("#browser")?.classList.contains("vm-gradient");
 
     const pad = el("div", "vm-theme-pad");
     const dot = el("div", "vm-theme-dot");
@@ -121,7 +124,7 @@
       let best = 0;
       let bestDist = Infinity;
       targets.forEach((t, i) => {
-        const d = Math.hypot((t.hue / 360 - x) * r.width, ((90 - t.light) / 80 - y) * r.height);
+        const d = Math.hypot((t.hue / 360 - x) * r.width, ((90 - (i ? shownLight(t.light) : t.light)) / 80 - y) * r.height);
         if (d < bestDist) { bestDist = d; best = i; }
       });
       return best;
@@ -129,7 +132,8 @@
     const place = (e, index) => {
       if (!pop) return;
       const [x, y] = fraction(e);
-      const target = index === 0 ? theme : theme.stops[index - 1];
+      const target = index === 0 ? theme : theme.stops?.[index - 1];
+      if (!target) return;
       target.hue = Math.min(359, Math.round(x * 360));
       target.light = Math.round(90 - y * 80);
       save();
@@ -140,8 +144,14 @@
       const index = nearest(e);
       place(e, index);
       const move = (ev) => place(ev, index);
+      const stop = () => {
+        pad.removeEventListener("pointermove", move);
+        pad.removeEventListener("pointerup", stop);
+        pad.removeEventListener("pointercancel", stop);
+      };
       pad.addEventListener("pointermove", move);
-      pad.addEventListener("pointerup", () => pad.removeEventListener("pointermove", move), { once: true });
+      pad.addEventListener("pointerup", stop);
+      pad.addEventListener("pointercancel", stop);
     });
 
     const swatches = el("div", "vm-theme-swatches");
@@ -175,7 +185,7 @@
       position(dot, theme);
       stopDots.forEach((d, i) => {
         d.hidden = !custom[i];
-        if (custom[i]) position(d, custom[i]);
+        if (custom[i]) position(d, { hue: custom[i].hue, light: shownLight(custom[i].light) });
       });
       autoBtn.ariaPressed = String(!custom.length);
       customBtn.ariaPressed = String(custom.length > 0);
@@ -186,7 +196,7 @@
     };
     sync();
 
-    pop.append(heading, modes, pad, swatches, grad, intensity.row, grain.row, reset);
+    pop.append(heading, modes, pad, swatches, ...(gradientOn ? [grad] : []), intensity.row, grain.row, reset);
     shield = el("div", "vm-menu-shield");
     shield.addEventListener?.("mousedown", (e) => { e.preventDefault(); close(); });
     (document.querySelector("#browser") || document.body).append(shield, pop);
