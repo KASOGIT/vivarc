@@ -19,7 +19,8 @@ async function bar({ tabs = [] } = {}) {
   const titles = () => list.children.map(row => row.children.find(c => c.className === 'vm-cmd-title'));
   return { ...env, input, list, type, titles };
 }
-const highlight = async (label, query) => (await bar()).context.window.__vm.commandBar.highlight(label, query);
+// The result comes from the vm context realm: copy it into this realm before deepEqual.
+const highlight = async (label, query) => JSON.parse(JSON.stringify((await bar()).context.window.__vm.commandBar.highlight(label, query)));
 const seg = (text, match) => ({ text, match });
 
 test('highlight marks a case-insensitive match and keeps the original casing', async () => {
